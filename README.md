@@ -70,6 +70,7 @@ dns-panel/
 │
 ├── Dockerfile              # Docker 镜像定义
 ├── docker-compose.yml      # Docker Compose 编排
+├── install.sh              # 远程一键部署/更新引导脚本（curl 直接调用）
 ├── panel.sh                # Linux 统一管理脚本（deploy/update/restart/stop/…）
 ├── panel.ps1               # Windows 统一管理脚本
 ├── README-Docker.md        # Docker 部署详细文档
@@ -89,11 +90,33 @@ dns-panel/
 
 ### 一键部署（推荐）
 
+服务器上执行一条命令即可部署，无需手动 clone：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
+```
+
+更新已有部署：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
+```
+
+其他子命令（restart / stop / status / logs / backup）同理：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) restart
+```
+
+> 默认安装目录 `/opt/dns-panel`，可通过 `INSTALL_DIR=/your/path` 环境变量自定义。
+
+<details>
+<summary>手动 clone 部署（备选）</summary>
+
 **Linux：**
 ```bash
 git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
-chmod +x panel.sh
 bash panel.sh deploy
 ```
 
@@ -103,6 +126,7 @@ git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
 .\panel.ps1 deploy
 ```
+</details>
 
 脚本自动完成：环境检查 → 生成 `.env` → 放行防火墙（IPv4+IPv6）→ 构建容器 → 健康检查。
 
@@ -119,11 +143,13 @@ http://<服务器IP>:5000
 ## 一键更新
 
 ```bash
-# Linux
-bash panel.sh update
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
+```
 
-# Windows
-.\panel.ps1 update
+或在项目目录内直接执行：
+
+```bash
+bash panel.sh update
 ```
 
 流程：备份 DB → `git pull` → `docker compose build --no-cache` → 重启 → 健康检查。

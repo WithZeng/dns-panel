@@ -1,17 +1,26 @@
 ﻿# Docker 一键部署说明
 
-> 所有操作统一使用 `panel.sh`（Linux）或 `panel.ps1`（Windows）一个脚本完成。
+> 所有操作只需一条命令，无需手动 clone 仓库。
 
-## 1. Linux 一键部署（推荐）
+## 1. 一键部署（推荐）
 
 ```bash
-chmod +x panel.sh
-bash panel.sh deploy
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
+```
+
+脚本自动完成：安装 git/Docker → 克隆代码到 `/opt/dns-panel` → 生成 `.env` → 端口检查 → IPv4/IPv6 防火墙放行 → 构建容器 → 健康检查。
+
+自定义安装目录：
+
+```bash
+INSTALL_DIR=/home/user/dns-panel bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
 ```
 
 ## 2. Windows 一键部署
 
 ```powershell
+git clone https://github.com/WithZeng/dns-panel.git /opt/dns-panel
+cd /opt/dns-panel
 powershell -ExecutionPolicy Bypass -File .\panel.ps1 deploy
 ```
 
@@ -28,11 +37,14 @@ http://<服务器IP>:5000
 ## 3. 一键更新
 
 ```bash
-# Linux
-bash panel.sh update
+bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
+```
 
-# Windows
-.\panel.ps1 update
+或在项目目录内：
+
+```bash
+cd /opt/dns-panel
+bash panel.sh update
 ```
 
 更新流程：**备份数据库 → git pull → 重建镜像 → 重启容器 → 健康检查**。
