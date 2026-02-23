@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl">
+  <div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-800 dark:text-white">添加新实例</h1>
+      <p class="mt-1 text-slate-500 dark:text-slate-400 text-sm">请输入阿里云 ECS 的访问凭证和监控策略。</p>
+    </div>
+
+    <form method="POST" class="space-y-4">
+      <div>
+        <label for="name" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">实例名称</label>
+        <input id="name" name="name" type="text" required
+          value="{{ request.args.get('name', '') if not instance else instance.name }}"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          placeholder="例如：香港-业务主机">
+      </div>
+
+      <div>
+        <label for="tag" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">标签 <span
+            class="text-slate-400 font-normal">(可选，用于分组筛选)</span></label>
+        <input id="tag" name="tag" type="text" value="{{ request.args.get('tag', '') }}"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          placeholder="例如：项目A">
+      </div>
+
+      <div>
+        <label for="notes" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">备注 <span
+            class="text-slate-400 font-normal">(可选)</span></label>
+        <textarea id="notes" name="notes" rows="2"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-y text-sm"
+          placeholder="自由备注信息">{{ request.args.get('notes', '') }}</textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="relative">
+          <label for="region_select" class="block text-sm font-medium text-slate-600 mb-1.5">Region ID</label>
+          <select id="region_select"
+            class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+            <optgroup label="华北">
+              <option value="cn-beijing">cn-beijing（北京）</option>
+              <option value="cn-zhangjiakou">cn-zhangjiakou（张家口）</option>
+              <option value="cn-huhehaote">cn-huhehaote（呼和浩特）</option>
+              <option value="cn-wulanchabu">cn-wulanchabu（乌兰察布）</option>
+            </optgroup>
+            <optgroup label="华东">
+              <option value="cn-hangzhou">cn-hangzhou（杭州）</option>
+              <option value="cn-shanghai">cn-shanghai（上海）</option>
+              <option value="cn-nanjing">cn-nanjing（南京）</option>
+              <option value="cn-fuzhou">cn-fuzhou（福州）</option>
+            </optgroup>
+            <optgroup label="华南">
+              <option value="cn-shenzhen">cn-shenzhen（深圳）</option>
+              <option value="cn-heyuan">cn-heyuan（河源）</option>
+              <option value="cn-guangzhou">cn-guangzhou（广州）</option>
+            </optgroup>
+            <optgroup label="西南">
+              <option value="cn-chengdu">cn-chengdu（成都）</option>
+            </optgroup>
+            <optgroup label="港澳台">
+              <option value="cn-hongkong">cn-hongkong（香港）</option>
+            </optgroup>
+            <optgroup label="亚太">
+              <option value="ap-southeast-1">ap-southeast-1（新加坡）</option>
+              <option value="ap-southeast-2">ap-southeast-2（悉尼）</option>
+              <option value="ap-southeast-3">ap-southeast-3（吉隆坡）</option>
+              <option value="ap-southeast-5">ap-southeast-5（雅加达）</option>
+              <option value="ap-southeast-6">ap-southeast-6（马尼拉）</option>
+              <option value="ap-southeast-7">ap-southeast-7（曼谷）</option>
+              <option value="ap-northeast-1">ap-northeast-1（东京）</option>
+              <option value="ap-northeast-2">ap-northeast-2（首尔）</option>
+              <option value="ap-south-1">ap-south-1（孟买）</option>
+            </optgroup>
+            <optgroup label="欧洲与美洲">
+              <option value="us-east-1">us-east-1（弗吉尼亚）</option>
+              <option value="us-west-1">us-west-1（硅谷）</option>
+              <option value="eu-west-1">eu-west-1（伦敦）</option>
+              <option value="eu-central-1">eu-central-1（法兰克福）</option>
+            </optgroup>
+            <optgroup label="中东">
+              <option value="me-east-1">me-east-1（迪拜）</option>
+              <option value="me-central-1">me-central-1（利雅得）</option>
+            </optgroup>
+            <option value="__custom__">✏️ 自定义输入...</option>
+          </select>
+          <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                clip-rule="evenodd" />
+            </svg>
+          </span>
+          <input id="region_custom" type="text"
+            class="hidden mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            placeholder="输入自定义 Region ID">
+          <!-- Hidden field actually submitted -->
+          <input id="region_id" name="region_id" type="hidden" required
+            value="{{ instance.region_id if instance else request.args.get('region_id', 'cn-hangzhou') }}">
+        </div>
+        <div>
+          <label for="instance_id" class="block text-sm font-medium text-slate-600 mb-1.5">Instance ID</label>
+          <input id="instance_id" name="instance_id" type="text" required
+            value="{{ instance.instance_id if instance else request.args.get('instance_id', '') }}"
+            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            placeholder="例如：i-xxxxxxxxxxxx">
+        </div>
+      </div>
+
+      <div>
+        <label for="access_key_id" class="block text-sm font-medium text-slate-600 mb-1.5">Access Key ID</label>
+        <input id="access_key_id" name="access_key_id" type="text" required
+          value="{{ instance.access_key_id if instance else (prefill.access_key_id if prefill else '') }}"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+
+      <div>
+        <label for="access_key_secret" class="block text-sm font-medium text-slate-600 mb-1.5">Access Key Secret</label>
+        <input id="access_key_secret" name="access_key_secret" type="password" required
+          value="{{ instance.access_key_secret if instance else (prefill.access_key_secret if prefill else '') }}"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+
+      <div class="relative">
+        <label for="traffic_strategy" class="block text-sm font-medium text-slate-600 mb-1.5">流量策略</label>
+        <select id="traffic_strategy" name="traffic_strategy"
+          class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+          <option value="cycle" {% if not instance or instance.traffic_strategy=='cycle' %}selected{% endif %}>周期循环
+            (Monthly Cycle)</option>
+          <option value="life" {% if instance and instance.traffic_strategy=='life' %}selected{% endif %}>生命周期
+            (Lifecycle)</option>
+        </select>
+        <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+              clip-rule="evenodd" />
+          </svg>
+        </span>
+      </div>
+
+      <div id="cycleFields">
+        <label for="monthly_limit" class="block text-sm font-medium text-slate-600 mb-1.5">周期限额 (GB)</label>
+        <input id="monthly_limit" name="monthly_limit" type="number" min="0" step="0.01"
+          value="{{ instance.monthly_limit if instance else 0 }}"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+
+      <div id="lifeFields" class="hidden">
+        <label for="life_total_limit" class="block text-sm font-medium text-slate-600 mb-1.5">生命周期总限额 (GB)</label>
+        <input id="life_total_limit" name="life_total_limit" type="number" min="0" step="0.01"
+          value="{{ instance.life_total_limit if instance else 0 }}"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+
+      <div>
+        <label for="monthly_free_allowance" class="block text-sm font-medium text-slate-600 mb-1.5">每月流量配额 (GB)</label>
+        <input id="monthly_free_allowance" name="monthly_free_allowance" type="number" min="0" step="0.01"
+          value="{{ instance.monthly_free_allowance if instance else '' }}"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" name="auto_stop_enabled"
+            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-blue-500/20" {% if instance and
+            instance.auto_stop_enabled %}checked{% endif %}>
+          开启超限自动停机
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" name="auto_start_enabled"
+            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-blue-500/20" {% if instance and
+            instance.auto_start_enabled %}checked{% endif %}>
+          开启探针离线自动开机
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" name="monitoring_enabled"
+            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-blue-500/20" {% if not instance or
+            instance.monitoring_enabled %}checked{% endif %}>
+          开启监控
+        </label>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit"
+          class="w-full bg-slate-900 text-white font-medium py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10">
+          保存实例
+        </button>
+        <a href="{{ url_for('main.dashboard') }}"
+          class="mt-3 block text-center text-slate-500 hover:text-slate-700 text-sm">
+          返回控制台
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    /* ── Traffic Strategy Toggle ── */
+    const strategy = document.getElementById('traffic_strategy');
+    const cycleFields = document.getElementById('cycleFields');
+    const lifeFields = document.getElementById('lifeFields');
+
+    function syncFields() {
+      if (strategy.value === 'life') {
+        cycleFields.classList.add('hidden');
+        lifeFields.classList.remove('hidden');
+      } else {
+        lifeFields.classList.add('hidden');
+        cycleFields.classList.remove('hidden');
+      }
+    }
+
+    strategy.addEventListener('change', syncFields);
+    syncFields();
+
+    /* ── Region Selector ── */
+    const regionSelect = document.getElementById('region_select');
+    const regionCustom = document.getElementById('region_custom');
+    const regionHidden = document.getElementById('region_id');
+
+    // On page load, try to select the current value
+    const currentRegion = regionHidden.value;
+    const matchOption = regionSelect.querySelector('option[value="' + currentRegion + '"]');
+    if (matchOption) {
+      matchOption.selected = true;
+    } else if (currentRegion && currentRegion !== 'cn-hangzhou') {
+      // Not in the list → show custom input
+      regionSelect.value = '__custom__';
+      regionCustom.classList.remove('hidden');
+      regionCustom.value = currentRegion;
+    }
+
+    regionSelect.addEventListener('change', function () {
+      if (this.value === '__custom__') {
+        regionCustom.classList.remove('hidden');
+        regionCustom.focus();
+        regionHidden.value = regionCustom.value;
+      } else {
+        regionCustom.classList.add('hidden');
+        regionCustom.value = '';
+        regionHidden.value = this.value;
+      }
+    });
+
+    regionCustom.addEventListener('input', function () {
+      regionHidden.value = this.value;
+    });
+  })();
+</script>
+{% endblock %}

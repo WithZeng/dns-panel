@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl">
+    <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">实例自动发现</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
+
+        <form method="POST" class="space-y-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey
+                        ID</label>
+                    <input name="access_key_id" type="text" required
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey
+                        Secret</label>
+                    <input name="access_key_secret" type="password" required
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+                </div>
+            </div>
+
+            <!-- Region Selector (same as add_instance) -->
+            <div class="relative">
+                <label for="region_select"
+                    class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">区域 ID</label>
+                <select id="region_select"
+                    class="w-full appearance-none bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 pr-10 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    <optgroup label="华北">
+                        <option value="cn-beijing">cn-beijing（北京）</option>
+                        <option value="cn-zhangjiakou">cn-zhangjiakou（张家口）</option>
+                        <option value="cn-huhehaote">cn-huhehaote（呼和浩特）</option>
+                        <option value="cn-wulanchabu">cn-wulanchabu（乌兰察布）</option>
+                    </optgroup>
+                    <optgroup label="华东">
+                        <option value="cn-hangzhou">cn-hangzhou（杭州）</option>
+                        <option value="cn-shanghai">cn-shanghai（上海）</option>
+                        <option value="cn-nanjing">cn-nanjing（南京）</option>
+                        <option value="cn-fuzhou">cn-fuzhou（福州）</option>
+                    </optgroup>
+                    <optgroup label="华南">
+                        <option value="cn-shenzhen">cn-shenzhen（深圳）</option>
+                        <option value="cn-heyuan">cn-heyuan（河源）</option>
+                        <option value="cn-guangzhou">cn-guangzhou（广州）</option>
+                    </optgroup>
+                    <optgroup label="西南">
+                        <option value="cn-chengdu">cn-chengdu（成都）</option>
+                    </optgroup>
+                    <optgroup label="港澳台">
+                        <option value="cn-hongkong">cn-hongkong（香港）</option>
+                    </optgroup>
+                    <optgroup label="亚太">
+                        <option value="ap-southeast-1">ap-southeast-1（新加坡）</option>
+                        <option value="ap-southeast-2">ap-southeast-2（悉尼）</option>
+                        <option value="ap-southeast-3">ap-southeast-3（吉隆坡）</option>
+                        <option value="ap-southeast-5">ap-southeast-5（雅加达）</option>
+                        <option value="ap-southeast-6">ap-southeast-6（马尼拉）</option>
+                        <option value="ap-southeast-7">ap-southeast-7（曼谷）</option>
+                        <option value="ap-northeast-1">ap-northeast-1（东京）</option>
+                        <option value="ap-northeast-2">ap-northeast-2（首尔）</option>
+                        <option value="ap-south-1">ap-south-1（孟买）</option>
+                    </optgroup>
+                    <optgroup label="欧洲与美洲">
+                        <option value="us-east-1">us-east-1（弗吉尼亚）</option>
+                        <option value="us-west-1">us-west-1（硅谷）</option>
+                        <option value="eu-west-1">eu-west-1（伦敦）</option>
+                        <option value="eu-central-1">eu-central-1（法兰克福）</option>
+                    </optgroup>
+                    <optgroup label="中东">
+                        <option value="me-east-1">me-east-1（迪拜）</option>
+                        <option value="me-central-1">me-central-1（利雅得）</option>
+                    </optgroup>
+                    <option value="__custom__">✏️ 自定义输入...</option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </span>
+                <input id="region_custom" type="text"
+                    class="hidden mt-2 w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    placeholder="输入自定义 Region ID">
+                <input id="region_id" name="region_id" type="hidden" required value="cn-hangzhou">
+            </div>
+
+            <button type="submit"
+                class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+                🔍 扫描实例
+            </button>
+        </form>
+
+        {% if discovered %}
+        <div class="border-t border-slate-100 dark:border-slate-700 pt-5">
+            <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">发现 {{ discovered|length }} 个实例
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr
+                            class="border-b border-slate-100 dark:border-slate-700 text-left text-slate-500 dark:text-slate-400">
+                            <th class="py-2 pr-4">Instance ID</th>
+                            <th class="py-2 pr-4">名称</th>
+                            <th class="py-2 pr-4">状态</th>
+                            <th class="py-2">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in discovered %}
+                        <tr class="border-b border-slate-50 dark:border-slate-700/50">
+                            <td class="py-2.5 pr-4 font-mono text-xs text-slate-600 dark:text-slate-300">{{
+                                d.instance_id }}</td>
+                            <td class="py-2.5 pr-4 text-slate-700 dark:text-slate-200">{{ d.name or '-' }}</td>
+                            <td class="py-2.5 pr-4">
+                                {% if d.status == 'Running' %}
+                                <span
+                                    class="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400">●
+                                    Running</span>
+                                {% elif d.status == 'Stopped' %}
+                                <span
+                                    class="inline-flex items-center text-xs font-medium text-red-500 dark:text-red-400">●
+                                    Stopped</span>
+                                {% else %}
+                                <span class="text-xs text-slate-400">{{ d.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5">
+                                {% if d.already_added %}
+                                <span class="text-xs text-slate-400 dark:text-slate-500">已添加</span>
+                                {% else %}
+                                <a href="{{ url_for('main.add_instance') }}?instance_id={{ d.instance_id }}&region_id={{ d.region_id }}&name={{ d.name }}"
+                                    class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">+
+                                    添加</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('main.dashboard') }}"
+            class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-4">←
+            返回</a>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const regionSelect = document.getElementById('region_select');
+        const regionCustom = document.getElementById('region_custom');
+        const regionHidden = document.getElementById('region_id');
+
+        const currentRegion = regionHidden.value;
+        const matchOption = regionSelect.querySelector('option[value="' + currentRegion + '"]');
+        if (matchOption) {
+            matchOption.selected = true;
+        } else if (currentRegion && currentRegion !== 'cn-hangzhou') {
+            regionSelect.value = '__custom__';
+            regionCustom.classList.remove('hidden');
+            regionCustom.value = currentRegion;
+        }
+
+        regionSelect.addEventListener('change', function () {
+            if (this.value === '__custom__') {
+                regionCustom.classList.remove('hidden');
+                regionCustom.focus();
+                regionHidden.value = regionCustom.value;
+            } else {
+                regionCustom.classList.add('hidden');
+                regionCustom.value = '';
+                regionHidden.value = this.value;
+            }
+        });
+
+        regionCustom.addEventListener('input', function () {
+            regionHidden.value = this.value;
+        });
+    })();
+</script>
+{% endblock %}

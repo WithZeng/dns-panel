@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}安全组 · {{ instance.name }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('main.instance_detail', id=instance.id) }}"
+            class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">&larr;
+            返回 {{ instance.name }}</a>
+    </div>
+
+    <!-- One-click Open All + Add Rule -->
+    <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white">🔒 安全组规则</h1>
+            <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ sg_id }}</span>
+        </div>
+
+        <!-- Quick Open All -->
+        <form method="POST" class="mb-6">
+            <input type="hidden" name="action" value="open_all">
+            <button type="submit"
+                class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                onclick="return confirm('确定一键开放全部端口：IPv4/IPv6 + TCP/UDP (1-65535) 吗？')">
+                🚀 一键开放全部端口 (IPv4/IPv6 + TCP + UDP)
+            </button>
+        </form>
+
+        <!-- Custom Rule Form -->
+        <h2 class="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">自定义规则</h2>
+        <form method="POST" class="space-y-3">
+            <input type="hidden" name="action" value="add">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">协议</label>
+                    <select name="protocol"
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+                        <option value="tcp+udp">TCP + UDP</option>
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                        <option value="all">ALL</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">端口
+                        <span class="text-slate-400">(空=全部)</span></label>
+                    <input name="port" type="text" placeholder="如 80 或 8080/8090"
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">来源 CIDR</label>
+                    <input name="source_cidr" type="text" value="0.0.0.0/0" placeholder="0.0.0.0/0"
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">备注</label>
+                    <input name="description" type="text" placeholder="可选"
+                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+                </div>
+            </div>
+            <button type="submit"
+                class="w-full py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-blue-600 dark:to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition-all text-sm">
+                ➕ 添加规则
+            </button>
+        </form>
+    </div>
+
+    <!-- Existing Rules -->
+    <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">入站规则
+                <span class="text-sm font-normal text-slate-500">({{ rules|length }})</span>
+            </h2>
+        </div>
+
+        {% if rules %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-left text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">协议</th>
+                        <th class="px-4 py-3 font-medium">端口范围</th>
+                        <th class="px-4 py-3 font-medium">来源</th>
+                        <th class="px-4 py-3 font-medium">策略</th>
+                        <th class="px-4 py-3 font-medium">备注</th>
+                        <th class="px-4 py-3 font-medium text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                    {% for rule in rules %}
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                        <td class="px-4 py-3">
+                            <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
+                {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' if rule.IpProtocol|upper == 'TCP'
+                   else 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' if rule.IpProtocol|upper == 'UDP'
+                   else 'bg-slate-100 text-slate-600 dark:bg-slate-600 dark:text-slate-300' }}">
+                                {{ rule.IpProtocol|upper }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-slate-800 dark:text-slate-200">{{ rule.PortRange }}</td>
+                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ rule.SourceCidrIp or
+                            rule.Ipv6SourceCidrIp or rule.SourceGroupId or '-' }}</td>
+                        <td class="px-4 py-3">
+                            {% if rule.Policy == 'Accept' %}
+                            <span class="text-emerald-600 dark:text-emerald-400">✓ 允许</span>
+                            {% else %}
+                            <span class="text-red-600 dark:text-red-400">✗ 拒绝</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-400 text-xs max-w-[120px] truncate">{{ rule.Description or '' }}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            {% if rule.SourceCidrIp or rule.Ipv6SourceCidrIp %}
+                            <form method="POST" action="{{ url_for('main.sg_delete_rule', id=instance.id) }}"
+                                class="inline" onsubmit="return confirm('确认删除此规则？')">
+                                <input type="hidden" name="protocol" value="{{ rule.IpProtocol }}">
+                                <input type="hidden" name="port_range" value="{{ rule.PortRange }}">
+                                <input type="hidden" name="source_cidr" value="{{ rule.SourceCidrIp or rule.Ipv6SourceCidrIp }}">
+                                <input type="hidden" name="policy" value="{{ rule.Policy|lower }}">
+                                <button type="submit"
+                                    class="rounded-lg border border-red-200 dark:border-red-700 px-2.5 py-1 text-xs text-red-600 bg-red-50 dark:bg-red-900/20 hover:opacity-80 transition">
+                                    删除
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <p class="text-3xl mb-2">🔓</p>
+            <p class="text-slate-400">暂无入站规则</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

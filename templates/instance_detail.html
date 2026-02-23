@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('main.dashboard') }}"
+        class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">&larr;
+        返回仪表盘</a>
+</div>
+
+<!-- ── Instance Header ── -->
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ instance.name }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ instance.instance_id }} · {{
+                instance.region_id }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            {% set is_online = instance.status in ['Running', 'Starting'] %}
+            {% if is_online %}
+            <span
+                class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <span class="relative flex h-2 w-2"><span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span
+                        class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>在线
+            </span>
+            {% else %}
+            <span
+                class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                <span class="h-2 w-2 rounded-full bg-slate-400"></span>{{ instance.status or '停止' }}
+            </span>
+            {% endif %}
+            <a href="{{ url_for('main.edit_instance', id=instance.id) }}"
+                class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">编辑</a>
+            <a href="{{ url_for('main.instance_schedules', id=instance.id) }}"
+                class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">⏰
+                定时</a>
+            <a href="{{ url_for('main.security_group', id=instance.id) }}"
+                class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">🔒
+                安全组</a>
+            <form method="POST" action="{{ url_for('main.enable_ipv6', id=instance.id) }}" class="inline">
+                <button type="submit"
+                    class="inline-flex items-center rounded-xl border border-indigo-200 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 text-sm text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">🌐
+                    一键开启 IPv6</button>
+            </form>
+            <a href="{{ url_for('main.download_ipv6_script', id=instance.id) }}"
+                class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">⬇️
+                下载 IPv6 配置脚本</a>
+        </div>
+    </div>
+
+    <div class="mt-5 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/20 p-4">
+        <div class="text-sm font-medium text-slate-700 dark:text-slate-300">IPv6 状态</div>
+        {% if ipv6_info.enabled %}
+        <div class="mt-2 text-sm text-emerald-700 dark:text-emerald-300">已开启：{{ (ipv6_info.addresses or [])|join(', ') }}</div>
+        {% else %}
+        <div class="mt-2 text-sm text-amber-700 dark:text-amber-300">未检测到 IPv6 地址{% if ipv6_info.message and ipv6_info.message != 'ok' %}（{{ ipv6_info.message }}）{% endif %}</div>
+        {% endif %}
+        <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">先点击“一键开启 IPv6”分配云端地址，再在实例内执行下载脚本完成网卡配置。</div>
+    </div>
+
+    <!-- Stats Row -->
+    {% set strategy = instance.traffic_strategy %}
+    {% set m_used = instance.current_month_traffic or 0 %}
+    {% if strategy == 'life' %}
+    {% set m_limit = instance.monthly_free_allowance or 0 %}
+    {% else %}
+    {% set m_limit = instance.monthly_limit or 0 %}
+    {% endif %}
+    {% set m_remain = (m_limit - m_used) if m_limit > 0 else 0 %}
+    {% set m_remain = m_remain if m_remain > 0 else 0 %}
+    {% set m_pct = ((m_used / m_limit) * 100) if m_limit > 0 else 0 %}
+    {% set m_pct = 100 if m_pct > 100 else m_pct %}
+
+    {% if strategy == 'life' %}
+    {% set start = instance.real_creation_time if instance.real_creation_time else instance.created_at %}
+    {% set now = instance.last_checked if instance.last_checked else instance.created_at %}
+    {% set running_days = ((now - start).days) if start and now else 0 %}
+    {% set running_days = running_days if running_days > 0 else 0 %}
+    {% set running_months = (running_days // 30) + 1 %}
+    {% set accumulated_monthly = running_months * m_limit %}
+    {% set total_traffic = instance.total_traffic_sum or 0 %}
+    {% set l_consumed = total_traffic - accumulated_monthly %}
+    {% set l_consumed = l_consumed if l_consumed > 0 else 0 %}
+    {% set l_limit = instance.life_total_limit or 0 %}
+    {% set l_remain = (l_limit - l_consumed) if l_limit > 0 else 0 %}
+    {% set l_remain = l_remain if l_remain > 0 else 0 %}
+    {% set l_pct = ((l_consumed / l_limit) * 100) if l_limit > 0 else 0 %}
+    {% set l_pct = 100 if l_pct > 100 else l_pct %}
+    {% endif %}
+
+    <div class="mt-6 space-y-4">
+        {# Monthly #}
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">📅 月度流量</span>
+                <span
+                    class="text-sm font-semibold {{ 'text-red-600 dark:text-red-400' if m_pct >= 90 else 'text-blue-600 dark:text-blue-400' }}">{{
+                    '%.1f'|format(m_pct) }}%</span>
+            </div>
+            <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if m_pct >= 90 else 'bg-gradient-to-r from-blue-500 to-indigo-600' }}"
+                    style="width: {{ m_pct }}%;"></div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">已用</div>
+                    <div class="font-semibold text-slate-900 dark:text-white">{{ '%.2f'|format(m_used) }} GB</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">配额</div>
+                    <div class="font-semibold text-slate-900 dark:text-white">{{ '%.2f'|format(m_limit) }} GB</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">剩余</div>
+                    <div
+                        class="font-semibold {{ 'text-red-600 dark:text-red-400' if m_remain <= 0 else 'text-slate-900 dark:text-white' }}">
+                        {{ '%.2f'|format(m_remain) }} GB</div>
+                </div>
+            </div>
+        </div>
+
+        {# Life (LIFE only) #}
+        {% if strategy == 'life' %}
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">♾️ 生命周期流量</span>
+                <span
+                    class="text-sm font-semibold {{ 'text-red-600 dark:text-red-400' if l_pct >= 90 else 'text-emerald-600 dark:text-emerald-400' }}">{{
+                    '%.1f'|format(l_pct) }}%</span>
+            </div>
+            <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if l_pct >= 90 else 'bg-gradient-to-r from-emerald-500 to-teal-600' }}"
+                    style="width: {{ l_pct }}%;"></div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">已用</div>
+                    <div class="font-semibold text-slate-900 dark:text-white">{{ '%.2f'|format(l_consumed) }} GB</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">配额</div>
+                    <div class="font-semibold text-slate-900 dark:text-white">{{ '%.2f'|format(l_limit) }} GB</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">剩余</div>
+                    <div
+                        class="font-semibold {{ 'text-red-600 dark:text-red-400' if l_remain <= 0 else 'text-slate-900 dark:text-white' }}">
+                        {{ '%.2f'|format(l_remain) }} GB</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Forecast -->
+    <div id="forecastCard"
+        class="hidden mt-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 p-4">
+        <div class="flex items-center gap-2 text-sm">
+            <span class="text-lg">🔮</span>
+            <span id="forecastText" class="text-indigo-700 dark:text-indigo-300 font-medium"></span>
+        </div>
+        <div id="forecastDetail" class="text-xs text-indigo-500 dark:text-indigo-400 mt-1 ml-7"></div>
+    </div>
+</div>
+
+<!-- ── Traffic Chart ── -->
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">流量趋势</h2>
+    <div class="relative" style="height: 300px;">
+        <canvas id="trafficChart"></canvas>
+    </div>
+    <p id="noChartData" class="hidden text-center text-slate-400 dark:text-slate-500 py-10">暂无流量数据，检查实例后将开始记录。</p>
+</div>
+
+<!-- ── Notes ── -->
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">📝 备注</h2>
+        <button id="saveNotesBtn" onclick="saveNotes()"
+            class="text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">保存</button>
+    </div>
+    <textarea id="notesArea" rows="3"
+        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y text-sm"
+        placeholder="在此添加备注信息...">{{ instance.notes or '' }}</textarea>
+    <p id="notesSaveStatus" class="text-xs text-emerald-500 mt-1 hidden">✅ 已保存</p>
+</div>
+
+<!-- ── Operation History ── -->
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">操作历史</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-700/50 text-left text-slate-600 dark:text-slate-300">
+                <tr>
+                    <th class="px-4 py-3 font-medium">时间</th>
+                    <th class="px-4 py-3 font-medium">操作</th>
+                    <th class="px-4 py-3 font-medium">详情</th>
+                    <th class="px-4 py-3 font-medium">操作人</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                {% for log in logs %}
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                    <td class="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{
+                        log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="px-4 py-3">
+                        {% set action_cls = {
+                        'start': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                        'stop': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        'release': 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                        'check': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        } %}
+                        <span
+                            class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {{ action_cls.get(log.action, 'bg-slate-100 text-slate-600') }}">{{
+                            log.action }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-xs truncate">{{ log.detail }}</td>
+                    <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ log.operator }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-slate-400">暂无操作记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+    fetch('/api/traffic_history/{{ instance.id }}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.labels || data.labels.length === 0) {
+                document.getElementById('noChartData').classList.remove('hidden');
+                document.getElementById('trafficChart').style.display = 'none';
+                return;
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            new Chart(document.getElementById('trafficChart'), {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: '流量 (GB)',
+                        data: data.data,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99,102,241,0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, maxRotation: 45, maxTicksLimit: 12 },
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, callback: v => v.toFixed(1) + ' GB' },
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+        })
+        .catch(() => {
+            document.getElementById('noChartData').classList.remove('hidden');
+            document.getElementById('trafficChart').style.display = 'none';
+        });
+</script>
+
+<script>
+    // Forecast
+    fetch('/api/traffic_forecast/{{ instance.id }}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.has_forecast) {
+                document.getElementById('forecastCard').classList.remove('hidden');
+                document.getElementById('forecastText').textContent = data.message;
+                if (data.daily_rate) {
+                    document.getElementById('forecastDetail').textContent =
+                        `日均消耗: ${data.daily_rate} GB/天` +
+                        (data.days_remaining ? ` · 剩余: ${data.days_remaining} 天` : '');
+                }
+            }
+        }).catch(() => { });
+
+    // Notes save
+    function saveNotes() {
+        const notes = document.getElementById('notesArea').value;
+        fetch('/api/instance/{{ instance.id }}/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                const status = document.getElementById('notesSaveStatus');
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 2000);
+            }
+        });
+    }
+</script>
+{% endblock %}

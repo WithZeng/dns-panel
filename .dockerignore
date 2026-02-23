@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+instance/backups/
+komari-1.1.7/
+komari-1.1.7.zip
+agent/__pycache__/
+.env

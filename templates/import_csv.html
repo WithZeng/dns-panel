@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}CSV 批量导入{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-8">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">📥 CSV 批量导入</h1>
+        <p class="text-sm text-slate-400 dark:text-slate-500 mb-6">上传 CSV 文件批量添加实例。</p>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">选择 CSV 文件</label>
+                <input type="file" name="file" accept=".csv" required
+                    class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-600 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50 transition-all">
+            </div>
+
+            <button type="submit"
+                class="w-full py-3 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-blue-600 dark:to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                📤 开始导入
+            </button>
+        </form>
+
+        <div class="mt-8 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">📋 CSV 格式说明</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                首行为表头，至少需要 <code class="bg-slate-200 dark:bg-slate-600 px-1 rounded">instance_id</code> 列。
+            </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-600">
+                            <th class="text-left py-1 pr-3">列名</th>
+                            <th class="text-left py-1 pr-3">必填</th>
+                            <th class="text-left py-1">说明</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-slate-600 dark:text-slate-300">
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">name</td>
+                            <td>否</td>
+                            <td>实例名称</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">instance_id</td>
+                            <td class="text-red-500">是</td>
+                            <td>ECS Instance ID</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">region_id</td>
+                            <td>否</td>
+                            <td>默认 cn-hangzhou</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">access_key_id</td>
+                            <td>否</td>
+                            <td>AK</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">access_key_secret</td>
+                            <td>否</td>
+                            <td>SK</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">tag</td>
+                            <td>否</td>
+                            <td>标签分组</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">notes</td>
+                            <td>否</td>
+                            <td>备注</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">traffic_strategy</td>
+                            <td>否</td>
+                            <td>cycle / life</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">monthly_limit</td>
+                            <td>否</td>
+                            <td>月限额 (GB)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">life_total_limit</td>
+                            <td>否</td>
+                            <td>总限额 (GB)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-3 font-mono">monthly_free_allowance</td>
+                            <td>否</td>
+                            <td>默认 200 GB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">CSV 示例：</p>
+                <pre
+                    class="text-xs bg-slate-100 dark:bg-slate-800 p-3 rounded-lg overflow-x-auto text-slate-600 dark:text-slate-300">name,instance_id,region_id,access_key_id,access_key_secret,tag,monthly_limit
+web-01,i-abc123,cn-hangzhou,LTAI...,abcdef,项目A,500
+web-02,i-def456,cn-shanghai,LTAI...,ghijkl,项目B,1000</pre>
+            </div>
+        </div>
+
+        <div class="text-center mt-6">
+            <a href="{{ url_for('main.dashboard') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">←
+                返回控制台</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

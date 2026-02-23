@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-md">
+    <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">告警配置</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">配置 Webhook 地址，流量超限时自动推送通知。</p>
+
+        <form method="POST" class="space-y-4">
+            <div class="relative">
+                <label for="notify_type"
+                    class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">通知渠道</label>
+                <select id="notify_type" name="notify_type"
+                    class="w-full appearance-none bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 pr-10 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    <option value="wechat" {% if config.notify_type=='wechat' %}selected{% endif %}>企业微信</option>
+                    <option value="dingtalk" {% if config.notify_type=='dingtalk' %}selected{% endif %}>钉钉</option>
+                    <option value="telegram" {% if config.notify_type=='telegram' %}selected{% endif %}>Telegram
+                    </option>
+                </select>
+                <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </span>
+            </div>
+
+            <div>
+                <label for="webhook_url"
+                    class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">Webhook URL</label>
+                <input id="webhook_url" name="webhook_url" type="url" value="{{ config.webhook_url or '' }}"
+                    placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+                    class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+            </div>
+
+            <div id="helpText"
+                class="text-xs text-slate-400 dark:text-slate-500 rounded-xl bg-slate-50 dark:bg-slate-700/50 p-3 leading-relaxed">
+            </div>
+
+            <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input type="checkbox" name="enabled"
+                    class="h-4 w-4 rounded border-slate-300 dark:border-slate-500 text-slate-900 focus:ring-blue-500/20"
+                    {% if config.enabled %}checked{% endif %}>
+                启用告警推送
+            </label>
+
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+                    保存配置
+                </button>
+                <button type="button" id="testBtn"
+                    class="px-5 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors text-sm">
+                    🔔 测试通知
+                </button>
+            </div>
+            <div id="testResult" class="hidden rounded-xl px-4 py-3 text-sm"></div>
+            <a href="{{ url_for('main.dashboard') }}"
+                class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-2">返回</a>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Help text per channel
+        const helpTexts = {
+            wechat: '企业微信：群聊 → 设置 → 群机器人 → 添加，获取 Webhook URL。',
+            dingtalk: '钉钉：群聊 → 设置 → 智能群助手 → 添加机器人 → 自定义，获取 Webhook URL。',
+            telegram: 'Telegram：格式为 https://api.telegram.org/bot&lt;TOKEN&gt;/sendMessage?chat_id=&lt;CHAT_ID&gt;'
+        };
+        const sel = document.getElementById('notify_type');
+        const help = document.getElementById('helpText');
+        function updateHelp() { help.innerHTML = helpTexts[sel.value] || ''; }
+        sel.addEventListener('change', updateHelp);
+        updateHelp();
+
+        // Test notification button
+        const testBtn = document.getElementById('testBtn');
+        const testResult = document.getElementById('testResult');
+        testBtn.addEventListener('click', async function () {
+            testBtn.disabled = true;
+            testBtn.textContent = '⏳ 发送中...';
+            testResult.classList.add('hidden');
+
+            try {
+                const resp = await fetch('{{ url_for("main.test_notification") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const data = await resp.json();
+                testResult.classList.remove('hidden');
+                if (data.success) {
+                    testResult.className = 'rounded-xl px-4 py-3 text-sm bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+                    testResult.textContent = data.message;
+                } else {
+                    testResult.className = 'rounded-xl px-4 py-3 text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+                    testResult.textContent = data.message;
+                }
+            } catch (e) {
+                testResult.classList.remove('hidden');
+                testResult.className = 'rounded-xl px-4 py-3 text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+                testResult.textContent = '请求失败: ' + e.message;
+            }
+            testBtn.disabled = false;
+            testBtn.textContent = '🔔 测试通知';
+        });
+    })();
+</script>
+{% endblock %}

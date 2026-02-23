@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECS 流量监控面板</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📳</text></svg>"
+    type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors">
+  <nav class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200/50 dark:bg-slate-800/80 dark:border-slate-700/50">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="h-16 flex items-center justify-between">
+        <a href="{{ url_for('main.dashboard') }}" class="text-slate-900 dark:text-white font-extrabold tracking-tight text-lg">ECS Monitor</a>
+
+        <div class="hidden sm:flex items-center gap-2 text-sm">
+          {% if current_user.is_authenticated %}
+          <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">仪表盘</a>
+          <a href="{{ url_for('probe.probe_servers_page') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">探针服务器</a>
+          <a href="{{ url_for('probe.dns_failover_page') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">DNS 管理</a>
+          <a href="{{ url_for('main.operation_logs') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">日志</a>
+          <a href="{{ url_for('main.alert_config') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">告警</a>
+          <a href="{{ url_for('main.discover_instances') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">发现</a>
+          <a href="{{ url_for('main.notification_logs') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">通知</a>
+          <a href="{{ url_for('main.import_csv') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">导入</a>
+          <button id="themeToggle" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="切换主题">
+            <svg id="sunIcon" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+            </svg>
+            <svg id="moonIcon" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+            </svg>
+          </button>
+          <span class="text-slate-500 dark:text-slate-400">{{ current_user.username }}</span>
+          <a href="{{ url_for('main.change_password') }}" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition text-xs">改密</a>
+          <a href="{{ url_for('main.logout') }}" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition text-xs">退出</a>
+          {% else %}
+          <a href="{{ url_for('main.login') }}" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700 hover:bg-slate-100 transition">登录</a>
+          {% endif %}
+        </div>
+
+        <div class="flex items-center gap-2 sm:hidden">
+          <button id="themeToggleMobile" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+            <svg id="sunIconM" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+            </svg>
+            <svg id="moonIconM" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+            </svg>
+          </button>
+          {% if current_user.is_authenticated %}
+          <button id="menuToggle" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div id="mobileMenu" class="hidden sm:hidden border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pb-4 pt-2 space-y-1 text-sm">
+      <a href="{{ url_for('main.dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">仪表盘</a>
+      <a href="{{ url_for('probe.probe_servers_page') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">探针服务器</a>
+      <a href="{{ url_for('probe.dns_failover_page') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">DNS 管理</a>
+      <a href="{{ url_for('main.operation_logs') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">日志</a>
+      <a href="{{ url_for('main.alert_config') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">告警</a>
+      <a href="{{ url_for('main.discover_instances') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">发现</a>
+      <a href="{{ url_for('main.notification_logs') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">通知</a>
+      <a href="{{ url_for('main.import_csv') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">导入</a>
+      <a href="{{ url_for('main.change_password') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">修改密码</a>
+      <a href="{{ url_for('main.logout') }}" class="block rounded-lg px-3 py-2 text-red-500 hover:bg-slate-100 dark:hover:bg-slate-700">退出</a>
+    </div>
+    {% endif %}
+  </nav>
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-10">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2 mb-5">
+      {% for category, message in messages %}
+      {% set cls = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600' %}
+      {% if category == 'success' %}
+      {% set cls = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700' %}
+      {% elif category == 'danger' %}
+      {% set cls = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700' %}
+      {% elif category == 'warning' %}
+      {% set cls = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700' %}
+      {% elif category == 'info' %}
+      {% set cls = 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700' %}
+      {% endif %}
+      <div class="rounded-xl border px-4 py-3 text-sm {{ cls }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    (function () {
+      const html = document.documentElement;
+
+      function applyTheme(dark) {
+        if (dark) {
+          html.classList.add('dark');
+          html.classList.remove('light');
+        } else {
+          html.classList.remove('dark');
+          html.classList.add('light');
+        }
+        document.querySelectorAll('[id^="sunIcon"]').forEach(el => el.classList.toggle('hidden', !dark));
+        document.querySelectorAll('[id^="moonIcon"]').forEach(el => el.classList.toggle('hidden', dark));
+      }
+
+      const saved = localStorage.getItem('theme');
+      applyTheme(saved === 'dark');
+
+      document.querySelectorAll('#themeToggle, #themeToggleMobile').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const isDark = html.classList.contains('dark');
+          localStorage.setItem('theme', isDark ? 'light' : 'dark');
+          applyTheme(!isDark);
+        });
+      });
+
+      const menuToggle = document.getElementById('menuToggle');
+      const mobileMenu = document.getElementById('mobileMenu');
+      if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', function () {
+          mobileMenu.classList.toggle('hidden');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

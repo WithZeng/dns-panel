@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}通知历史{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">📬 通知历史</h1>
+        <a href="{{ url_for('main.dashboard') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">←
+            返回控制台</a>
+    </div>
+
+    {% if logs.items %}
+    <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                        <th class="text-left px-5 py-3 font-medium">时间</th>
+                        <th class="text-left px-5 py-3 font-medium">实例</th>
+                        <th class="text-left px-5 py-3 font-medium">渠道</th>
+                        <th class="text-left px-5 py-3 font-medium">状态</th>
+                        <th class="text-left px-5 py-3 font-medium">重试</th>
+                        <th class="text-left px-5 py-3 font-medium">消息</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr
+                        class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <td class="px-5 py-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            {{ log.timestamp.strftime('%m-%d %H:%M:%S') }}
+                        </td>
+                        <td class="px-5 py-3 text-slate-700 dark:text-slate-200">
+                            {{ log.instance_name or '-' }}
+                        </td>
+                        <td class="px-5 py-3">
+                            {% if log.notify_type == 'wechat' %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">微信</span>
+                            {% elif log.notify_type == 'dingtalk' %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">钉钉</span>
+                            {% elif log.notify_type == 'telegram' %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">Telegram</span>
+                            {% else %}
+                            <span class="text-slate-400">{{ log.notify_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            {% if log.success %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">✅
+                                成功</span>
+                            {% else %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                title="{{ log.error_message }}">❌ 失败</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ log.attempts }}</td>
+                        <td class="px-5 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate"
+                            title="{{ log.message }}">
+                            {{ log.message[:80] }}{% if log.message|length > 80 %}...{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center gap-2 mt-6">
+        {% if logs.has_prev %}
+        <a href="{{ url_for('main.notification_logs', page=logs.prev_num) }}"
+            class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300">
+            ← 上一页
+        </a>
+        {% endif %}
+        <span class="px-4 py-2 text-sm text-slate-500 dark:text-slate-400">
+            第 {{ logs.page }} / {{ logs.pages }} 页 (共 {{ logs.total }} 条)
+        </span>
+        {% if logs.has_next %}
+        <a href="{{ url_for('main.notification_logs', page=logs.next_num) }}"
+            class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300">
+            下一页 →
+        </a>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <div
+        class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <p class="text-4xl mb-3">📭</p>
+        <p class="text-slate-400 dark:text-slate-500">暂无通知记录</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

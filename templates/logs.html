@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">操作日志</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">记录所有实例操作和系统事件。</p>
+    </div>
+    <a href="{{ url_for('main.dashboard') }}"
+        class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition text-sm">返回仪表盘</a>
+</div>
+
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-700/50 text-left text-slate-600 dark:text-slate-300">
+                <tr>
+                    <th class="px-4 py-3 font-medium">时间</th>
+                    <th class="px-4 py-3 font-medium">操作</th>
+                    <th class="px-4 py-3 font-medium">详情</th>
+                    <th class="px-4 py-3 font-medium">操作人</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                {% for log in logs.items %}
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                    <td class="px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{
+                        log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="px-4 py-3">
+                        {% set action_cls = {
+                        'start': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                        'stop': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        'release': 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                        'check': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        'check_all': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        'add': 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+                        'edit': 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+                        'delete': 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                        } %}
+                        <span
+                            class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {{ action_cls.get(log.action, 'bg-slate-100 text-slate-600') }}">{{
+                            log.action }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-xs truncate">{{ log.detail }}</td>
+                    <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ log.operator }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-slate-400">暂无操作日志</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if logs.pages > 1 %}
+    <div class="flex items-center justify-center gap-2 p-4 border-t border-slate-100 dark:border-slate-700">
+        {% if logs.has_prev %}
+        <a href="?page={{ logs.prev_num }}"
+            class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition">上一页</a>
+        {% endif %}
+        <span class="text-sm text-slate-500 dark:text-slate-400">{{ logs.page }} / {{ logs.pages }}</span>
+        {% if logs.has_next %}
+        <a href="?page={{ logs.next_num }}"
+            class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition">下一页</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

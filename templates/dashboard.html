@@ -1,0 +1,625 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Widget container: sortable via SortableJS -->
+<div id="widgetContainer">
+
+  {% for widget_id in widget_order %}
+
+  {% if widget_id == 'summary' %}
+  <!-- ── Widget: Summary Cards ── -->
+  <div class="widget mb-6" data-widget="summary">
+    <div
+      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
+      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+      </svg>
+      <span class="text-xs text-slate-400">拖拽排序</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="text-xs text-slate-500 dark:text-slate-400">实例总数</div>
+        <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1" id="s_total">{{ total }}</div>
+      </div>
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="text-xs text-slate-500 dark:text-slate-400">在线</div>
+        <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1" id="s_online">{{ online }}</div>
+      </div>
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="text-xs text-slate-500 dark:text-slate-400">已停机</div>
+        <div class="text-2xl font-bold text-slate-500 dark:text-slate-400 mt-1" id="s_stopped">{{ stopped }}</div>
+      </div>
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="text-xs text-slate-500 dark:text-slate-400">本月总流量</div>
+        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1" id="s_traffic">{{
+          '%.1f'|format(total_traffic)
+          }} <span class="text-sm font-normal">GB</span></div>
+      </div>
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="text-xs text-slate-500 dark:text-slate-400">预估费用</div>
+        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1" id="s_cost">¥{{
+          '%.2f'|format(total_cost)
+          }}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">探针服务器概览</h3>
+          <a href="{{ url_for('probe.probe_servers_page') }}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">查看全部</a>
+        </div>
+        <div class="flex items-center gap-4 text-xs mb-3">
+          <span class="text-slate-500 dark:text-slate-400">总计 <strong id="p_total">{{ probe_total or 0 }}</strong></span>
+          <span class="text-emerald-600 dark:text-emerald-400">在线 <strong id="p_online">{{ probe_online or 0 }}</strong></span>
+          <span class="text-rose-600 dark:text-rose-400">离线 <strong id="p_offline">{{ probe_offline or 0 }}</strong></span>
+        </div>
+        <div id="probeMiniList" class="space-y-1 text-xs text-slate-600 dark:text-slate-300"></div>
+      </div>
+
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">DNS 解析状态</h3>
+          <a href="{{ url_for('probe.dns_failover_page') }}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">管理</a>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">规则总数</div>
+            <div id="dns_total_rules" class="font-semibold text-slate-900 dark:text-white mt-1">{{ dns_total or 0 }}</div>
+          </div>
+          <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">启用规则</div>
+            <div id="dns_enabled_rules" class="font-semibold text-slate-900 dark:text-white mt-1">{{ dns_enabled or 0 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% elif widget_id == 'actions' %}
+  <!-- ── Widget: Action Bar ── -->
+  <div class="widget mb-6" data-widget="actions">
+    <div
+      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
+      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+      </svg>
+      <span class="text-xs text-slate-400">拖拽排序</span>
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">实例仪表盘</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          自动刷新 <span id="countdown" class="font-mono text-blue-600 dark:text-blue-400">30</span>s
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        {% if all_tags %}
+        <select id="tagFilter" onchange="window.location='?tag='+this.value"
+          class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none min-h-[44px]">
+          <option value="">全部标签</option>
+          {% for tag in all_tags %}
+          <option value="{{ tag }}" {% if current_tag==tag %}selected{% endif %}>{{ tag }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+        <a href="{{ url_for('main.check_all') }}"
+          class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">全部检查</a>
+        <button type="button" id="exportCsvBtn"
+          class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">导出
+          CSV</button>
+        <a href="{{ url_for('main.download_backup') }}"
+          class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">下载备份</a>
+        <a href="{{ url_for('main.add_instance') }}"
+          class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px]">添加实例</a>
+      </div>
+    </div>
+  </div>
+
+  {% elif widget_id == 'batch' %}
+  <!-- ── Widget: Batch Operations ── -->
+  <div class="widget mb-6" data-widget="batch">
+    <div
+      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
+      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+      </svg>
+      <span class="text-xs text-slate-400">拖拽排序</span>
+    </div>
+    <form id="batchForm" method="POST" action="{{ url_for('main.batch_action') }}"
+      class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 shadow-sm">
+      <span class="text-sm text-slate-600 dark:text-slate-400 font-medium">批量操作:</span>
+
+      <!-- Select All checkbox -->
+      <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+        <input type="checkbox" id="selectAll"
+          class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+        <span class="text-sm text-slate-600 dark:text-slate-300">全选</span>
+      </label>
+
+      <!-- Selected count badge -->
+      <span id="selectedCount"
+        class="hidden rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all">已选
+        0</span>
+
+      <!-- Tag filter -->
+      {% if all_tags %}
+      <select id="batchTagFilter" name="tag"
+        class="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 min-h-[44px]">
+        <option value="">所有实例</option>
+        {% for tag in all_tags %}
+        <option value="{{ tag }}" {% if current_tag==tag %}selected{% endif %}>{{ tag }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+
+      <!-- Hidden container for selected IDs -->
+      <div id="selectedIdsContainer"></div>
+
+      <button type="submit" name="action" value="check"
+        class="inline-flex items-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition min-h-[44px]">🔍
+        检查</button>
+      <button type="submit" name="action" value="start"
+        class="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition min-h-[44px]">▶
+        启动</button>
+      <button type="submit" name="action" value="stop"
+        class="inline-flex items-center rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition min-h-[44px]"
+        onclick="return confirm('确定要批量停止吗？')">⏸ 停止</button>
+    </form>
+  </div>
+
+  {% elif widget_id == 'instances' %}
+  <!-- ── Widget: Instance Grid ── -->
+  <div class="widget mb-6" data-widget="instances">
+    <div
+      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
+      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+      </svg>
+      <span class="text-xs text-slate-400">拖拽排序</span>
+    </div>
+    {% if instances %}
+    <div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {% for instance in instances %}
+      {% set strategy = instance.traffic_strategy %}
+      {% set is_online = instance.status in ['Running', 'Starting'] %}
+
+      {# ── Monthly stats (all strategies) ── #}
+      {% set m_used = instance.current_month_traffic or 0 %}
+      {% if strategy == 'life' %}
+      {% set m_limit = instance.monthly_free_allowance or 0 %}
+      {% else %}
+      {% set m_limit = instance.monthly_limit or 0 %}
+      {% endif %}
+      {% set m_remain = (m_limit - m_used) if m_limit > 0 else 0 %}
+      {% set m_remain = m_remain if m_remain > 0 else 0 %}
+      {% set m_pct = ((m_used / m_limit) * 100) if m_limit > 0 else 0 %}
+      {% set m_pct = 100 if m_pct > 100 else m_pct %}
+
+      {# ── Life stats (LIFE only): monthly quota consumed first ── #}
+      {% if strategy == 'life' %}
+      {% set start = instance.real_creation_time if instance.real_creation_time else instance.created_at %}
+      {% set now = instance.last_checked if instance.last_checked else instance.created_at %}
+      {% set running_days = ((now - start).days) if start and now else 0 %}
+      {% set running_days = running_days if running_days > 0 else 0 %}
+      {% set running_months = (running_days // 30) + 1 %}
+      {% set accumulated_monthly = running_months * m_limit %}
+      {% set total_traffic = instance.total_traffic_sum or 0 %}
+      {% set l_consumed = total_traffic - accumulated_monthly %}
+      {% set l_consumed = l_consumed if l_consumed > 0 else 0 %}
+      {% set l_limit = instance.life_total_limit or 0 %}
+      {% set l_remain = (l_limit - l_consumed) if l_limit > 0 else 0 %}
+      {% set l_remain = l_remain if l_remain > 0 else 0 %}
+      {% set l_pct = ((l_consumed / l_limit) * 100) if l_limit > 0 else 0 %}
+      {% set l_pct = 100 if l_pct > 100 else l_pct %}
+      {% else %}
+      {% set l_consumed = 0 %}
+      {% set l_limit = 0 %}
+      {% set l_remain = 0 %}
+      {% set l_pct = 0 %}
+      {% endif %}
+
+      {# ── Overall percent (for color/alert) ── #}
+      {% set percent = l_pct if l_pct > m_pct else m_pct %}
+
+      <section
+        class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md transition p-5"
+        data-id="{{ instance.id }}">
+        <div class="flex items-start justify-between gap-3">
+          <label class="flex items-center pt-1 cursor-pointer">
+            <input type="checkbox"
+              class="instance-checkbox w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              data-instance-id="{{ instance.id }}">
+          </label>
+          <div class="flex-1 min-w-0">
+            <a href="{{ url_for('main.instance_detail', id=instance.id) }}"
+              class="text-lg font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition">{{
+              instance.name }}</a>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ instance.instance_id }} · {{
+              instance.region_id }}
+              {% if instance.tag %}<span
+                class="inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">{{
+                instance.tag }}</span>{% endif %}
+            </p>
+          </div>
+          {% if is_online %}
+          <span
+            class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+            <span class="relative flex h-2 w-2"><span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span
+                class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>在线
+          </span>
+          {% else %}
+          <span
+            class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+            <span class="h-2 w-2 rounded-full bg-slate-400"></span>{{ instance.status or '停止' }}
+          </span>
+          {% endif %}
+        </div>
+
+        {# ── Monthly progress ── #}
+        <div class="mt-4">
+          <div class="flex items-center justify-between text-sm mb-1">
+            <span class="text-slate-600 dark:text-slate-400">📅 月度流量</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{{ '%.1f'|format(m_pct) }}%</span>
+          </div>
+          <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if m_pct >= 90 else 'bg-gradient-to-r from-blue-500 to-indigo-600' }}"
+              style="width: {{ m_pct }}%;"></div>
+          </div>
+          <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span>已用 {{ '%.2f'|format(m_used) }} GB</span>
+            <span>配额 {{ '%.2f'|format(m_limit) }} GB</span>
+          </div>
+        </div>
+
+        {# ── Life progress (LIFE only) ── #}
+        {% if strategy == 'life' %}
+        <div class="mt-3">
+          <div class="flex items-center justify-between text-sm mb-1">
+            <span class="text-slate-600 dark:text-slate-400">♾️ 生命周期</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{{ '%.1f'|format(l_pct) }}%</span>
+          </div>
+          <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if l_pct >= 90 else 'bg-gradient-to-r from-emerald-500 to-teal-600' }}"
+              style="width: {{ l_pct }}%;"></div>
+          </div>
+          <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span>已用 {{ '%.2f'|format(l_consumed) }} GB</span>
+            <span>配额 {{ '%.2f'|format(l_limit) }} GB</span>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400" data-field="last_checked">
+          最后检查：{{ instance.last_checked.strftime('%Y-%m-%d %H:%M') if instance.last_checked else '-' }}
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a href="{{ url_for('main.check_instance', id=instance.id) }}"
+            class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">🔍
+            检查</a>
+          <a href="{{ url_for('main.edit_instance', id=instance.id) }}"
+            class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">✏️
+            编辑</a>
+          <a href="{{ url_for('main.delete_instance_local', id=instance.id) }}"
+            class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]"
+            onclick="return confirm('确认仅删除本地记录？')">🗑️ 移除</a>
+
+          {% if instance.status == 'Stopped' %}
+          <form method="POST" action="{{ url_for('main.start_instance', id=instance.id) }}" class="inline">
+            <button type="submit"
+              class="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-700 transition min-h-[44px]">▶
+              开机</button>
+          </form>
+          {% elif instance.status == 'Running' %}
+          <form method="POST" action="{{ url_for('main.stop_instance', id=instance.id) }}" class="inline">
+            <button type="submit"
+              class="inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-600 px-3 py-1.5 text-sm text-white hover:bg-slate-800 dark:hover:bg-slate-500 transition min-h-[44px]">⏸
+              关机</button>
+          </form>
+          {% endif %}
+
+          <button type="button"
+            class="inline-flex items-center rounded-lg border border-red-200 dark:border-red-700 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition min-h-[44px] js-open-release"
+            data-id="{{ instance.id }}" data-name="{{ instance.name }}">
+            ⚠️ 释放
+          </button>
+        </div>
+      </section>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div
+      class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-10 text-center text-slate-500 dark:text-slate-400">
+      当前没有实例，点击"添加实例"开始使用。
+    </div>
+    {% endif %}
+  </div>
+
+  {% elif widget_id == 'region' %}
+  <!-- ── Widget: Region Traffic Chart ── -->
+  <div class="widget mb-6" data-widget="region">
+    <div
+      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
+      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+      </svg>
+      <span class="text-xs text-slate-400">拖拽排序</span>
+    </div>
+    <div
+      class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">🌍 区域流量对比</h2>
+      <div class="relative" style="height: 280px;">
+        <canvas id="regionChart"></canvas>
+      </div>
+      <p id="noRegionData" class="hidden text-center text-slate-400 dark:text-slate-500 py-8">暂无区域数据</p>
+    </div>
+  </div>
+
+  {% endif %}
+  {% endfor %}
+</div><!-- /widgetContainer -->
+
+<!-- Release Confirm Modal -->
+<div id="releaseModal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/20 dark:bg-black/40 p-4">
+  <div
+    class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-6 shadow-xl">
+    <h3 class="text-xl font-bold text-slate-900 dark:text-white">确认释放实例</h3>
+    <p class="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-6">
+      你将释放实例 <span id="releaseTargetName" class="font-semibold text-slate-900 dark:text-white"></span>。
+      该操作具有风险，请确认已完成数据备份。
+    </p>
+    <div
+      class="mt-4 rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+      危险操作：释放后可能无法恢复。
+    </div>
+    <form id="releaseForm" method="POST" class="mt-6 flex justify-end gap-2">
+      <button type="button" id="cancelRelease"
+        class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">取消</button>
+      <button type="submit"
+        class="inline-flex items-center rounded-lg border border-red-200 dark:border-red-700 bg-white dark:bg-slate-700 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">确认删除</button>
+    </form>
+  </div>
+</div>
+
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+<script>
+  // ---- SortableJS Widget Drag-and-Drop ----
+  new Sortable(document.getElementById('widgetContainer'), {
+    animation: 200,
+    handle: '.widget-handle',
+    ghostClass: 'opacity-30',
+    filter: 'input, label, button, a, select, form',
+    preventOnFilter: false,
+    onEnd: function () {
+      const order = [...document.querySelectorAll('.widget')].map(w => w.dataset.widget).filter(Boolean);
+      fetch('/api/dashboard_layout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order })
+      });
+    }
+  });
+
+  // ---- Region Chart ----
+  fetch('/api/region_traffic')
+    .then(r => r.json())
+    .then(data => {
+      if (!data || data.length === 0) {
+        document.getElementById('noRegionData').classList.remove('hidden');
+        document.getElementById('regionChart').style.display = 'none';
+        return;
+      }
+      const isDark = document.documentElement.classList.contains('dark');
+      const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
+      const textColor = isDark ? '#94a3b8' : '#64748b';
+
+      new Chart(document.getElementById('regionChart'), {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.region),
+          datasets: [
+            {
+              label: '已用 (GB)',
+              data: data.map(d => d.used),
+              backgroundColor: 'rgba(99,102,241,0.7)',
+              borderRadius: 6,
+            },
+            {
+              label: '上限 (GB)',
+              data: data.map(d => d.limit),
+              backgroundColor: 'rgba(148,163,184,0.3)',
+              borderRadius: 6,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: textColor } },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => v + ' GB' }, beginAtZero: true },
+          },
+        },
+      });
+    }).catch(() => {
+      document.getElementById('noRegionData')?.classList.remove('hidden');
+      const rc = document.getElementById('regionChart');
+      if (rc) rc.style.display = 'none';
+    });
+
+  // ---- Release Modal ----
+  (function () {
+    const modal = document.getElementById('releaseModal');
+    const releaseForm = document.getElementById('releaseForm');
+    const releaseTargetName = document.getElementById('releaseTargetName');
+    const cancelBtn = document.getElementById('cancelRelease');
+    const openBtns = document.querySelectorAll('.js-open-release');
+
+    function openModal(id, name) {
+      releaseTargetName.textContent = name;
+      releaseForm.action = `/release_instance/${id}`;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    openBtns.forEach((btn) => {
+      btn.addEventListener('click', () => openModal(btn.dataset.id, btn.dataset.name));
+    });
+
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  })();
+
+  // ---- Auto-refresh via AJAX every 30s ----
+  (function () {
+    const countdownEl = document.getElementById('countdown');
+    let seconds = 30;
+
+    function updateCountdown() {
+      seconds--;
+      if (seconds <= 0) {
+        fetchData();
+        seconds = 30;
+      }
+      countdownEl.textContent = seconds;
+    }
+
+    function fetchData() {
+      fetch('/api/instances')
+        .then(r => r.json())
+        .then(data => {
+          try {
+            const s = data.summary;
+            document.getElementById('s_total').textContent = s.total;
+            document.getElementById('s_online').textContent = s.online;
+            document.getElementById('s_stopped').textContent = s.stopped;
+            document.getElementById('s_traffic').innerHTML = s.total_traffic.toFixed(1) + ' <span class="text-sm font-normal">GB</span>';
+            document.getElementById('s_cost').textContent = '¥' + s.total_cost.toFixed(2);
+
+            data.instances.forEach(inst => {
+              const card = document.querySelector(`section[data-id="${inst.id}"]`);
+              if (!card) return;
+              const lc = card.querySelector('[data-field="last_checked"]');
+              if (lc) lc.textContent = '最后检查：' + inst.last_checked;
+            });
+          } catch (e) {
+            console.warn('Auto-refresh render error:', e);
+          }
+        })
+        .catch(() => { });
+
+      fetch('/api/dashboard_probe_overview')
+        .then(r => r.json())
+        .then(data => {
+          const probe = data.probe || {};
+          const dns = data.dns || {};
+          const pTotal = document.getElementById('p_total');
+          const pOnline = document.getElementById('p_online');
+          const pOffline = document.getElementById('p_offline');
+          const dnsTotal = document.getElementById('dns_total_rules');
+          const dnsEnabled = document.getElementById('dns_enabled_rules');
+          if (pTotal) pTotal.textContent = probe.total || 0;
+          if (pOnline) pOnline.textContent = probe.online || 0;
+          if (pOffline) pOffline.textContent = probe.offline || 0;
+          if (dnsTotal) dnsTotal.textContent = dns.total_rules || 0;
+          if (dnsEnabled) dnsEnabled.textContent = dns.enabled_rules || 0;
+
+          const list = document.getElementById('probeMiniList');
+          if (list) {
+            list.innerHTML = '';
+            (probe.servers || []).slice(0, 5).forEach(s => {
+              const row = document.createElement('div');
+              row.className = 'flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 px-2.5 py-1.5';
+              row.innerHTML = `
+                <span class="truncate">${s.name}</span>
+                <span class="${s.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${s.is_online ? '在线' : '离线'}</span>
+              `;
+              list.appendChild(row);
+            });
+          }
+        })
+        .catch(() => { });
+    }
+
+    setInterval(updateCountdown, 1000);
+    fetchData();
+  })();
+
+  // ---- Export CSV with selected instances ----
+  document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+    const checked = document.querySelectorAll('.instance-checkbox:checked');
+    let url = '{{ url_for("main.export_csv") }}';
+    if (checked.length > 0) {
+      const ids = [...checked].map(cb => cb.dataset.instanceId).join(',');
+      url += '?ids=' + ids;
+    }
+    window.location.href = url;
+  });
+
+  (function () {
+    const selectAll = document.getElementById('selectAll');
+    const countBadge = document.getElementById('selectedCount');
+    const batchForm = document.getElementById('batchForm');
+    const idsContainer = document.getElementById('selectedIdsContainer');
+    const checkboxes = () => document.querySelectorAll('.instance-checkbox');
+
+    function updateCount() {
+      const checked = document.querySelectorAll('.instance-checkbox:checked');
+      const n = checked.length;
+      const total = checkboxes().length;
+      if (n > 0) {
+        countBadge.textContent = `已选 ${n}/${total}`;
+        countBadge.classList.remove('hidden');
+      } else {
+        countBadge.classList.add('hidden');
+      }
+      selectAll.checked = n === total && total > 0;
+      selectAll.indeterminate = n > 0 && n < total;
+    }
+
+    if (selectAll) {
+      selectAll.addEventListener('change', () => {
+        checkboxes().forEach(cb => { cb.checked = selectAll.checked; });
+        updateCount();
+      });
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target.classList.contains('instance-checkbox')) updateCount();
+    });
+
+    if (batchForm) {
+      batchForm.addEventListener('submit', () => {
+        idsContainer.innerHTML = '';
+        const checked = document.querySelectorAll('.instance-checkbox:checked');
+        checked.forEach(cb => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'instance_ids';
+          input.value = cb.dataset.instanceId;
+          idsContainer.appendChild(input);
+        });
+      });
+    }
+  })();
+
+</script>
+{% endblock %}

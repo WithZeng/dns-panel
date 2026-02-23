@@ -1,0 +1,50 @@
+﻿{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">国内测试机部署</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">用于部署独立 Ping Checker，避免跨境网络导致误判</p>
+    </div>
+    <a href="{{ url_for('probe.dns_failover_page') }}" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">返回 DNS 管理</a>
+  </div>
+
+  <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-4">
+    <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
+      <div class="text-sm font-semibold text-slate-900 dark:text-white">国内机器一键部署（推荐）</div>
+      <pre class="mt-2 rounded-lg bg-slate-950 text-slate-100 text-xs p-3 overflow-auto whitespace-pre-wrap">{{ install_cmd_cn }}</pre>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
+      <div class="text-sm font-semibold text-slate-900 dark:text-white">国外机器一键部署</div>
+      <pre class="mt-2 rounded-lg bg-slate-950 text-slate-100 text-xs p-3 overflow-auto whitespace-pre-wrap">{{ install_cmd_global }}</pre>
+      <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">兼容命令：<code>{{ install_cmd_legacy }}</code></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl border border-slate-200 dark:border-slate-600 p-4">
+        <div class="text-sm font-semibold mb-2">部署完成后检查</div>
+        <ol class="list-decimal ml-5 text-sm text-slate-600 dark:text-slate-300 space-y-1">
+          <li><code>systemctl status dns-panel-checker --no-pager</code></li>
+          <li><code>{{ verify_cmd }}</code></li>
+          <li><code>journalctl -u dns-panel-checker -f</code></li>
+        </ol>
+      </div>
+      <div class="rounded-xl border border-slate-200 dark:border-slate-600 p-4">
+        <div class="text-sm font-semibold mb-2">网络与安全建议</div>
+        <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+          <li>开放端口：<code>8888/tcp</code></li>
+          <li>建议仅允许面板机 IP 访问</li>
+          <li>UFW 示例：<code>ufw allow from 面板机IP to any port 8888 proto tcp</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200">
+      面板自动故障转移检测模式受环境变量 <code>DNS_FAILOVER_TEST_MODE</code> 控制：
+      <code>panel_local</code>（默认）或 <code>checker</code>。
+    </div>
+  </section>
+</div>
+{% endblock %}

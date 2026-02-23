@@ -1,0 +1,261 @@
+﻿{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">DNS 故障转移管理</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自动检测模式：{{ '国内测试机 IP' if auto_test_mode == 'checker' else '面板机本地 Ping' }}</p>
+    </div>
+    <a href="{{ url_for('probe.checker_deploy_page') }}" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">测试机部署指南</a>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="xl:col-span-2 space-y-5">
+      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">Cloudflare 配置</h2>
+        <form method="POST" action="{{ url_for('probe.save_cloudflare_config') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2">
+            <label class="text-xs text-slate-500 dark:text-slate-400">API Token（留空则不修改）</label>
+            <input name="api_token" type="password" placeholder="示例：CF 令牌（以实际后台生成值为准）" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">用途：用于修改 DNS 记录。建议只给 Zone.DNS.Edit 权限。</p>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">Zone ID</label>
+            <input name="zone_id" value="{{ cfg.zone_id or '' }}" placeholder="示例：84fffdbe84f52b455a4b3596991e1d1c" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Cloudflare 域名概览页右侧可找到 Zone ID。</p>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">默认域名</label>
+            <input name="domain" value="{{ cfg.domain or '' }}" placeholder="示例：test.withzeng.de" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">填完整子域名（不是根域名），用于默认测试目标。</p>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-xs text-slate-500 dark:text-slate-400">国内测试机 IP（checker 模式）</label>
+            <input id="testerIpInput" name="tester_ip" value="{{ cfg.tester_ip or '' }}" placeholder="例如：39.97.40.207" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">该机器需已部署 checker，并确保面板机能访问 <code>http://测试机IP:8888/ping</code>。</p>
+          </div>
+          <div class="sm:col-span-2 rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-3">
+            <div class="text-sm font-semibold text-blue-800 dark:text-blue-200">填写教程（建议按顺序）</div>
+            <ol class="mt-2 list-decimal ml-5 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+              <li>先填 Zone ID 和默认域名，保存一次。</li>
+              <li>点击右上“测试机部署指南”，在国内机执行一键部署命令。</li>
+              <li>部署完成后回到本页填写测试机 IP，再保存。</li>
+              <li>在“一键测试”先用“面板机测试”，再用“国内测试机 IP 测试”做对比。</li>
+            </ol>
+          </div>
+          <div class="sm:col-span-2 flex justify-end">
+            <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">保存配置</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">一键测试</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr_110px_auto] gap-2">
+          <select id="manualTestMode" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+            <option value="panel_local">面板机测试</option>
+            <option value="checker">国内测试机 IP 测试</option>
+          </select>
+          <input id="manualTestHost" value="{{ cfg.domain or '' }}" placeholder="输入目标域名或 IP" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+          <input id="manualTestCount" type="number" min="1" max="10" value="4" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+          <button id="manualTestBtn" class="rounded-lg border border-slate-300 dark:border-slate-500 px-3 py-2 text-sm">立即测试</button>
+        </div>
+        <div id="manualTestResult" class="hidden mt-3 rounded-xl border px-3 py-3 text-sm"></div>
+        <div id="manualTestTerminalWrap" class="hidden mt-3 rounded-xl border border-slate-700 bg-slate-950 text-slate-100">
+          <div id="manualTestTerminalTitle" class="px-3 py-2 text-xs border-b border-slate-800 text-slate-300">测试输出（命令行）</div>
+          <pre id="manualTestTerminal" class="px-3 py-2 text-xs leading-5 max-h-72 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">新增规则</h2>
+        <form method="POST" action="{{ url_for('probe.create_dns_failover_rule') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">域名</label>
+            <input name="domain" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">检查间隔（分钟）</label>
+            <input name="check_interval_minutes" type="number" value="10" min="1" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">主用服务器</label>
+            <select name="primary_server_id" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+              {% for s in servers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 dark:text-slate-400">备用服务器（多选）</label>
+            <select name="backup_server_ids" multiple class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm min-h-[100px]">
+              {% for s in servers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="sm:col-span-2 flex justify-end">
+            <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">创建规则</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">规则列表</h2>
+        <div class="space-y-3">
+          {% for r in rules %}
+          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white">{{ r.domain }}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">主用: {{ r.primary_server.name if r.primary_server else '-' }} · 当前: {{ r.current_active_server.name if r.current_active_server else '-' }}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm js-toggle" data-id="{{ r.id }}">{{ '禁用' if r.enabled else '启用' }}</button>
+                <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm js-manual-switch" data-id="{{ r.id }}" data-domain="{{ r.domain }}">手动切换</button>
+                <form method="POST" action="{{ url_for('probe.delete_dns_failover_rule', rule_id=r.id) }}" onsubmit="return confirm('确认删除该规则？')">
+                  <button type="submit" class="rounded-lg border border-rose-300 text-rose-600 px-3 py-1.5 text-sm">删除</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-sm text-slate-500 dark:text-slate-400">暂无规则</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="space-y-5">
+      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">切换日志</h2>
+        <div class="space-y-2 max-h-[760px] overflow-auto">
+          {% for l in logs %}
+          <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">{{ l.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            <div class="text-sm mt-1">[{{ l.action }}] {{ l.message }}</div>
+          </div>
+          {% else %}
+          <div class="text-sm text-slate-500 dark:text-slate-400">暂无日志</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
+  <div class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-5">
+    <h3 class="text-lg font-semibold">手动切换 DNS</h3>
+    <p id="switchDomain" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
+    <select id="switchTargetSelect" class="w-full mt-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+      {% for s in servers %}
+      <option value="{{ s.id }}">{{ s.name }} ({{ s.ipv4 or s.ipv6 or '无 IP' }})</option>
+      {% endfor %}
+    </select>
+    <div class="flex justify-end gap-2 mt-4">
+      <button id="closeSwitchModal" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">取消</button>
+      <button id="confirmSwitch" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">确认切换</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const manualTestBtn = document.getElementById('manualTestBtn');
+  const manualTestMode = document.getElementById('manualTestMode');
+  const manualTestHost = document.getElementById('manualTestHost');
+  const manualTestCount = document.getElementById('manualTestCount');
+  const manualTestResult = document.getElementById('manualTestResult');
+  const manualTestTerminalWrap = document.getElementById('manualTestTerminalWrap');
+  const manualTestTerminalTitle = document.getElementById('manualTestTerminalTitle');
+  const manualTestTerminal = document.getElementById('manualTestTerminal');
+  const testerIpInput = document.getElementById('testerIpInput');
+
+  function renderResult(ok, text) {
+    manualTestResult.className = `mt-3 rounded-xl border px-3 py-3 text-sm ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300' : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'}`;
+    manualTestResult.textContent = text;
+    manualTestResult.classList.remove('hidden');
+  }
+
+  function renderTerminal(mode, command, output) {
+    manualTestTerminalTitle.textContent = mode === 'checker' ? '测试输出（国内测试机 API）' : '测试输出（面板机命令行）';
+    manualTestTerminal.textContent = `${command ? '$ ' + command + '\n\n' : ''}${output || '(no output)'}`;
+    manualTestTerminalWrap.classList.remove('hidden');
+  }
+
+  manualTestBtn?.addEventListener('click', async () => {
+    const host = (manualTestHost.value || '').trim();
+    const mode = (manualTestMode.value || 'panel_local');
+    const testerIp = (testerIpInput?.value || '').trim();
+    const count = Math.min(10, Math.max(1, Number(manualTestCount.value || 4) || 4));
+    if (!host) {
+      renderResult(false, '请先填写目标域名或 IP');
+      return;
+    }
+    if (mode === 'checker' && !testerIp) {
+      renderResult(false, '已选择国内测试机模式，请先填写测试机 IP');
+      return;
+    }
+    manualTestBtn.disabled = true;
+    manualTestBtn.textContent = '测试中...';
+    try {
+      const res = await fetch('/api/dns/failover/manual-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host, mode, packet_count: count, tester_ip: testerIp })
+      });
+      const data = await res.json();
+      renderTerminal(mode, data.command || '', data.output || '');
+      if (!res.ok || !data.success) {
+        renderResult(false, `测试失败：${data.message || 'unknown_error'}`);
+      } else {
+        renderResult(!!data.reachable, data.reachable ? `测试成功，平均延迟 ${data.avg_ms ?? '-'} ms` : '目标不可达');
+      }
+    } catch (e) {
+      renderResult(false, `请求失败：${e}`);
+    } finally {
+      manualTestBtn.disabled = false;
+      manualTestBtn.textContent = '立即测试';
+    }
+  });
+
+  document.querySelectorAll('.js-toggle').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const res = await fetch(`/dns/failover/rule/${id}/toggle`, { method: 'POST' });
+      if (res.ok) location.reload();
+    });
+  });
+
+  const switchModal = document.getElementById('switchModal');
+  const switchDomain = document.getElementById('switchDomain');
+  const switchTargetSelect = document.getElementById('switchTargetSelect');
+  const closeSwitchModal = document.getElementById('closeSwitchModal');
+  const confirmSwitch = document.getElementById('confirmSwitch');
+  let switchRuleId = null;
+
+  document.querySelectorAll('.js-manual-switch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchRuleId = btn.dataset.id;
+      switchDomain.textContent = `规则域名：${btn.dataset.domain}`;
+      switchModal.classList.remove('hidden');
+      switchModal.classList.add('flex');
+    });
+  });
+
+  closeSwitchModal?.addEventListener('click', () => {
+    switchModal.classList.add('hidden');
+    switchModal.classList.remove('flex');
+  });
+
+  confirmSwitch?.addEventListener('click', async () => {
+    if (!switchRuleId) return;
+    const targetServerId = switchTargetSelect.value;
+    const res = await fetch(`/dns/failover/rule/${switchRuleId}/switch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_server_id: Number(targetServerId) })
+    });
+    if (res.ok) location.reload();
+  });
+})();
+</script>
+{% endblock %}
