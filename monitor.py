@@ -338,9 +338,11 @@ def authorize_sg(client, security_group_id, region_id, ip_protocol, port_range, 
         req.set_protocol_type('https')
         req.add_query_param('SecurityGroupId', security_group_id)
         req.add_query_param('RegionId', region_id)
+        req.add_query_param('NicType', 'intranet')  # VPC 安全组必须为 intranet
         req.add_query_param('IpProtocol', ip_protocol)  # tcp, udp, icmp, all
         req.add_query_param('PortRange', port_range)      # e.g. 80/80, 1/65535, -1/-1
         if ':' in str(source_cidr):
+            # IPv6 规则: 同时设置 Ipv6SourceCidrIp
             req.add_query_param('Ipv6SourceCidrIp', source_cidr)
         else:
             req.add_query_param('SourceCidrIp', source_cidr)
@@ -371,6 +373,7 @@ def revoke_sg(client, security_group_id, region_id, ip_protocol, port_range, sou
         req.set_protocol_type('https')
         req.add_query_param('SecurityGroupId', security_group_id)
         req.add_query_param('RegionId', region_id)
+        req.add_query_param('NicType', 'intranet')
         req.add_query_param('IpProtocol', ip_protocol)
         req.add_query_param('PortRange', port_range)
         if ':' in str(source_cidr):
