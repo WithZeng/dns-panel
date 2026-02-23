@@ -38,7 +38,7 @@ if not os.path.exists(BACKUP_DIR):
 def _load_env():
     """Load .env file if present (simple parser, no external deps required)."""
     env_path = os.path.join(BASE_DIR, '.env')
-    if os.path.exists(env_path):
+    if os.path.isfile(env_path):
         with open(env_path, 'r') as f:
             for line in f:
                 line = line.strip()
@@ -60,7 +60,11 @@ def _get_secret_key():
         return key
     key = secrets.token_hex(32)
     env_path = os.path.join(BASE_DIR, '.env')
-    mode = 'a' if os.path.exists(env_path) else 'w'
+    # If .env is accidentally a directory (Docker bind-mount quirk), remove it
+    if os.path.exists(env_path) and not os.path.isfile(env_path):
+        import shutil
+        shutil.rmtree(env_path, ignore_errors=True)
+    mode = 'a' if os.path.isfile(env_path) else 'w'
     with open(env_path, mode) as f:
         f.write(f"\nSECRET_KEY={key}\n")
     return key

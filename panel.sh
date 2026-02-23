@@ -111,6 +111,11 @@ ensure_compose() {
 }
 
 ensure_env_file() {
+  # If .env is a directory (Docker bind-mount quirk), remove it
+  if [[ -d .env ]]; then
+    warn ".env 是目录而非文件，正在修复..."
+    rm -rf .env
+  fi
   if [[ -f .env ]]; then
     info ".env 已存在，保留现有配置。"
     return
@@ -270,6 +275,9 @@ cmd_update() {
       warn "不是 git 仓库或未安装 git，跳过代码拉取。"
     fi
   fi
+
+  # 确保 .env 文件存在（防止 Docker bind-mount 创建为目录）
+  ensure_env_file
 
   step "第 3 步：重建镜像并重启"
   info "先构建新镜像（旧容器保持运行，避免服务中断）..."
