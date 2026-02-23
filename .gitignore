@@ -24,3 +24,6 @@ Thumbs.db
 
 # Docker
 .docker/
+
+# Third-party / vendored (not part of this project)
+komari-1.1.7/
