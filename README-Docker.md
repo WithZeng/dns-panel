@@ -28,7 +28,36 @@ http://<服务器IP>:5000
 powershell -ExecutionPolicy Bypass -File .\deploy.ps1
 ```
 
-## 3. 常用运维命令
+## 3. 一键更新（升级已有部署）
+
+更新脚本会依次完成：**本地备份数据库 → git pull 拉取最新代码 → 重建镜像 → 重启容器 → 健康检查**。
+
+### Linux
+
+```bash
+chmod +x update.sh
+bash update.sh
+```
+
+可选参数：
+
+| 参数              | 说明                           |
+| ----------------- | ------------------------------ |
+| `--skip-backup`   | 跳过数据库备份步骤             |
+| `--skip-pull`     | 跳过 git pull（仅重建容器）    |
+
+### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\update.ps1
+# 可选：-SkipBackup  -SkipPull
+```
+
+> **数据库备份位置**：`instance/backups/ecs_monitor_before_update_<时间戳>.db`，脚本自动清理 14 天前的旧备份。
+
+---
+
+## 4. 常用运维命令
 
 ```bash
 # 容器状态
@@ -44,7 +73,7 @@ docker compose up -d --build
 docker compose down
 ```
 
-## 4. 端口与防火墙
+## 5. 端口与防火墙
 - 默认端口：`5000`，可在 `.env` 修改 `PANEL_PORT`
 - **部署脚本会自动一键放行防火墙（IPv4 + IPv6）**，无需手动操作：
   - Linux：自动检测并配置 UFW / firewalld / iptables+ip6tables
@@ -56,7 +85,7 @@ docker compose down
 ufw allow 5000/tcp
 ```
 
-## 5. 国内/国外测试机一键部署（可选）
+## 6. 国内/国外测试机一键部署（可选）
 说明：面板默认使用“面板机本地 Ping”。如需独立测试机校验，可部署 checker。
 
 国内机器（推荐）：
@@ -79,7 +108,7 @@ curl -s 'http://127.0.0.1:8888/ping?host=1.1.1.1'
 journalctl -u dns-panel-checker -f
 ```
 
-## 6. 关键环境变量
+## 7. 关键环境变量
 `.env` 中可配置：
 
 - `PANEL_PORT`: 面板对外端口

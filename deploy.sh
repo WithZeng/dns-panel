@@ -200,6 +200,7 @@ show_result() {
   echo "容器状态: docker compose ps"
   echo "查看日志: docker compose logs -f ${SERVICE_NAME}"
   echo "停止服务: docker compose down"
+  echo "一键更新: bash update.sh"
 }
 
 main() {
