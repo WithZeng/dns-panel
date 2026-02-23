@@ -408,7 +408,14 @@ def check_and_manage_instance(instance_id):
         instance.last_api_traffic = current_gb
         instance.current_month_traffic = current_gb
         # For LIFE, total_traffic_sum accumulates across months; for CYCLE it equals current month
-        if instance.traffic_strategy != 'life':
+        if instance.traffic_strategy == 'life':
+            # Accumulate delta (traffic since last check) to all-time total
+            delta = max(current_gb - previous_gb, 0)
+            instance.total_traffic_sum = (instance.total_traffic_sum or 0) + delta
+            # Safety: total must be at least current month's traffic
+            if instance.total_traffic_sum < current_gb:
+                instance.total_traffic_sum = current_gb
+        else:
             instance.total_traffic_sum = current_gb
 
         # Write traffic log
