@@ -208,7 +208,15 @@ cmd_deploy() {
 
   step "第 5 步：构建并启动容器"
   info "首次构建可能较慢..."
-  docker compose up -d --build
+  if ! docker compose build 2>&1; then
+    warn "构建失败，清理 Docker 构建缓存后重试..."
+    docker builder prune -af 2>/dev/null || true
+    if ! docker compose build 2>&1; then
+      docker system prune -af 2>/dev/null || true
+      docker compose build || fail "镜像构建失败，请手动排查。"
+    fi
+  fi
+  docker compose up -d
   ok "容器已启动。"
 
   step "第 6 步：健康检查"
@@ -264,10 +272,26 @@ cmd_update() {
   fi
 
   step "第 3 步：重建镜像并重启"
-  info "停止旧容器..."
-  docker compose down --remove-orphans 2>&1 | tail -5 || true
-  info "重建镜像（--no-cache）..."
-  docker compose build --no-cache
+  info "先构建新镜像（旧容器保持运行，避免服务中断）..."
+
+  # 第一次尝试构建
+  if ! docker compose build --no-cache 2>&1; then
+    warn "构建失败，清理 Docker 构建缓存后重试..."
+    docker builder prune -af 2>/dev/null || true
+    # 第二次尝试
+    if ! docker compose build --no-cache 2>&1; then
+      warn "二次构建仍然失败，尝试完整清理..."
+      docker system prune -af 2>/dev/null || true
+      # 最后一次尝试
+      if ! docker compose build --no-cache 2>&1; then
+        fail "镜像构建失败，旧容器仍在运行，服务未中断。请手动排查后重试。"
+      fi
+    fi
+  fi
+  ok "新镜像构建成功。"
+
+  info "停止旧容器并启动新容器..."
+  docker compose down --remove-orphans 2>&1 | tail -3 || true
   docker compose up -d
   ok "容器已重启。"
 
