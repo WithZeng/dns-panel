@@ -70,10 +70,8 @@ dns-panel/
 │
 ├── Dockerfile              # Docker 镜像定义
 ├── docker-compose.yml      # Docker Compose 编排
-├── deploy.sh               # Linux 一键部署（含防火墙 IPv4+IPv6 自动放行）
-├── deploy.ps1              # Windows 一键部署
-├── update.sh               # Linux 一键更新（备份→拉取→重建→健康检查）
-├── update.ps1              # Windows 一键更新
+├── panel.sh                # Linux 统一管理脚本（deploy/update/restart/stop/…）
+├── panel.ps1               # Windows 统一管理脚本
 ├── README-Docker.md        # Docker 部署详细文档
 ├── .gitignore              # Git 忽略规则
 └── .env                    # 环境变量（不入库）
@@ -95,18 +93,18 @@ dns-panel/
 ```bash
 git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
-chmod +x deploy.sh
-bash deploy.sh
+chmod +x panel.sh
+bash panel.sh deploy
 ```
 
 **Windows：**
 ```powershell
 git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
-powershell -ExecutionPolicy Bypass -File .\deploy.ps1
+.\panel.ps1 deploy
 ```
 
-部署脚本会自动完成：环境检查 → 生成 `.env` → 放行防火墙（IPv4+IPv6）→ 构建容器 → 健康检查。
+脚本自动完成：环境检查 → 生成 `.env` → 放行防火墙（IPv4+IPv6）→ 构建容器 → 健康检查。
 
 ### 默认访问
 
@@ -122,10 +120,10 @@ http://<服务器IP>:5000
 
 ```bash
 # Linux
-bash update.sh
+bash panel.sh update
 
 # Windows
-powershell -ExecutionPolicy Bypass -File .\update.ps1
+.\panel.ps1 update
 ```
 
 流程：备份 DB → `git pull` → `docker compose build --no-cache` → 重启 → 健康检查。
@@ -163,10 +161,12 @@ powershell -ExecutionPolicy Bypass -File .\update.ps1
 ## 常用运维
 
 ```bash
-docker compose ps                   # 容器状态
-docker compose logs -f dns-panel    # 实时日志
-docker compose down                 # 停止服务
-docker compose up -d --build        # 重建并启动
+bash panel.sh status      # 容器状态
+bash panel.sh logs        # 实时日志
+bash panel.sh restart     # 重启容器
+bash panel.sh stop        # 停止服务
+bash panel.sh backup      # 手动备份数据库
+bash panel.sh help        # 查看所有命令
 ```
 
 更多细节请参阅 [README-Docker.md](README-Docker.md)。

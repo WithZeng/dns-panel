@@ -1,20 +1,21 @@
 ﻿# Docker 一键部署说明
 
-## 1. Linux 服务器一键部署（推荐）
-在项目根目录执行：
+> 所有操作统一使用 `panel.sh`（Linux）或 `panel.ps1`（Windows）一个脚本完成。
+
+## 1. Linux 一键部署（推荐）
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+chmod +x panel.sh
+bash panel.sh deploy
 ```
 
-脚本会按中文步骤自动完成：
-1. 检查项目文件完整性
-2. 检查 Docker 和 docker compose
-3. 生成 `.env`（首次）
-4. 检查端口占用与防火墙提示
-5. 构建并启动容器
-6. 访问 `/health` 做健康检查
+## 2. Windows 一键部署
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\panel.ps1 deploy
+```
+
+部署脚本自动完成：检测 Docker → 生成 `.env` → 端口检查 → IPv4/IPv6 防火墙放行 → 构建容器 → 健康检查。
 
 默认访问地址：
 
@@ -22,56 +23,41 @@ chmod +x deploy.sh
 http://<服务器IP>:5000
 ```
 
-## 2. Windows 一键部署
+首次登录凭据见 `instance/initial_admin_credentials.txt`。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy.ps1
-```
-
-## 3. 一键更新（升级已有部署）
-
-更新脚本会依次完成：**本地备份数据库 → git pull 拉取最新代码 → 重建镜像 → 重启容器 → 健康检查**。
-
-### Linux
+## 3. 一键更新
 
 ```bash
-chmod +x update.sh
-bash update.sh
+# Linux
+bash panel.sh update
+
+# Windows
+.\panel.ps1 update
 ```
+
+更新流程：**备份数据库 → git pull → 重建镜像 → 重启容器 → 健康检查**。
 
 可选参数：
 
-| 参数              | 说明                           |
-| ----------------- | ------------------------------ |
-| `--skip-backup`   | 跳过数据库备份步骤             |
-| `--skip-pull`     | 跳过 git pull（仅重建容器）    |
+| Linux              | Windows          | 说明                        |
+| ------------------- | ---------------- | --------------------------- |
+| `--skip-backup`     | `-SkipBackup`    | 跳过数据库备份              |
+| `--skip-pull`       | `-SkipPull`      | 跳过 git pull（仅重新构建） |
 
-### Windows
+> 数据库备份位置：`instance/backups/`，自动清理 14 天前旧备份。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\update.ps1
-# 可选：-SkipBackup  -SkipPull
-```
+## 4. 更多管理命令
 
-> **数据库备份位置**：`instance/backups/ecs_monitor_before_update_<时间戳>.db`，脚本自动清理 14 天前的旧备份。
+| 命令                         | 说明           |
+| ---------------------------- | -------------- |
+| `bash panel.sh status`       | 查看容器状态   |
+| `bash panel.sh logs`         | 实时查看日志   |
+| `bash panel.sh restart`      | 重启容器       |
+| `bash panel.sh stop`         | 停止服务       |
+| `bash panel.sh backup`       | 手动备份数据库 |
+| `bash panel.sh help`         | 查看帮助       |
 
----
-
-## 4. 常用运维命令
-
-```bash
-# 容器状态
-docker compose ps
-
-# 实时日志
-docker compose logs -f dns-panel
-
-# 重建并启动
-docker compose up -d --build
-
-# 停止服务
-docker compose down
-```
+Windows 对应：`.\panel.ps1 status` / `.\panel.ps1 logs` 等。
 
 ## 5. 端口与防火墙
 - 默认端口：`5000`，可在 `.env` 修改 `PANEL_PORT`
