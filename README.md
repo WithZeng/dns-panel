@@ -192,7 +192,50 @@ bash panel.sh logs        # 实时日志
 bash panel.sh restart     # 重启容器
 bash panel.sh stop        # 停止服务
 bash panel.sh backup      # 手动备份数据库
+bash panel.sh restore     # 一键恢复到最新备份
 bash panel.sh help        # 查看所有命令
+```
+
+### 数据备份与恢复
+
+数据库文件位于 `instance/ecs_monitor.db`，每次执行 `update` 命令前会自动备份到 `instance/backups/`。
+
+```bash
+# 手动备份
+bash panel.sh backup
+
+# 一键恢复到最新备份（会先备份当前数据库再恢复）
+bash panel.sh restore
+
+# 指定某个备份恢复
+bash panel.sh restore instance/backups/ecs_monitor_20260223_120000.db
+
+# 查看所有备份
+ls -lh instance/backups/
+```
+
+### 重置管理员密码
+
+```bash
+# 方法 1：查看初始密码（仅首次部署未改密码时有效）
+cat instance/initial_admin_credentials.txt
+
+# 方法 2：进容器重置密码（特殊字符用脚本方式避免 shell 转义问题）
+cat > /tmp/reset_pw.py << 'EOF'
+from app import app, db
+from models import User
+from werkzeug.security import generate_password_hash
+with app.app_context():
+    u = User.query.filter_by(username='admin').first()
+    u.password_hash = generate_password_hash('你的新密码')
+    u.force_password_change = False
+    db.session.commit()
+    print('密码已重置')
+EOF
+docker cp /tmp/reset_pw.py dns-panel:/app/reset_pw.py
+docker exec dns-panel python /app/reset_pw.py
+docker exec dns-panel rm /app/reset_pw.py
+rm /tmp/reset_pw.py
 ```
 
 更多细节请参阅 [README-Docker.md](README-Docker.md)。

@@ -10,6 +10,7 @@
 #   bash panel.sh status              查看容器状态
 #   bash panel.sh logs                查看实时日志
 #   bash panel.sh backup              手动备份数据库
+#   bash panel.sh restore [file]       从备份恢复数据库（默认最新备份）
 #   bash panel.sh help                帮助信息
 # =============================================================================
 set -euo pipefail
@@ -341,6 +342,37 @@ cmd_backup() {
   backup_db
 }
 
+cmd_restore() {
+  local target="$1"
+  local db_path="instance/ecs_monitor.db"
+
+  # 如果没指定文件，自动找最新备份
+  if [[ -z "$target" ]]; then
+    target="$(ls -t "${BACKUP_DIR}"/ecs_monitor_*.db 2>/dev/null | head -n1 || true)"
+    [[ -n "$target" ]] || fail "没有找到任何备份文件。备份目录: ${BACKUP_DIR}"
+    info "自动选择最新备份: ${target}"
+  fi
+
+  [[ -f "$target" ]] || fail "备份文件不存在: ${target}"
+
+  # 恢复前先备份当前数据库（如果有的话）
+  if [[ -f "$db_path" ]]; then
+    local ts
+    ts="$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    cp "$db_path" "${BACKUP_DIR}/ecs_monitor_pre_restore_${ts}.db"
+    info "已备份当前数据库 → ${BACKUP_DIR}/ecs_monitor_pre_restore_${ts}.db"
+  fi
+
+  cp "$target" "$db_path"
+  ok "数据库已从备份恢复: ${target}"
+
+  # 重启容器使新数据生效
+  info "重启容器使数据生效..."
+  docker compose restart "$SERVICE_NAME" 2>&1 | tail -3 || true
+  ok "恢复完成，服务已重启。"
+}
+
 cmd_help() {
   cat <<'HELP'
 dns-panel 管理脚本
@@ -357,12 +389,15 @@ dns-panel 管理脚本
   status                查看容器状态
   logs                  实时查看日志
   backup                手动备份数据库
+  restore [文件路径]    从备份恢复数据库（不指定则使用最新备份）
   help                  显示此帮助信息
 
 示例：
   bash panel.sh deploy
   bash panel.sh update
   bash panel.sh update --skip-backup
+  bash panel.sh restore
+  bash panel.sh restore instance/backups/ecs_monitor_20260223_120000.db
   bash panel.sh logs
 HELP
 }
@@ -380,6 +415,7 @@ case "$ACTION" in
   status)   cmd_status ;;
   logs)     cmd_logs ;;
   backup)   cmd_backup ;;
+  restore)  cmd_restore "${1:-}" ;;
   help|-h|--help) cmd_help ;;
   *)
     warn "未知命令: $ACTION"
