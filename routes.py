@@ -51,39 +51,28 @@ def log_operation(action, detail='', instance_id=None):
 def _compute_instance_stats(inst):
     """Compute traffic stats for an instance.
     Returns a dict with:
-      monthly_used, monthly_limit, monthly_remain, monthly_percent  (all strategies)
-      life_used, life_limit, life_remain, life_percent              (LIFE only, 0 for CYCLE)
-      percent  (overall: max of monthly & life)
+      monthly_used, monthly_limit, monthly_remain, monthly_percent  (CYCLE only)
+      life_used, life_limit, life_remain, life_percent              (LIFE only)
+      percent  (overall)
       cost
     """
     monthly_used = inst.current_month_traffic or 0
-    # LIFE: monthly quota is stored in monthly_free_allowance
-    # CYCLE: monthly quota is stored in monthly_limit
-    if inst.traffic_strategy == 'life':
-        monthly_limit = inst.monthly_free_allowance or 0
-    else:
-        monthly_limit = inst.monthly_limit or 0
-    monthly_remain = max(monthly_limit - monthly_used, 0) if monthly_limit > 0 else 0
-    monthly_pct = min((monthly_used / monthly_limit) * 100, 100) if monthly_limit > 0 else 0
 
     if inst.traffic_strategy == 'life':
-        # Monthly quota is consumed first; only excess counts against lifetime
-        start = inst.real_creation_time or inst.created_at
-        now = inst.last_checked or inst.created_at
-        running_days = max((now - start).days, 0) if start and now else 0
-        running_months = (running_days // 30) + 1
-        accumulated_monthly = running_months * monthly_limit
-
-        total_traffic = inst.total_traffic_sum or 0
-        life_consumed = max(total_traffic - accumulated_monthly, 0)
+        # LIFE: total_traffic_sum is compared directly against life_total_limit
+        life_consumed = inst.total_traffic_sum or 0
         life_limit = inst.life_total_limit or 0
         life_remain = max(life_limit - life_consumed, 0) if life_limit > 0 else 0
-        life_pct = min((life_consumed / life_limit) * 100, 100) if life_limit > 0 else 0
+        life_pct = (life_consumed / life_limit) * 100 if life_limit > 0 else 0
+        monthly_limit = monthly_remain = monthly_pct = 0
+        percent = life_pct
     else:
+        # CYCLE: monthly quota
+        monthly_limit = inst.monthly_limit or 0
+        monthly_remain = max(monthly_limit - monthly_used, 0) if monthly_limit > 0 else 0
+        monthly_pct = (monthly_used / monthly_limit) * 100 if monthly_limit > 0 else 0
         life_consumed = life_limit = life_remain = life_pct = 0
-
-    # Overall percent = whichever pool is more full (for alerts)
-    percent = max(monthly_pct, life_pct)
+        percent = monthly_pct
 
     # Cost estimation
     price = inst.hourly_price or 0
@@ -348,7 +337,7 @@ def add_instance():
         traffic_strategy = request.form.get('traffic_strategy', 'cycle')
         monthly_limit = float(request.form.get('monthly_limit') or 0)
         life_total_limit = float(request.form.get('life_total_limit') or 0)
-        monthly_free_allowance = float(request.form.get('monthly_free_allowance') or 200.0)
+        monthly_free_allowance = float(request.form.get('monthly_free_allowance') or 0)
 
         auto_stop_enabled = 'auto_stop_enabled' in request.form
         auto_start_enabled = 'auto_start_enabled' in request.form
@@ -993,8 +982,8 @@ def api_region_traffic():
         stats = _compute_instance_stats(inst)
         if region not in region_data:
             region_data[region] = {'used': 0, 'limit': 0, 'cost': 0, 'count': 0}
-        region_data[region]['used'] += stats['monthly_used']
-        region_data[region]['limit'] += stats['monthly_limit']
+        region_data[region]['used'] += stats['life_used'] if inst.traffic_strategy == 'life' else stats['monthly_used']
+        region_data[region]['limit'] += stats['life_limit'] if inst.traffic_strategy == 'life' else stats['monthly_limit']
         region_data[region]['cost'] += stats['cost']
         region_data[region]['count'] += 1
 

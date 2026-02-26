@@ -63,35 +63,28 @@
     <!-- Stats Row -->
     {% set strategy = instance.traffic_strategy %}
     {% set m_used = instance.current_month_traffic or 0 %}
-    {% if strategy == 'life' %}
-    {% set m_limit = instance.monthly_free_allowance or 0 %}
-    {% else %}
-    {% set m_limit = instance.monthly_limit or 0 %}
-    {% endif %}
-    {% set m_remain = (m_limit - m_used) if m_limit > 0 else 0 %}
-    {% set m_remain = m_remain if m_remain > 0 else 0 %}
-    {% set m_pct = ((m_used / m_limit) * 100) if m_limit > 0 else 0 %}
-    {% set m_pct = 100 if m_pct > 100 else m_pct %}
 
     {% if strategy == 'life' %}
-    {% set start = instance.real_creation_time if instance.real_creation_time else instance.created_at %}
-    {% set now = instance.last_checked if instance.last_checked else instance.created_at %}
-    {% set running_days = ((now - start).days) if start and now else 0 %}
-    {% set running_days = running_days if running_days > 0 else 0 %}
-    {% set running_months = (running_days // 30) + 1 %}
-    {% set accumulated_monthly = running_months * m_limit %}
-    {% set total_traffic = instance.total_traffic_sum or 0 %}
-    {% set l_consumed = total_traffic - accumulated_monthly %}
-    {% set l_consumed = l_consumed if l_consumed > 0 else 0 %}
+    {# LIFE: total_traffic_sum vs life_total_limit, no monthly quota concept #}
+    {% set l_consumed = instance.total_traffic_sum or 0 %}
     {% set l_limit = instance.life_total_limit or 0 %}
     {% set l_remain = (l_limit - l_consumed) if l_limit > 0 else 0 %}
     {% set l_remain = l_remain if l_remain > 0 else 0 %}
     {% set l_pct = ((l_consumed / l_limit) * 100) if l_limit > 0 else 0 %}
-    {% set l_pct = 100 if l_pct > 100 else l_pct %}
+    {% set m_limit = 0 %}
+    {% set m_remain = 0 %}
+    {% set m_pct = 0 %}
+    {% else %}
+    {# CYCLE: monthly quota #}
+    {% set m_limit = instance.monthly_limit or 0 %}
+    {% set m_remain = (m_limit - m_used) if m_limit > 0 else 0 %}
+    {% set m_remain = m_remain if m_remain > 0 else 0 %}
+    {% set m_pct = ((m_used / m_limit) * 100) if m_limit > 0 else 0 %}
     {% endif %}
 
     <div class="mt-6 space-y-4">
-        {# Monthly #}
+        {# Monthly (CYCLE only) #}
+        {% if strategy != 'life' %}
         <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-slate-700 dark:text-slate-300">📅 月度流量</span>
@@ -101,7 +94,7 @@
             </div>
             <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
                 <div class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if m_pct >= 90 else 'bg-gradient-to-r from-blue-500 to-indigo-600' }}"
-                    style="width: {{ m_pct }}%;"></div>
+                    style="width: {{ [m_pct, 100]|min }}%;"></div>
             </div>
             <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
                 <div>
@@ -120,6 +113,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {# Life (LIFE only) #}
         {% if strategy == 'life' %}
@@ -132,7 +126,7 @@
             </div>
             <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
                 <div class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if l_pct >= 90 else 'bg-gradient-to-r from-emerald-500 to-teal-600' }}"
-                    style="width: {{ l_pct }}%;"></div>
+                    style="width: {{ [l_pct, 100]|min }}%;"></div>
             </div>
             <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
                 <div>
@@ -149,6 +143,9 @@
                         class="font-semibold {{ 'text-red-600 dark:text-red-400' if l_remain <= 0 else 'text-slate-900 dark:text-white' }}">
                         {{ '%.2f'|format(l_remain) }} GB</div>
                 </div>
+            </div>
+            <div class="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                本月流量：{{ '%.2f'|format(m_used) }} GB
             </div>
         </div>
         {% endif %}

@@ -253,8 +253,12 @@ def daily_report():
             lines.append("-" * 20)
 
             for inst in instances:
-                limit = inst.monthly_limit or inst.life_total_limit or 0
-                used = inst.current_month_traffic or 0
+                if inst.traffic_strategy == 'life':
+                    limit = inst.life_total_limit or 0
+                    used = inst.total_traffic_sum or 0
+                else:
+                    limit = inst.monthly_limit or 0
+                    used = inst.current_month_traffic or 0
                 pct = (used / limit * 100) if limit > 0 else 0
                 status_emoji = "🟢" if inst.status in ('Running', 'Starting') else "🔴"
                 lines.append(f"{status_emoji} {inst.name}: {used:.2f}/{limit:.0f} GB ({pct:.0f}%)")

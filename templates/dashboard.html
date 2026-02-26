@@ -184,34 +184,27 @@
       {% set strategy = instance.traffic_strategy %}
       {% set is_online = instance.status in ['Running', 'Starting'] %}
 
-      {# ── Monthly stats (all strategies) ── #}
+      {# ── Monthly stats (CYCLE only) ── #}
+      {% if strategy != 'life' %}
       {% set m_used = instance.current_month_traffic or 0 %}
-      {% if strategy == 'life' %}
-      {% set m_limit = instance.monthly_free_allowance or 0 %}
-      {% else %}
       {% set m_limit = instance.monthly_limit or 0 %}
-      {% endif %}
       {% set m_remain = (m_limit - m_used) if m_limit > 0 else 0 %}
       {% set m_remain = m_remain if m_remain > 0 else 0 %}
       {% set m_pct = ((m_used / m_limit) * 100) if m_limit > 0 else 0 %}
-      {% set m_pct = 100 if m_pct > 100 else m_pct %}
+      {% else %}
+      {% set m_used = 0 %}
+      {% set m_limit = 0 %}
+      {% set m_remain = 0 %}
+      {% set m_pct = 0 %}
+      {% endif %}
 
-      {# ── Life stats (LIFE only): monthly quota consumed first ── #}
+      {# ── Life stats (LIFE only): total_traffic_sum vs life_total_limit ── #}
       {% if strategy == 'life' %}
-      {% set start = instance.real_creation_time if instance.real_creation_time else instance.created_at %}
-      {% set now = instance.last_checked if instance.last_checked else instance.created_at %}
-      {% set running_days = ((now - start).days) if start and now else 0 %}
-      {% set running_days = running_days if running_days > 0 else 0 %}
-      {% set running_months = (running_days // 30) + 1 %}
-      {% set accumulated_monthly = running_months * m_limit %}
-      {% set total_traffic = instance.total_traffic_sum or 0 %}
-      {% set l_consumed = total_traffic - accumulated_monthly %}
-      {% set l_consumed = l_consumed if l_consumed > 0 else 0 %}
+      {% set l_consumed = instance.total_traffic_sum or 0 %}
       {% set l_limit = instance.life_total_limit or 0 %}
       {% set l_remain = (l_limit - l_consumed) if l_limit > 0 else 0 %}
       {% set l_remain = l_remain if l_remain > 0 else 0 %}
       {% set l_pct = ((l_consumed / l_limit) * 100) if l_limit > 0 else 0 %}
-      {% set l_pct = 100 if l_pct > 100 else l_pct %}
       {% else %}
       {% set l_consumed = 0 %}
       {% set l_limit = 0 %}
@@ -220,7 +213,7 @@
       {% endif %}
 
       {# ── Overall percent (for color/alert) ── #}
-      {% set percent = l_pct if l_pct > m_pct else m_pct %}
+      {% set percent = l_pct if strategy == 'life' else m_pct %}
 
       <section
         class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-md transition p-5"
@@ -257,7 +250,8 @@
           {% endif %}
         </div>
 
-        {# ── Monthly progress ── #}
+        {# ── Monthly progress (CYCLE only) ── #}
+        {% if strategy != 'life' %}
         <div class="mt-4">
           <div class="flex items-center justify-between text-sm mb-1">
             <span class="text-slate-600 dark:text-slate-400">📅 月度流量</span>
@@ -266,17 +260,18 @@
           <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if m_pct >= 90 else 'bg-gradient-to-r from-blue-500 to-indigo-600' }}"
-              style="width: {{ m_pct }}%;"></div>
+              style="width: {{ [m_pct, 100]|min }}%;"></div>
           </div>
           <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
             <span>已用 {{ '%.2f'|format(m_used) }} GB</span>
             <span>配额 {{ '%.2f'|format(m_limit) }} GB</span>
           </div>
         </div>
+        {% endif %}
 
         {# ── Life progress (LIFE only) ── #}
         {% if strategy == 'life' %}
-        <div class="mt-3">
+        <div class="mt-4">
           <div class="flex items-center justify-between text-sm mb-1">
             <span class="text-slate-600 dark:text-slate-400">♾️ 生命周期</span>
             <span class="font-semibold text-slate-900 dark:text-white">{{ '%.1f'|format(l_pct) }}%</span>
@@ -284,11 +279,14 @@
           <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-500 {{ 'bg-gradient-to-r from-red-500 to-red-600' if l_pct >= 90 else 'bg-gradient-to-r from-emerald-500 to-teal-600' }}"
-              style="width: {{ l_pct }}%;"></div>
+              style="width: {{ [l_pct, 100]|min }}%;"></div>
           </div>
           <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
             <span>已用 {{ '%.2f'|format(l_consumed) }} GB</span>
             <span>配额 {{ '%.2f'|format(l_limit) }} GB</span>
+          </div>
+          <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            本月流量：{{ '%.2f'|format(instance.current_month_traffic or 0) }} GB
           </div>
         </div>
         {% endif %}

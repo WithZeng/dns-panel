@@ -431,9 +431,8 @@ def check_and_manage_instance(instance_id):
 
         # Determine the appropriate threshold per strategy
         if instance.traffic_strategy == 'life':
-            monthly_quota = instance.monthly_free_allowance or 0
             life_limit = instance.life_total_limit or 0
-            logger.info(f"Status: {current_status} | Traffic: {current_gb:.2f} GB | Monthly quota: {monthly_quota} GB | Life limit: {life_limit} GB")
+            logger.info(f"Status: {current_status} | Traffic: {current_gb:.2f} GB | Total: {instance.total_traffic_sum or 0:.2f} GB | Life limit: {life_limit} GB")
         else:
             monthly_quota = instance.monthly_limit or 0
             logger.info(f"Status: {current_status} | Traffic: {current_gb:.2f} GB / Monthly limit: {monthly_quota} GB")
@@ -462,14 +461,8 @@ def check_and_manage_instance(instance_id):
                         if success:
                             instance.status = 'Stopping'
             elif instance.traffic_strategy == 'life' and life_limit > 0:
-                # For LIFE: compute how much lifetime pool has been consumed
-                start = instance.real_creation_time or instance.created_at
-                now = instance.last_checked or instance.created_at
-                running_days = max((now - start).days, 0) if start and now else 0
-                running_months = (running_days // 30) + 1
-                accumulated_monthly = running_months * monthly_quota
-                total_traffic = instance.total_traffic_sum or 0
-                life_consumed = max(total_traffic - accumulated_monthly, 0)
+                # For LIFE: total_traffic_sum is compared directly against life_total_limit
+                life_consumed = instance.total_traffic_sum or 0
                 if life_consumed >= life_limit:
                     if current_status == 'Running' or probe_online:
                         logger.warning(f"LIFE quota exhausted (consumed {life_consumed:.2f} >= {life_limit}), try stop.")
@@ -481,14 +474,8 @@ def check_and_manage_instance(instance_id):
         try:
             if instance.traffic_strategy == 'life':
                 limit = life_limit
-                # Use life_consumed for alert percentage
-                start = instance.real_creation_time or instance.created_at
-                now = instance.last_checked or instance.created_at
-                running_days = max((now - start).days, 0) if start and now else 0
-                running_months = (running_days // 30) + 1
-                accumulated_monthly = running_months * monthly_quota
-                total_traffic = instance.total_traffic_sum or 0
-                alert_traffic = max(total_traffic - accumulated_monthly, 0)
+                # LIFE: total_traffic_sum directly compared against life_total_limit
+                alert_traffic = instance.total_traffic_sum or 0
             else:
                 limit = monthly_quota
                 alert_traffic = current_gb

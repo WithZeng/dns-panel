@@ -147,13 +147,6 @@
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
       </div>
 
-      <div>
-        <label for="monthly_free_allowance" class="block text-sm font-medium text-slate-600 mb-1.5">每月流量配额 (GB)</label>
-        <input id="monthly_free_allowance" name="monthly_free_allowance" type="number" min="0" step="0.01"
-          value="{{ instance.monthly_free_allowance or '' }}"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-      </div>
-
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
         <label class="inline-flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" name="auto_stop_enabled"
