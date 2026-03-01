@@ -762,12 +762,12 @@ def discover_instances():
                 })
 
             if not discovered:
-                flash(f'鍦?{region_id} 鍖哄煙鏈彂鐜?ECS 瀹炰緥', 'warning')
+                flash(f'在 {region_id} 区域未发现 ECS 实例', 'warning')
             else:
                 flash(f'发现 {len(discovered)} 个实例', 'success')
 
         except Exception as e:
-            flash(f'鎵弿澶辫触: {str(e)}', 'danger')
+            flash(f'扫描失败: {str(e)}', 'danger')
 
     return render_template('discover.html', discovered=discovered)
 
@@ -779,18 +779,23 @@ def discover_instances():
 def download_backup():
     db_path = os.path.join(current_app.instance_path, 'ecs_monitor.db')
     if not os.path.exists(db_path):
-        flash('鏁版嵁搴撴枃浠朵笉瀛樺湪', 'danger')
+        flash('数据库文件不存在', 'danger')
         return redirect(url_for('main.dashboard'))
 
     try:
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             zf.write(db_path, arcname='ecs_monitor.db')
+
+            # Include encryption key file when present, so AK/SK remains decryptable after restore.
+            encrypt_key_path = os.path.join(current_app.instance_path, 'encrypt.key')
+            if os.path.isfile(encrypt_key_path):
+                zf.write(encrypt_key_path, arcname='encrypt.key')
         memory_file.seek(0)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         return send_file(memory_file, download_name=f"backup_{timestamp}.zip", as_attachment=True)
     except Exception as e:
-        flash(f'澶囦唤澶辫触: {str(e)}', 'danger')
+        flash(f'备份失败: {str(e)}', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -811,17 +816,31 @@ def export_csv():
     # Headers match import_csv field expectations
     writer.writerow([
         'name', 'instance_id', 'region_id', 'access_key_id', 'access_key_secret',
+        'ak_format', 'is_encrypted',
         'tag', 'notes', 'traffic_strategy', 'monthly_limit', 'life_total_limit',
         'monthly_free_allowance', 'hourly_price', 'alert_threshold_pct',
         'auto_stop_enabled', 'auto_start_enabled', 'total_traffic_sum', 'current_month_traffic'
     ])
     for inst in instances:
+        exported_ak = inst.decrypted_ak
+        exported_sk = inst.decrypted_sk
+        ak_format = 'plaintext'
+
+        # If key mismatch prevents decrypt, keep raw ciphertext + marker for lossless migration.
+        if inst.is_encrypted and (not exported_ak or not exported_sk):
+            exported_ak = inst.access_key_id or ''
+            exported_sk = inst.access_key_secret or ''
+            if exported_ak.startswith('gAAAA') and exported_sk.startswith('gAAAA'):
+                ak_format = 'fernet_encrypted'
+
         writer.writerow([
             inst.name,
             inst.instance_id,
             inst.region_id,
-            inst.decrypted_ak,
-            inst.decrypted_sk,
+            exported_ak,
+            exported_sk,
+            ak_format,
+            bool(inst.is_encrypted),
             inst.tag or '',
             inst.notes or '',
             inst.traffic_strategy,
@@ -957,8 +976,19 @@ def import_csv():
                 if (ak and not sk) or (sk and not ak):
                     skipped += 1
                     continue
+                ak_format = (row.get('ak_format', '') or '').strip().lower()
+                is_enc = str(row.get('is_encrypted', '')).strip().lower() in ('true', '1', 'yes')
+
                 if ak and sk:
-                    new_inst.set_ak_sk(ak, sk)
+                    if ak_format == 'fernet_encrypted' and ak.startswith('gAAAA') and sk.startswith('gAAAA'):
+                        # Keep ciphertext as-is for cross-environment restore (requires matching encrypt.key).
+                        new_inst.access_key_id = ak
+                        new_inst.access_key_secret = sk
+                        new_inst.is_encrypted = True
+                    else:
+                        new_inst.set_ak_sk(ak, sk)
+                        if is_enc and not new_inst.is_encrypted:
+                            new_inst.is_encrypted = True
                 else:
                     new_inst.access_key_id = ''
                     new_inst.access_key_secret = ''
