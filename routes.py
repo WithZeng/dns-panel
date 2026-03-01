@@ -430,7 +430,7 @@ def edit_instance(id):
 def delete_instance_local(id):
     instance = EcsInstance.query.get_or_404(id)
     name = instance.name
-    log_operation('delete', f'鍒犻櫎鏈湴瀹炰緥 {name}', instance_id=id)
+    log_operation('delete', f'删除本地实例 {name}', instance_id=id)
     db.session.delete(instance)
     db.session.commit()
     flash('本地记录已删除', 'info')
@@ -443,7 +443,7 @@ def delete_instance_local(id):
 @login_required
 def check_instance(id):
     check_and_manage_instance(id)
-    log_operation('check', f'鎵嬪姩妫€鏌ュ疄渚?ID {id}', instance_id=id)
+    log_operation('check', f'手动检查实例 ID {id}', instance_id=id)
     db.session.commit()
     flash(f'实例 {id} 检查完成', 'success')
     return redirect(url_for('main.dashboard'))
@@ -472,12 +472,12 @@ def stop_instance(id):
             instance.status = 'Stopping'
             flash('停机指令已发送', 'success')
         else:
-            flash(f'鍋滄満澶辫触: {msg}', 'danger')
+            flash(f'停机失败: {msg}', 'danger')
         log_operation('stop', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'鍋滄満澶辫触: {str(e)}', 'danger')
+        flash(f'停机失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -492,12 +492,12 @@ def start_instance(id):
             instance.status = 'Starting'
             flash('开机指令已发送', 'success')
         else:
-            flash(f'寮€鏈哄け璐? {msg}', 'danger')
+            flash(f'开机失败: {msg}', 'danger')
         log_operation('start', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'寮€鏈哄け璐? {str(e)}', 'danger')
+        flash(f'开机失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -546,10 +546,10 @@ def enable_ipv6(id):
         success, msg, _ = ecs_enable_ipv6(client, instance)
         log_operation('enable_ipv6', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
-        flash(msg if success else f'寮€鍚?IPv6 澶辫触: {msg}', 'success' if success else 'danger')
+        flash(msg if success else f'开启 IPv6 失败: {msg}', 'success' if success else 'danger')
     except Exception as e:
         db.session.rollback()
-        flash(f'寮€鍚?IPv6 澶辫触: {str(e)}', 'danger')
+        flash(f'开启 IPv6 失败: {str(e)}', 'danger')
     return redirect(url_for('main.instance_detail', id=id))
 
 
@@ -1101,7 +1101,7 @@ def update_notes(id):
     instance = EcsInstance.query.get_or_404(id)
     data = request.get_json(silent=True) or {}
     instance.notes = data.get('notes', '').strip()
-    log_operation('notes', f'鏇存柊澶囨敞 {instance.name}', instance_id=id)
+    log_operation('notes', f'更新备注 {instance.name}', instance_id=id)
     db.session.commit()
     return jsonify({'success': True, 'notes': instance.notes})
 
@@ -1145,10 +1145,10 @@ def instance_schedules(id):
             enabled=True,
         )
         db.session.add(task)
-        log_operation('schedule', f'娣诲姞瀹氭椂{"鍚姩" if action=="start" else "鍋滄"} '
+        log_operation('schedule', f'添加定时{"启动" if action=="start" else "停止"} '
                       f'{instance.name} {hour:02d}:{minute:02d} days={days}', instance_id=id)
         db.session.commit()
-        flash(f'宸叉坊鍔犲畾鏃朵换鍔? {hour:02d}:{minute:02d} {"鍚姩" if action=="start" else "鍋滄"}', 'success')
+        flash(f'已添加定时任务: {hour:02d}:{minute:02d} {"启动" if action=="start" else "停止"}', 'success')
         return redirect(url_for('main.instance_schedules', id=id))
 
     schedules = ScheduleTask.query.filter_by(instance_id=id).order_by(ScheduleTask.created_at.desc()).all()
@@ -1189,7 +1189,7 @@ def security_group(id):
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
 
     if not sg_ids:
-        flash(f'鏈壘鍒拌瀹炰緥鐨勫畨鍏ㄧ粍: {sg_err}' if sg_err else '鏈壘鍒拌瀹炰緥鐨勫畨鍏ㄧ粍', 'warning')
+        flash(f'未找到该实例的安全组: {sg_err}' if sg_err else '未找到该实例的安全组', 'warning')
         return redirect(url_for('main.instance_detail', id=id))
 
     sg_id = sg_ids[0]  # Use first security group
@@ -1219,16 +1219,16 @@ def security_group(id):
                 ok2, msg2 = authorize_sg(client, sg_id, instance.region_id, 'udp', port_range, source_cidr, description=desc)
                 if ok1 and ok2:
                     flash(f'已开放 TCP+UDP {port_range}', 'success')
-                    log_operation('sg_add', f'寮€鏀剧鍙?TCP+UDP {port_range} from {source_cidr}', instance_id=id)
+                    log_operation('sg_add', f'开放端口 TCP+UDP {port_range} from {source_cidr}', instance_id=id)
                 else:
                     flash(f'閮ㄥ垎澶辫触: TCP={msg1}, UDP={msg2}', 'warning')
             else:
                 ok, msg = authorize_sg(client, sg_id, instance.region_id, protocol, port_range, source_cidr, description=desc)
                 if ok:
                     flash(f'已开放 {protocol.upper()} {port_range}', 'success')
-                    log_operation('sg_add', f'寮€鏀剧鍙?{protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
+                    log_operation('sg_add', f'开放端口 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
                 else:
-                    flash(f'娣诲姞澶辫触: {msg}', 'danger')
+                    flash(f'添加失败: {msg}', 'danger')
 
         elif action == 'open_all':
             # Open all ports for IPv4 + IPv6, both TCP + UDP.
@@ -1267,7 +1267,7 @@ def sg_delete_rule(id):
     client = get_client(instance)
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
     if not sg_ids:
-        flash(f'鏈壘鍒板畨鍏ㄧ粍: {sg_err}' if sg_err else '鏈壘鍒板畨鍏ㄧ粍', 'warning')
+        flash(f'未找到安全组: {sg_err}' if sg_err else '未找到安全组', 'warning')
         return redirect(url_for('main.instance_detail', id=id))
 
     sg_id = sg_ids[0]
@@ -1279,9 +1279,9 @@ def sg_delete_rule(id):
     ok, msg = revoke_sg(client, sg_id, instance.region_id, protocol, port_range, source_cidr, policy)
     if ok:
         flash(f'已删除规则 {protocol.upper()} {port_range}', 'success')
-        log_operation('sg_delete', f'鍒犻櫎瑙勫垯 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
+        log_operation('sg_delete', f'删除规则 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
     else:
-        flash(f'鍒犻櫎澶辫触: {msg}', 'danger')
+        flash(f'删除失败: {msg}', 'danger')
 
     return redirect(url_for('main.security_group', id=id))
 
