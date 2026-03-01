@@ -371,13 +371,13 @@ def add_instance():
 
         try:
             db.session.add(new_instance)
-            log_operation('add', f'娣诲姞瀹炰緥 {name} ({instance_id})')
+            log_operation('add', f'添加实例 {name} ({instance_id})')
             db.session.commit()
-            flash('瀹炰緥娣诲姞鎴愬姛', 'success')
+            flash('实例添加成功', 'success')
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f'娣诲姞澶辫触: {str(e)}', 'danger')
+            flash(f'添加失败: {str(e)}', 'danger')
             return render_template('add_instance.html', instance=None, prefill={})
 
     # If coming from discover page, pre-fill AK/SK from session
@@ -401,7 +401,7 @@ def edit_instance(id):
         instance.instance_id = request.form.get('instance_id')
         instance.tag = request.form.get('tag', '').strip()
         instance.notes = request.form.get('notes', '').strip()
-        instance.traffic_strategy = request.form.get('traffic_strategy', 'monthly')
+        instance.traffic_strategy = request.form.get('traffic_strategy', 'cycle')
         instance.monthly_limit = float(request.form.get('monthly_limit') or 0)
         instance.life_total_limit = float(request.form.get('life_total_limit') or 0)
         instance.hourly_price = float(request.form.get('hourly_price') or 0)
@@ -410,11 +410,16 @@ def edit_instance(id):
         instance.auto_start_enabled = 'auto_start_enabled' in request.form
         instance.monitoring_enabled = 'monitoring_enabled' in request.form
 
-        instance.set_ak_sk(new_ak, new_sk)
+        # Only overwrite AK/SK when both fields are provided.
+        if (new_ak and not new_sk) or (new_sk and not new_ak):
+            flash('请同时填写 Access Key ID 和 Access Key Secret，或保持两项都为空以保留原密钥', 'warning')
+            return render_template('edit_instance.html', instance=instance)
+        if new_ak and new_sk:
+            instance.set_ak_sk(new_ak, new_sk)
 
-        log_operation('edit', f'缂栬緫瀹炰緥 {instance.name}', instance_id=instance.id)
+        log_operation('edit', f'编辑实例 {instance.name}', instance_id=instance.id)
         db.session.commit()
-        flash('瀹炰緥鏇存柊鎴愬姛', 'success')
+        flash('实例更新成功', 'success')
         return redirect(url_for('main.dashboard'))
 
     return render_template('edit_instance.html', instance=instance)
@@ -949,6 +954,9 @@ def import_csv():
                 )
                 ak = row.get('access_key_id', '').strip()
                 sk = row.get('access_key_secret', '').strip()
+                if (ak and not sk) or (sk and not ak):
+                    skipped += 1
+                    continue
                 if ak and sk:
                     new_inst.set_ak_sk(ak, sk)
                 else:
@@ -964,7 +972,7 @@ def import_csv():
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f'瀵煎叆澶辫触: {str(e)}', 'danger')
+            flash(f'导入失败: {str(e)}', 'danger')
 
     return render_template('import_csv.html')
 

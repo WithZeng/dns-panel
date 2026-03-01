@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 import datetime
 from aliyunsdkcore.client import AcsClient
@@ -272,7 +272,7 @@ def get_total_traffic_gb(client, region_id):
 
     try:
         response = client.do_action_with_exception(request)
-        response_json = json.loads(response.decode('utf-8'))
+        response_json = json.loads(response.decode('utf-8') if isinstance(response, (bytes, bytearray)) else response)
         total_bytes = 0
         for detail in response_json.get('TrafficDetails', []):
             if detail.get('BusinessRegionId') == region_id:
@@ -280,7 +280,7 @@ def get_total_traffic_gb(client, region_id):
         return total_bytes / (1024 ** 3)
     except Exception as e:
         logger.error(f"Failed to fetch CDT traffic: {e}")
-        return 0.0
+        return None
 
 
 def get_region_traffic(client, region_id):
@@ -401,26 +401,35 @@ def check_and_manage_instance(instance_id):
     try:
         client = get_client(instance)
 
-        # Fetch traffic
-        current_gb = get_total_traffic_gb(client, instance.region_id)
-        previous_gb = instance.current_month_traffic or 0
+        # Fetch traffic (CDT reading is cumulative for the period; we persist by delta to avoid jump/reset bugs)
+        current_api_gb = get_total_traffic_gb(client, instance.region_id)
+        previous_api_gb = instance.last_api_traffic or 0
 
-        instance.last_api_traffic = current_gb
-        instance.current_month_traffic = current_gb
-        # For LIFE, total_traffic_sum accumulates across months; for CYCLE it equals current month
-        if instance.traffic_strategy == 'life':
-            # Accumulate delta (traffic since last check) to all-time total
-            delta = max(current_gb - previous_gb, 0)
-            instance.total_traffic_sum = (instance.total_traffic_sum or 0) + delta
-            # Safety: total must be at least current month's traffic
-            if instance.total_traffic_sum < current_gb:
-                instance.total_traffic_sum = current_gb
+        if current_api_gb is not None:
+            # If the upstream counter resets (new cycle/account reset), treat current reading as fresh delta.
+            if previous_api_gb > 0 and current_api_gb < previous_api_gb:
+                delta_gb = current_api_gb
+            else:
+                delta_gb = max(current_api_gb - previous_api_gb, 0)
+
+            # Monthly counter is always incremental, reset by monthly scheduler.
+            instance.current_month_traffic = (instance.current_month_traffic or 0) + delta_gb
+            instance.last_api_traffic = current_api_gb
+
+            # LIFE accumulates forever; CYCLE keeps total aligned with current month for compatibility.
+            if instance.traffic_strategy == 'life':
+                instance.total_traffic_sum = (instance.total_traffic_sum or 0) + delta_gb
+            else:
+                instance.total_traffic_sum = instance.current_month_traffic
+
+            # Write traffic log using displayed usage metric.
+            display_usage = (instance.total_traffic_sum or 0) if instance.traffic_strategy == 'life' else (instance.current_month_traffic or 0)
+            traffic_log = TrafficLog(instance_id=instance.id, traffic_gb=display_usage)
+            db.session.add(traffic_log)
         else:
-            instance.total_traffic_sum = current_gb
-
-        # Write traffic log
-        traffic_log = TrafficLog(instance_id=instance.id, traffic_gb=current_gb)
-        db.session.add(traffic_log)
+            # Preserve previous values when API temporarily fails.
+            current_api_gb = previous_api_gb
+            delta_gb = 0
 
         # Fetch status
         current_status = get_ecs_status(client, instance.instance_id)
@@ -432,10 +441,10 @@ def check_and_manage_instance(instance_id):
         # Determine the appropriate threshold per strategy
         if instance.traffic_strategy == 'life':
             life_limit = instance.life_total_limit or 0
-            logger.info(f"Status: {current_status} | Traffic: {current_gb:.2f} GB | Total: {instance.total_traffic_sum or 0:.2f} GB | Life limit: {life_limit} GB")
+            logger.info(f"Status: {current_status} | API: {current_api_gb:.2f} GB | Month: {instance.current_month_traffic or 0:.2f} GB | Total: {instance.total_traffic_sum or 0:.2f} GB | Life limit: {life_limit} GB")
         else:
             monthly_quota = instance.monthly_limit or 0
-            logger.info(f"Status: {current_status} | Traffic: {current_gb:.2f} GB / Monthly limit: {monthly_quota} GB")
+            logger.info(f"Status: {current_status} | API: {current_api_gb:.2f} GB | Month: {instance.current_month_traffic or 0:.2f} GB / Monthly limit: {monthly_quota} GB")
 
         # Auto start logic (probe-first): if probe offline and ECS appears stopped/pending, auto start when enabled.
         if instance.auto_start_enabled:
@@ -448,7 +457,7 @@ def check_and_manage_instance(instance_id):
         # Auto start/stop logic
         if instance.auto_stop_enabled:
             if instance.traffic_strategy == 'cycle' and monthly_quota > 0:
-                if current_gb < monthly_quota:
+                if (instance.current_month_traffic or 0) < monthly_quota:
                     if current_status == 'Stopped' and not probe_online:
                         logger.info("Traffic below threshold, try start instance.")
                         success, _ = ecs_start(client, instance.instance_id)
@@ -456,7 +465,7 @@ def check_and_manage_instance(instance_id):
                             instance.status = 'Starting'
                 else:
                     if current_status == 'Running' or probe_online:
-                        logger.warning(f"Traffic exceeded ({current_gb:.2f} >= {monthly_quota}), try stop instance.")
+                        logger.warning(f"Traffic exceeded ({(instance.current_month_traffic or 0):.2f} >= {monthly_quota}), try stop instance.")
                         success, _ = ecs_stop(client, instance.instance_id)
                         if success:
                             instance.status = 'Stopping'
@@ -478,7 +487,7 @@ def check_and_manage_instance(instance_id):
                 alert_traffic = instance.total_traffic_sum or 0
             else:
                 limit = monthly_quota
-                alert_traffic = current_gb
+                alert_traffic = instance.current_month_traffic or 0
 
             threshold_pct = instance.alert_threshold_pct or 80
             if limit > 0:
@@ -496,13 +505,14 @@ def check_and_manage_instance(instance_id):
 
         # Anomaly detection: alert if traffic spiked significantly
         try:
-            if previous_gb > 0 and current_gb > previous_gb:
-                increase_pct = ((current_gb - previous_gb) / previous_gb) * 100
+            if previous_api_gb > 0 and current_api_gb > previous_api_gb:
+                increase_pct = ((current_api_gb - previous_api_gb) / previous_api_gb) * 100
                 if increase_pct >= ANOMALY_INCREASE_PCT:
                     alert_cfg = AlertConfig.query.first()
                     if alert_cfg and alert_cfg.enabled and alert_cfg.webhook_url:
                         msg = (f"🚨 [{instance.name}] 流量异常\n"
-                               f"流量从 {previous_gb:.2f} GB 突增至 {current_gb:.2f} GB (+{increase_pct:.1f}%)\n"
+                               f"API读数从 {previous_api_gb:.2f} GB 增至 {current_api_gb:.2f} GB (+{increase_pct:.1f}%)\n"
+                               f"本月累计: {(instance.current_month_traffic or 0):.2f} GB\n"
                                f"状态: {current_status}")
                         send_alert(alert_cfg.notify_type, alert_cfg.webhook_url, msg,
                                    instance_name=instance.name)

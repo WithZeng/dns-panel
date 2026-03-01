@@ -1,4 +1,4 @@
-"""
+﻿"""
 AK/SK encryption utility using Fernet symmetric encryption.
 Key is loaded from ENCRYPT_KEY environment variable or auto-generated into .env.
 """
@@ -59,5 +59,9 @@ def decrypt(ciphertext: str) -> str:
     try:
         return f.decrypt(ciphertext.encode()).decode()
     except Exception:
-        # Fallback: might be stored as plaintext (pre-migration)
+        # If it looks like a Fernet token but cannot be decrypted, key is likely mismatched.
+        # Returning empty string prevents exporting/reimporting broken ciphertext as AK/SK plaintext.
+        if isinstance(ciphertext, str) and ciphertext.startswith('gAAAA'):
+            return ''
+        # Fallback for legacy plaintext (pre-migration rows).
         return ciphertext
