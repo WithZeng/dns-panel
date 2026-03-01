@@ -261,3 +261,11 @@ curl -fsSL http://<面板IP>:5000/agent/install_checker_global.sh -o /tmp/instal
 ## License
 
 Private project — all rights reserved.
+
+
+## 备份/导入增强（vNext）
+
+- 备份 zip 现在会尽量包含 `instance/encrypt.key`（若存在），用于跨环境恢复 AK/SK。
+- CSV 导出新增字段：`ak_format`、`is_encrypted`。
+- CSV 导入支持密文迁移（`ak_format=fernet_encrypted`）与原有明文导入。
+- 建议上线前参考 `docs/DEPLOY_CHECKLIST.md`。
