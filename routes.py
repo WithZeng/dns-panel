@@ -512,12 +512,12 @@ def release_instance(id):
             instance.status = 'Releasing'
             flash('释放指令已发送', 'success')
         else:
-            flash(f'閲婃斁澶辫触: {msg}', 'danger')
+            flash(f'释放失败: {msg}', 'danger')
         log_operation('release', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'閲婃斁澶辫触: {str(e)}', 'danger')
+        flash(f'释放失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -572,7 +572,7 @@ set -euo pipefail
 
 TARGET_IPV6="{target_ipv6}"
 
-echo "[1/5] 鍚敤鍐呮牳 IPv6 寮€鍏?
+echo "[1/5] 启用内核 IPv6 开关"
 cat >/etc/sysctl.d/99-enable-ipv6.conf <<'EOF'
 net.ipv6.conf.all.disable_ipv6 = 0
 net.ipv6.conf.default.disable_ipv6 = 0
@@ -580,22 +580,22 @@ net.ipv6.conf.lo.disable_ipv6 = 0
 EOF
 sysctl --system >/dev/null
 
-echo "[2/5] 璇嗗埆涓荤綉鍗?
+echo "[2/5] 识别主网卡"
 IFACE=$(ip -4 route show default 2>/dev/null | awk '{{print $5}}' | head -n1)
 if [[ -z "$IFACE" ]]; then
     IFACE=$(ip -o link show | awk -F': ' '{{print $2}}' | grep -E '^(eth|ens|enp)' | head -n1 || true)
 fi
 if [[ -z "$IFACE" ]]; then
-    echo "[ERROR] 鏃犳硶璇嗗埆缃戝崱锛岃鎵嬪姩閰嶇疆"
+    echo "[ERROR] 无法识别网卡，请手动配置"
     exit 1
 fi
-echo "缃戝崱: $IFACE"
+echo "网卡: $IFACE"
 
-echo "[3/5] 鎵撳紑 IPv6 鑷姩閰嶇疆"
+echo "[3/5] 打开 IPv6 自动配置"
 sysctl -w net.ipv6.conf."$IFACE".accept_ra=2 >/dev/null || true
 sysctl -w net.ipv6.conf."$IFACE".autoconf=1 >/dev/null || true
 
-echo "[4/5] 灏濊瘯閫氳繃鍙戣鐗堢綉缁滅鐞嗗櫒鍒锋柊"
+echo "[4/5] 尝试通过网络管理器刷新"
 if command -v nmcli >/dev/null 2>&1; then
     CONN=$(nmcli -t -f NAME,DEVICE con show --active | awk -F: -v d="$IFACE" '$2==d {{print $1; exit}}')
     if [[ -n "$CONN" ]]; then
@@ -618,30 +618,30 @@ EOF
 fi
 
 if [[ -n "$TARGET_IPV6" ]] && ! ip -6 addr show dev "$IFACE" | grep -q "$TARGET_IPV6"; then
-    echo "[5/5] 娣诲姞浜戠鍒嗛厤鐨?IPv6 鍦板潃: $TARGET_IPV6"
+    echo "[5/5] 添加云端分配的 IPv6 地址: $TARGET_IPV6"
     ip -6 addr add "$TARGET_IPV6/128" dev "$IFACE" || true
 fi
 
 if ! ip -6 route show default | grep -q '^default'; then
-    echo "[extra] 鏈娴嬪埌榛樿 IPv6 璺敱锛屽皾璇曟坊鍔? default via fe80::1 dev $IFACE"
+    echo "[extra] 未检测到默认 IPv6 路由，尝试添加 default via fe80::1 dev $IFACE"
     ip -6 route replace default via fe80::1 dev "$IFACE" metric 1024 || true
 fi
 
-echo "瀹屾垚锛屽綋鍓?IPv6 鍦板潃濡備笅锛?
+echo "完成，当前 IPv6 地址如下："
 ip -6 addr show dev "$IFACE"
-echo "褰撳墠 IPv6 璺敱濡備笅锛?
+echo "当前 IPv6 路由如下："
 ip -6 route show
-echo "寮€濮嬭繛閫氭€ф祴璇曪紙鍥藉唴浼樺厛鐩爣锛?.."
+echo "开始连通性测试（国内优先目标）..."
 TEST_TARGETS=("2400:3200::1" "2400:3200:baba::1" "240c::6666" "240c::6644")
 for target in "${{TEST_TARGETS[@]}}"; do
     echo "- ping6 $target"
     if ping -6 -c 3 -W 2 "$target" >/dev/null 2>&1; then
-        echo "  鉁?鍙揪"
+        echo "  ✅ 可达"
     else
-        echo "  鉂?涓嶅彲杈?
+        echo "  ❌ 不可达"
     fi
 done
-echo "浣犱篃鍙互娴嬭瘯涓氬姟鍩熷悕: ping -6 -c 3 <浣犵殑鍩熷悕>"
+echo "你也可以测试业务域名: ping -6 -c 3 <你的域名>"
 '''
 
     return send_file(
@@ -1221,7 +1221,7 @@ def security_group(id):
                     flash(f'已开放 TCP+UDP {port_range}', 'success')
                     log_operation('sg_add', f'开放端口 TCP+UDP {port_range} from {source_cidr}', instance_id=id)
                 else:
-                    flash(f'閮ㄥ垎澶辫触: TCP={msg1}, UDP={msg2}', 'warning')
+                    flash(f'部分失败: TCP={msg1}, UDP={msg2}', 'warning')
             else:
                 ok, msg = authorize_sg(client, sg_id, instance.region_id, protocol, port_range, source_cidr, description=desc)
                 if ok:
