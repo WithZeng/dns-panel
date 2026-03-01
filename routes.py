@@ -371,13 +371,13 @@ def add_instance():
 
         try:
             db.session.add(new_instance)
-            log_operation('add', f'娣诲姞瀹炰緥 {name} ({instance_id})')
+            log_operation('add', f'添加实例 {name} ({instance_id})')
             db.session.commit()
-            flash('瀹炰緥娣诲姞鎴愬姛', 'success')
+            flash('实例添加成功', 'success')
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f'娣诲姞澶辫触: {str(e)}', 'danger')
+            flash(f'添加失败: {str(e)}', 'danger')
             return render_template('add_instance.html', instance=None, prefill={})
 
     # If coming from discover page, pre-fill AK/SK from session
@@ -401,7 +401,7 @@ def edit_instance(id):
         instance.instance_id = request.form.get('instance_id')
         instance.tag = request.form.get('tag', '').strip()
         instance.notes = request.form.get('notes', '').strip()
-        instance.traffic_strategy = request.form.get('traffic_strategy', 'monthly')
+        instance.traffic_strategy = request.form.get('traffic_strategy', 'cycle')
         instance.monthly_limit = float(request.form.get('monthly_limit') or 0)
         instance.life_total_limit = float(request.form.get('life_total_limit') or 0)
         instance.hourly_price = float(request.form.get('hourly_price') or 0)
@@ -410,11 +410,16 @@ def edit_instance(id):
         instance.auto_start_enabled = 'auto_start_enabled' in request.form
         instance.monitoring_enabled = 'monitoring_enabled' in request.form
 
-        instance.set_ak_sk(new_ak, new_sk)
+        # Only overwrite AK/SK when both fields are provided.
+        if (new_ak and not new_sk) or (new_sk and not new_ak):
+            flash('请同时填写 Access Key ID 和 Access Key Secret，或保持两项都为空以保留原密钥', 'warning')
+            return render_template('edit_instance.html', instance=instance)
+        if new_ak and new_sk:
+            instance.set_ak_sk(new_ak, new_sk)
 
-        log_operation('edit', f'缂栬緫瀹炰緥 {instance.name}', instance_id=instance.id)
+        log_operation('edit', f'编辑实例 {instance.name}', instance_id=instance.id)
         db.session.commit()
-        flash('瀹炰緥鏇存柊鎴愬姛', 'success')
+        flash('实例更新成功', 'success')
         return redirect(url_for('main.dashboard'))
 
     return render_template('edit_instance.html', instance=instance)
@@ -425,7 +430,7 @@ def edit_instance(id):
 def delete_instance_local(id):
     instance = EcsInstance.query.get_or_404(id)
     name = instance.name
-    log_operation('delete', f'鍒犻櫎鏈湴瀹炰緥 {name}', instance_id=id)
+    log_operation('delete', f'删除本地实例 {name}', instance_id=id)
     db.session.delete(instance)
     db.session.commit()
     flash('本地记录已删除', 'info')
@@ -438,7 +443,7 @@ def delete_instance_local(id):
 @login_required
 def check_instance(id):
     check_and_manage_instance(id)
-    log_operation('check', f'鎵嬪姩妫€鏌ュ疄渚?ID {id}', instance_id=id)
+    log_operation('check', f'手动检查实例 ID {id}', instance_id=id)
     db.session.commit()
     flash(f'实例 {id} 检查完成', 'success')
     return redirect(url_for('main.dashboard'))
@@ -467,12 +472,12 @@ def stop_instance(id):
             instance.status = 'Stopping'
             flash('停机指令已发送', 'success')
         else:
-            flash(f'鍋滄満澶辫触: {msg}', 'danger')
+            flash(f'停机失败: {msg}', 'danger')
         log_operation('stop', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'鍋滄満澶辫触: {str(e)}', 'danger')
+        flash(f'停机失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -487,12 +492,12 @@ def start_instance(id):
             instance.status = 'Starting'
             flash('开机指令已发送', 'success')
         else:
-            flash(f'寮€鏈哄け璐? {msg}', 'danger')
+            flash(f'开机失败: {msg}', 'danger')
         log_operation('start', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'寮€鏈哄け璐? {str(e)}', 'danger')
+        flash(f'开机失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -507,12 +512,12 @@ def release_instance(id):
             instance.status = 'Releasing'
             flash('释放指令已发送', 'success')
         else:
-            flash(f'閲婃斁澶辫触: {msg}', 'danger')
+            flash(f'释放失败: {msg}', 'danger')
         log_operation('release', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        flash(f'閲婃斁澶辫触: {str(e)}', 'danger')
+        flash(f'释放失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -541,10 +546,10 @@ def enable_ipv6(id):
         success, msg, _ = ecs_enable_ipv6(client, instance)
         log_operation('enable_ipv6', f'{instance.name}: {msg}', instance_id=id)
         db.session.commit()
-        flash(msg if success else f'寮€鍚?IPv6 澶辫触: {msg}', 'success' if success else 'danger')
+        flash(msg if success else f'开启 IPv6 失败: {msg}', 'success' if success else 'danger')
     except Exception as e:
         db.session.rollback()
-        flash(f'寮€鍚?IPv6 澶辫触: {str(e)}', 'danger')
+        flash(f'开启 IPv6 失败: {str(e)}', 'danger')
     return redirect(url_for('main.instance_detail', id=id))
 
 
@@ -567,7 +572,7 @@ set -euo pipefail
 
 TARGET_IPV6="{target_ipv6}"
 
-echo "[1/5] 鍚敤鍐呮牳 IPv6 寮€鍏?
+echo "[1/5] 启用内核 IPv6 开关"
 cat >/etc/sysctl.d/99-enable-ipv6.conf <<'EOF'
 net.ipv6.conf.all.disable_ipv6 = 0
 net.ipv6.conf.default.disable_ipv6 = 0
@@ -575,22 +580,22 @@ net.ipv6.conf.lo.disable_ipv6 = 0
 EOF
 sysctl --system >/dev/null
 
-echo "[2/5] 璇嗗埆涓荤綉鍗?
+echo "[2/5] 识别主网卡"
 IFACE=$(ip -4 route show default 2>/dev/null | awk '{{print $5}}' | head -n1)
 if [[ -z "$IFACE" ]]; then
     IFACE=$(ip -o link show | awk -F': ' '{{print $2}}' | grep -E '^(eth|ens|enp)' | head -n1 || true)
 fi
 if [[ -z "$IFACE" ]]; then
-    echo "[ERROR] 鏃犳硶璇嗗埆缃戝崱锛岃鎵嬪姩閰嶇疆"
+    echo "[ERROR] 无法识别网卡，请手动配置"
     exit 1
 fi
-echo "缃戝崱: $IFACE"
+echo "网卡: $IFACE"
 
-echo "[3/5] 鎵撳紑 IPv6 鑷姩閰嶇疆"
+echo "[3/5] 打开 IPv6 自动配置"
 sysctl -w net.ipv6.conf."$IFACE".accept_ra=2 >/dev/null || true
 sysctl -w net.ipv6.conf."$IFACE".autoconf=1 >/dev/null || true
 
-echo "[4/5] 灏濊瘯閫氳繃鍙戣鐗堢綉缁滅鐞嗗櫒鍒锋柊"
+echo "[4/5] 尝试通过网络管理器刷新"
 if command -v nmcli >/dev/null 2>&1; then
     CONN=$(nmcli -t -f NAME,DEVICE con show --active | awk -F: -v d="$IFACE" '$2==d {{print $1; exit}}')
     if [[ -n "$CONN" ]]; then
@@ -613,30 +618,30 @@ EOF
 fi
 
 if [[ -n "$TARGET_IPV6" ]] && ! ip -6 addr show dev "$IFACE" | grep -q "$TARGET_IPV6"; then
-    echo "[5/5] 娣诲姞浜戠鍒嗛厤鐨?IPv6 鍦板潃: $TARGET_IPV6"
+    echo "[5/5] 添加云端分配的 IPv6 地址: $TARGET_IPV6"
     ip -6 addr add "$TARGET_IPV6/128" dev "$IFACE" || true
 fi
 
 if ! ip -6 route show default | grep -q '^default'; then
-    echo "[extra] 鏈娴嬪埌榛樿 IPv6 璺敱锛屽皾璇曟坊鍔? default via fe80::1 dev $IFACE"
+    echo "[extra] 未检测到默认 IPv6 路由，尝试添加 default via fe80::1 dev $IFACE"
     ip -6 route replace default via fe80::1 dev "$IFACE" metric 1024 || true
 fi
 
-echo "瀹屾垚锛屽綋鍓?IPv6 鍦板潃濡備笅锛?
+echo "完成，当前 IPv6 地址如下："
 ip -6 addr show dev "$IFACE"
-echo "褰撳墠 IPv6 璺敱濡備笅锛?
+echo "当前 IPv6 路由如下："
 ip -6 route show
-echo "寮€濮嬭繛閫氭€ф祴璇曪紙鍥藉唴浼樺厛鐩爣锛?.."
+echo "开始连通性测试（国内优先目标）..."
 TEST_TARGETS=("2400:3200::1" "2400:3200:baba::1" "240c::6666" "240c::6644")
 for target in "${{TEST_TARGETS[@]}}"; do
     echo "- ping6 $target"
     if ping -6 -c 3 -W 2 "$target" >/dev/null 2>&1; then
-        echo "  鉁?鍙揪"
+        echo "  ✅ 可达"
     else
-        echo "  鉂?涓嶅彲杈?
+        echo "  ❌ 不可达"
     fi
 done
-echo "浣犱篃鍙互娴嬭瘯涓氬姟鍩熷悕: ping -6 -c 3 <浣犵殑鍩熷悕>"
+echo "你也可以测试业务域名: ping -6 -c 3 <你的域名>"
 '''
 
     return send_file(
@@ -757,12 +762,12 @@ def discover_instances():
                 })
 
             if not discovered:
-                flash(f'鍦?{region_id} 鍖哄煙鏈彂鐜?ECS 瀹炰緥', 'warning')
+                flash(f'在 {region_id} 区域未发现 ECS 实例', 'warning')
             else:
                 flash(f'发现 {len(discovered)} 个实例', 'success')
 
         except Exception as e:
-            flash(f'鎵弿澶辫触: {str(e)}', 'danger')
+            flash(f'扫描失败: {str(e)}', 'danger')
 
     return render_template('discover.html', discovered=discovered)
 
@@ -774,18 +779,23 @@ def discover_instances():
 def download_backup():
     db_path = os.path.join(current_app.instance_path, 'ecs_monitor.db')
     if not os.path.exists(db_path):
-        flash('鏁版嵁搴撴枃浠朵笉瀛樺湪', 'danger')
+        flash('数据库文件不存在', 'danger')
         return redirect(url_for('main.dashboard'))
 
     try:
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             zf.write(db_path, arcname='ecs_monitor.db')
+
+            # Include encryption key file when present, so AK/SK remains decryptable after restore.
+            encrypt_key_path = os.path.join(current_app.instance_path, 'encrypt.key')
+            if os.path.isfile(encrypt_key_path):
+                zf.write(encrypt_key_path, arcname='encrypt.key')
         memory_file.seek(0)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         return send_file(memory_file, download_name=f"backup_{timestamp}.zip", as_attachment=True)
     except Exception as e:
-        flash(f'澶囦唤澶辫触: {str(e)}', 'danger')
+        flash(f'备份失败: {str(e)}', 'danger')
         return redirect(url_for('main.dashboard'))
 
 
@@ -806,17 +816,31 @@ def export_csv():
     # Headers match import_csv field expectations
     writer.writerow([
         'name', 'instance_id', 'region_id', 'access_key_id', 'access_key_secret',
+        'ak_format', 'is_encrypted',
         'tag', 'notes', 'traffic_strategy', 'monthly_limit', 'life_total_limit',
         'monthly_free_allowance', 'hourly_price', 'alert_threshold_pct',
         'auto_stop_enabled', 'auto_start_enabled', 'total_traffic_sum', 'current_month_traffic'
     ])
     for inst in instances:
+        exported_ak = inst.decrypted_ak
+        exported_sk = inst.decrypted_sk
+        ak_format = 'plaintext'
+
+        # If key mismatch prevents decrypt, keep raw ciphertext + marker for lossless migration.
+        if inst.is_encrypted and (not exported_ak or not exported_sk):
+            exported_ak = inst.access_key_id or ''
+            exported_sk = inst.access_key_secret or ''
+            if exported_ak.startswith('gAAAA') and exported_sk.startswith('gAAAA'):
+                ak_format = 'fernet_encrypted'
+
         writer.writerow([
             inst.name,
             inst.instance_id,
             inst.region_id,
-            inst.decrypted_ak,
-            inst.decrypted_sk,
+            exported_ak,
+            exported_sk,
+            ak_format,
+            bool(inst.is_encrypted),
             inst.tag or '',
             inst.notes or '',
             inst.traffic_strategy,
@@ -949,8 +973,22 @@ def import_csv():
                 )
                 ak = row.get('access_key_id', '').strip()
                 sk = row.get('access_key_secret', '').strip()
+                if (ak and not sk) or (sk and not ak):
+                    skipped += 1
+                    continue
+                ak_format = (row.get('ak_format', '') or '').strip().lower()
+                is_enc = str(row.get('is_encrypted', '')).strip().lower() in ('true', '1', 'yes')
+
                 if ak and sk:
-                    new_inst.set_ak_sk(ak, sk)
+                    if ak_format == 'fernet_encrypted' and ak.startswith('gAAAA') and sk.startswith('gAAAA'):
+                        # Keep ciphertext as-is for cross-environment restore (requires matching encrypt.key).
+                        new_inst.access_key_id = ak
+                        new_inst.access_key_secret = sk
+                        new_inst.is_encrypted = True
+                    else:
+                        new_inst.set_ak_sk(ak, sk)
+                        if is_enc and not new_inst.is_encrypted:
+                            new_inst.is_encrypted = True
                 else:
                     new_inst.access_key_id = ''
                     new_inst.access_key_secret = ''
@@ -964,7 +1002,7 @@ def import_csv():
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f'瀵煎叆澶辫触: {str(e)}', 'danger')
+            flash(f'导入失败: {str(e)}', 'danger')
 
     return render_template('import_csv.html')
 
@@ -1063,7 +1101,7 @@ def update_notes(id):
     instance = EcsInstance.query.get_or_404(id)
     data = request.get_json(silent=True) or {}
     instance.notes = data.get('notes', '').strip()
-    log_operation('notes', f'鏇存柊澶囨敞 {instance.name}', instance_id=id)
+    log_operation('notes', f'更新备注 {instance.name}', instance_id=id)
     db.session.commit()
     return jsonify({'success': True, 'notes': instance.notes})
 
@@ -1107,10 +1145,10 @@ def instance_schedules(id):
             enabled=True,
         )
         db.session.add(task)
-        log_operation('schedule', f'娣诲姞瀹氭椂{"鍚姩" if action=="start" else "鍋滄"} '
+        log_operation('schedule', f'添加定时{"启动" if action=="start" else "停止"} '
                       f'{instance.name} {hour:02d}:{minute:02d} days={days}', instance_id=id)
         db.session.commit()
-        flash(f'宸叉坊鍔犲畾鏃朵换鍔? {hour:02d}:{minute:02d} {"鍚姩" if action=="start" else "鍋滄"}', 'success')
+        flash(f'已添加定时任务: {hour:02d}:{minute:02d} {"启动" if action=="start" else "停止"}', 'success')
         return redirect(url_for('main.instance_schedules', id=id))
 
     schedules = ScheduleTask.query.filter_by(instance_id=id).order_by(ScheduleTask.created_at.desc()).all()
@@ -1151,7 +1189,7 @@ def security_group(id):
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
 
     if not sg_ids:
-        flash(f'鏈壘鍒拌瀹炰緥鐨勫畨鍏ㄧ粍: {sg_err}' if sg_err else '鏈壘鍒拌瀹炰緥鐨勫畨鍏ㄧ粍', 'warning')
+        flash(f'未找到该实例的安全组: {sg_err}' if sg_err else '未找到该实例的安全组', 'warning')
         return redirect(url_for('main.instance_detail', id=id))
 
     sg_id = sg_ids[0]  # Use first security group
@@ -1181,16 +1219,16 @@ def security_group(id):
                 ok2, msg2 = authorize_sg(client, sg_id, instance.region_id, 'udp', port_range, source_cidr, description=desc)
                 if ok1 and ok2:
                     flash(f'已开放 TCP+UDP {port_range}', 'success')
-                    log_operation('sg_add', f'寮€鏀剧鍙?TCP+UDP {port_range} from {source_cidr}', instance_id=id)
+                    log_operation('sg_add', f'开放端口 TCP+UDP {port_range} from {source_cidr}', instance_id=id)
                 else:
-                    flash(f'閮ㄥ垎澶辫触: TCP={msg1}, UDP={msg2}', 'warning')
+                    flash(f'部分失败: TCP={msg1}, UDP={msg2}', 'warning')
             else:
                 ok, msg = authorize_sg(client, sg_id, instance.region_id, protocol, port_range, source_cidr, description=desc)
                 if ok:
                     flash(f'已开放 {protocol.upper()} {port_range}', 'success')
-                    log_operation('sg_add', f'寮€鏀剧鍙?{protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
+                    log_operation('sg_add', f'开放端口 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
                 else:
-                    flash(f'娣诲姞澶辫触: {msg}', 'danger')
+                    flash(f'添加失败: {msg}', 'danger')
 
         elif action == 'open_all':
             # Open all ports for IPv4 + IPv6, both TCP + UDP.
@@ -1229,7 +1267,7 @@ def sg_delete_rule(id):
     client = get_client(instance)
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
     if not sg_ids:
-        flash(f'鏈壘鍒板畨鍏ㄧ粍: {sg_err}' if sg_err else '鏈壘鍒板畨鍏ㄧ粍', 'warning')
+        flash(f'未找到安全组: {sg_err}' if sg_err else '未找到安全组', 'warning')
         return redirect(url_for('main.instance_detail', id=id))
 
     sg_id = sg_ids[0]
@@ -1241,9 +1279,9 @@ def sg_delete_rule(id):
     ok, msg = revoke_sg(client, sg_id, instance.region_id, protocol, port_range, source_cidr, policy)
     if ok:
         flash(f'已删除规则 {protocol.upper()} {port_range}', 'success')
-        log_operation('sg_delete', f'鍒犻櫎瑙勫垯 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
+        log_operation('sg_delete', f'删除规则 {protocol.upper()} {port_range} from {source_cidr}', instance_id=id)
     else:
-        flash(f'鍒犻櫎澶辫触: {msg}', 'danger')
+        flash(f'删除失败: {msg}', 'danger')
 
     return redirect(url_for('main.security_group', id=id))
 

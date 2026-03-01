@@ -173,10 +173,10 @@ def bootstrap_database():
             db.session.commit()
             cred_path = os.path.join(INSTANCE_PATH, 'initial_admin_credentials.txt')
             with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write("DNS Panel 鍒濆绠＄悊鍛樿处鍙穃n")
+                f.write("DNS Panel 初始管理员账号\n")
                 f.write("username=admin\n")
                 f.write(f"password={initial_password}\n")
-                f.write("璇风櫥褰曞悗绔嬪嵆淇敼瀵嗙爜銆俓n")
+                f.write("请登录后立即修改密码。\n")
             print("Default admin created. Please check instance/initial_admin_credentials.txt")
 
         # Migrate: encrypt plaintext AK/SK
@@ -337,11 +337,11 @@ def run_scheduled_tasks():
                 if task.action == 'start' and inst.status == 'Stopped':
                     ecs_start(client, inst.instance_id)
                     inst.status = 'Starting'
-                    action_name = '瀹氭椂鍚姩'
+                    action_name = '定时启动'
                 elif task.action == 'stop' and inst.status == 'Running':
                     ecs_stop(client, inst.instance_id)
                     inst.status = 'Stopping'
-                    action_name = '瀹氭椂鍋滄'
+                    action_name = '定时停止'
                 else:
                     continue
 

@@ -1,4 +1,4 @@
-"""
+﻿"""
 AK/SK encryption utility using Fernet symmetric encryption.
 Key is loaded from ENCRYPT_KEY environment variable or auto-generated into .env.
 """
@@ -16,11 +16,18 @@ def _get_fernet():
 
     key = os.environ.get('ENCRYPT_KEY')
 
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    key_file = os.environ.get('ENCRYPT_KEY_FILE', '').strip() or os.path.join(base_dir, 'instance', 'encrypt.key')
+
+    if not key and key_file and os.path.isfile(key_file):
+        with open(key_file, 'r', encoding='utf-8') as f:
+            key = (f.read() or '').strip()
+
     if not key:
         # Try loading from .env file
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+        env_path = os.path.join(base_dir, '.env')
         if os.path.exists(env_path):
-            with open(env_path, 'r') as f:
+            with open(env_path, 'r', encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith('ENCRYPT_KEY='):
@@ -28,11 +35,19 @@ def _get_fernet():
                         break
 
     if not key:
-        # Auto-generate key and write to .env
+        # Auto-generate key and persist to dedicated key file + .env fallback
         key = Fernet.generate_key().decode()
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+
+        try:
+            os.makedirs(os.path.dirname(key_file), exist_ok=True)
+            with open(key_file, 'w', encoding='utf-8') as f:
+                f.write(key + '\n')
+        except Exception:
+            pass
+
+        env_path = os.path.join(base_dir, '.env')
         mode = 'a' if os.path.exists(env_path) else 'w'
-        with open(env_path, mode) as f:
+        with open(env_path, mode, encoding='utf-8') as f:
             f.write(f"\nENCRYPT_KEY={key}\n")
 
     # Ensure key is valid base64
@@ -59,5 +74,9 @@ def decrypt(ciphertext: str) -> str:
     try:
         return f.decrypt(ciphertext.encode()).decode()
     except Exception:
-        # Fallback: might be stored as plaintext (pre-migration)
+        # If it looks like a Fernet token but cannot be decrypted, key is likely mismatched.
+        # Returning empty string prevents exporting/reimporting broken ciphertext as AK/SK plaintext.
+        if isinstance(ciphertext, str) and ciphertext.startswith('gAAAA'):
+            return ''
+        # Fallback for legacy plaintext (pre-migration rows).
         return ciphertext
