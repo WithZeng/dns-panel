@@ -17,7 +17,7 @@
             <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <input type="checkbox" name="scan_all_regions" value="1"
                     class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" {% if request.method != 'POST' or request.form.get('scan_all_regions') %}checked{% endif %}>
-                全区域扫描（可能较慢）
+                扫描国内常用区域（北京/广州/上海/杭州/深圳）
             </label>
 
             <button type="submit"

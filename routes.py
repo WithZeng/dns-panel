@@ -337,7 +337,8 @@ def _parse_account_text(raw_text):
 
 
 def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', scan_all_regions=True):
-    """Discover ECS instances. By default scans all regions; can limit to default region for faster interactive flows."""
+    """Discover ECS instances.
+    scan_all_regions=True 时仅扫描国内常用区域（北京/广州/上海/杭州/深圳），避免全区域慢请求。"""
     from aliyunsdkcore.client import AcsClient
     from aliyunsdkecs.request.v20140526.DescribeRegionsRequest import DescribeRegionsRequest
     from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
@@ -347,16 +348,12 @@ def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', sc
 
     region_ids = [default_region]
     if scan_all_regions:
-        try:
-            r_req = DescribeRegionsRequest()
-            r_req.set_accept_format('json')
-            region_resp = client.do_action_with_exception(r_req)
-            region_data = json.loads(region_resp)
-            fetched = [r.get('RegionId') for r in region_data.get('Regions', {}).get('Region', []) if r.get('RegionId')]
-            if fetched:
-                region_ids = sorted(set(fetched))
-        except Exception:
-            pass
+        preferred_regions = ['cn-beijing', 'cn-guangzhou', 'cn-shanghai', 'cn-hangzhou', 'cn-shenzhen']
+        # Keep deterministic preferred order and include default region if user entered another cn-* region.
+        region_ids = []
+        for rid in preferred_regions + [default_region]:
+            if rid and rid not in region_ids:
+                region_ids.append(rid)
 
     discovered = []
     seen_ids = set()
