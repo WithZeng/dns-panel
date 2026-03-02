@@ -336,8 +336,8 @@ def _parse_account_text(raw_text):
     }
 
 
-def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou'):
-    """Discover ECS instances across all available regions."""
+def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', scan_all_regions=True):
+    """Discover ECS instances. By default scans all regions; can limit to default region for faster interactive flows."""
     from aliyunsdkcore.client import AcsClient
     from aliyunsdkecs.request.v20140526.DescribeRegionsRequest import DescribeRegionsRequest
     from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
@@ -346,16 +346,17 @@ def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou'):
     client.add_endpoint(default_region, 'Ecs', f'ecs.{default_region}.aliyuncs.com')
 
     region_ids = [default_region]
-    try:
-        r_req = DescribeRegionsRequest()
-        r_req.set_accept_format('json')
-        region_resp = client.do_action_with_exception(r_req)
-        region_data = json.loads(region_resp)
-        fetched = [r.get('RegionId') for r in region_data.get('Regions', {}).get('Region', []) if r.get('RegionId')]
-        if fetched:
-            region_ids = sorted(set(fetched))
-    except Exception:
-        pass
+    if scan_all_regions:
+        try:
+            r_req = DescribeRegionsRequest()
+            r_req.set_accept_format('json')
+            region_resp = client.do_action_with_exception(r_req)
+            region_data = json.loads(region_resp)
+            fetched = [r.get('RegionId') for r in region_data.get('Regions', {}).get('Region', []) if r.get('RegionId')]
+            if fetched:
+                region_ids = sorted(set(fetched))
+        except Exception:
+            pass
 
     discovered = []
     seen_ids = set()
@@ -1125,8 +1126,10 @@ def import_account_text():
     note_parts = [part for part in [parsed.get('remark', '').strip(), f'account:{account_slug}'] if part]
     merged_note = ' | '.join(note_parts)
 
+    scan_all_regions = 'scan_all_regions' in request.form
+
     try:
-        discovered = _discover_ecs_instances_all_regions(ak, sk, default_region)
+        discovered = _discover_ecs_instances_all_regions(ak, sk, default_region, scan_all_regions=scan_all_regions)
     except Exception as e:
         flash(f'自动发现失败: {str(e)}', 'danger')
         return render_template('import_account_text.html', raw_text=raw_text)

@@ -14,6 +14,12 @@
                 <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">支持中英文标签，自动忽略无关行；同一账号重复导入会覆盖更新。</p>
             </div>
 
+            <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input type="checkbox" name="scan_all_regions" value="1"
+                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" {% if request.method != 'POST' or request.form.get('scan_all_regions') %}checked{% endif %}>
+                全区域扫描（可能较慢）
+            </label>
+
             <button type="submit"
                 class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
                 🚀 一键导入并同步
