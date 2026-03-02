@@ -2,6 +2,11 @@
 import os
 import csv
 import json
+import re
+import base64
+import shutil
+import subprocess
+import unicodedata
 import zipfile
 from datetime import datetime, timedelta
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -240,6 +245,215 @@ def _normalize_days_of_week(value):
             normalized.append(str(day))
 
     return ','.join(normalized), None
+
+
+def _slugify_account(value):
+    text = (value or '').strip().lower()
+    if not text:
+        return ''
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    text = re.sub(r'[^a-z0-9]+', '-', text)
+    text = re.sub(r'-{2,}', '-', text).strip('-')
+    return text[:80]
+
+
+def _safe_yaml_str(value):
+    s = '' if value is None else str(value)
+    s = s.replace('\\', '\\\\').replace('"', '\\"')
+    return f'"{s}"'
+
+
+def _parse_account_text(raw_text):
+    """Parse AK/SK and optional metadata from free-form text (CN/EN labels)."""
+    text = (raw_text or '').replace('\r\n', '\n')
+    lines = [ln.strip() for ln in text.split('\n') if ln.strip()]
+
+    key_map = {
+        'login_name': ['登录名称', '登录名', '账号', '账户', '用户名', 'login name', 'username', 'account'],
+        'login_password': ['登录密码', '密码', 'login password', 'passwd', 'password'],
+        'access_key_secret': ['accesskey secret', 'access key secret', 'accesskeysecret', 'secret key', 'sk'],
+        'access_key_id': ['accesskey id', 'access key id', 'accesskeyid', 'key id', 'akid', 'ak'],
+        'security_email': ['安全邮箱', '邮箱', 'email', 'mail'],
+        'security_phone': ['安全手机', '手机', 'phone', 'mobile', 'tel'],
+        'remark': ['备注', '说明', 'note', 'notes', 'remark', 'memo'],
+        'region_id': ['区域', '地域', 'region id', 'region_id', 'region'],
+    }
+
+    parsed = {}
+    for line in lines:
+        normalized = line.replace('：', ':')
+        if ':' not in normalized:
+            continue
+        left, right = normalized.split(':', 1)
+        key = left.strip().lower()
+        key_nospace = re.sub(r'\s+', '', key)
+        value = right.strip()
+        if not value:
+            continue
+        for target, aliases in key_map.items():
+            matched = False
+            for alias in aliases:
+                alias_l = alias.lower()
+                alias_nospace = re.sub(r'\s+', '', alias_l)
+                if key == alias_l or key_nospace == alias_nospace or alias_l in key:
+                    matched = True
+                    break
+            if matched:
+                parsed[target] = value
+                break
+
+    ak = (parsed.get('access_key_id') or '').strip()
+    sk = (parsed.get('access_key_secret') or '').strip()
+
+    if not ak:
+        m = re.search(r'\b(LTAI[a-zA-Z0-9]{8,})\b', text)
+        if m:
+            ak = m.group(1)
+    if not sk:
+        candidates = re.findall(r'\b[a-zA-Z0-9+/=]{24,64}\b', text)
+        for cand in candidates:
+            if cand != ak and not cand.startswith('LTAI'):
+                sk = cand
+                break
+
+    login_name = (parsed.get('login_name') or '').strip()
+    remark = (parsed.get('remark') or '').strip()
+    region_id = (parsed.get('region_id') or '').strip() or 'cn-hangzhou'
+    if not re.match(r'^[a-z0-9-]+$', region_id):
+        region_id = 'cn-hangzhou'
+
+    account_slug_seed = login_name or remark or (f'account-{ak[-6:].lower()}' if ak else '')
+    account_slug = _slugify_account(account_slug_seed) or (f'account-{datetime.utcnow().strftime("%Y%m%d%H%M%S")}')
+
+    return {
+        'login_name': login_name,
+        'remark': remark,
+        'access_key_id': ak,
+        'access_key_secret': sk,
+        'region_id': region_id,
+        'account_slug': account_slug,
+    }
+
+
+def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou'):
+    """Discover ECS instances across all available regions."""
+    from aliyunsdkcore.client import AcsClient
+    from aliyunsdkecs.request.v20140526.DescribeRegionsRequest import DescribeRegionsRequest
+    from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
+
+    client = AcsClient(ak, sk, default_region)
+    client.add_endpoint(default_region, 'Ecs', f'ecs.{default_region}.aliyuncs.com')
+
+    region_ids = [default_region]
+    try:
+        r_req = DescribeRegionsRequest()
+        r_req.set_accept_format('json')
+        region_resp = client.do_action_with_exception(r_req)
+        region_data = json.loads(region_resp)
+        fetched = [r.get('RegionId') for r in region_data.get('Regions', {}).get('Region', []) if r.get('RegionId')]
+        if fetched:
+            region_ids = sorted(set(fetched))
+    except Exception:
+        pass
+
+    discovered = []
+    seen_ids = set()
+
+    for region_id in region_ids:
+        try:
+            rc = AcsClient(ak, sk, region_id)
+            rc.add_endpoint(region_id, 'Ecs', f'ecs.{region_id}.aliyuncs.com')
+            req = DescribeInstancesRequest()
+            req.set_PageSize(100)
+            req.set_accept_format('json')
+            response = rc.do_action_with_exception(req)
+            result = json.loads(response)
+            for inst in result.get('Instances', {}).get('Instance', []):
+                iid = inst.get('InstanceId')
+                if not iid or iid in seen_ids:
+                    continue
+                seen_ids.add(iid)
+
+                public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', []) or []
+                eip = inst.get('EipAddress', {}).get('IpAddress', '')
+                if eip:
+                    public_ips.append(eip)
+                private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', []) or []
+                ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', []) or []
+
+                discovered.append({
+                    'instance_id': iid,
+                    'name': inst.get('InstanceName', iid),
+                    'region_id': inst.get('RegionId', region_id),
+                    'status': inst.get('Status', 'Unknown'),
+                    'public_ip': public_ips[0] if public_ips else '',
+                    'private_ip': private_ips[0] if private_ips else '',
+                    'ipv6_addr': ipv6_ips[0] if ipv6_ips else '',
+                })
+        except Exception:
+            continue
+
+    return discovered
+
+
+def _sync_account_to_github(repo, account_slug, payload):
+    """Sync account payload to GitHub private repo using gh CLI (overwrite update)."""
+    if not shutil.which('gh'):
+        return False, '未检测到 gh CLI，请先安装并 gh auth login'
+
+    check = subprocess.run(['gh', 'repo', 'view', repo], capture_output=True, text=True)
+    if check.returncode != 0:
+        created = subprocess.run(['gh', 'repo', 'create', repo, '--private', '--confirm'], capture_output=True, text=True)
+        if created.returncode != 0:
+            return False, f'创建 GitHub 仓库失败: {(created.stderr or created.stdout).strip()}'
+
+    file_path = f'accounts/{account_slug}/account.yaml'
+    payload_yaml = [
+        f'account_slug: {_safe_yaml_str(payload.get("account_slug", ""))}',
+        f'account_identifier: {_safe_yaml_str(payload.get("account_identifier", ""))}',
+        f'login_name: {_safe_yaml_str(payload.get("login_name", ""))}',
+        f'remark: {_safe_yaml_str(payload.get("remark", ""))}',
+        f'access_key_id: {_safe_yaml_str(payload.get("access_key_id", ""))}',
+        f'access_key_secret: {_safe_yaml_str(payload.get("access_key_secret", ""))}',
+        f'region: {_safe_yaml_str(payload.get("region", ""))}',
+        f'discovered_at: {_safe_yaml_str(payload.get("discovered_at", ""))}',
+        'instances:',
+    ]
+    for inst in payload.get('instances', []):
+        payload_yaml.extend([
+            f'  - instance_id: {_safe_yaml_str(inst.get("instance_id", ""))}',
+            f'    name: {_safe_yaml_str(inst.get("name", ""))}',
+            f'    region: {_safe_yaml_str(inst.get("region_id", ""))}',
+            f'    status: {_safe_yaml_str(inst.get("status", ""))}',
+            f'    public_ip: {_safe_yaml_str(inst.get("public_ip", ""))}',
+            f'    private_ip: {_safe_yaml_str(inst.get("private_ip", ""))}',
+            f'    ipv6: {_safe_yaml_str(inst.get("ipv6_addr", ""))}',
+        ])
+    content_b64 = base64.b64encode(('\n'.join(payload_yaml) + '\n').encode('utf-8')).decode('utf-8')
+
+    sha = None
+    get_res = subprocess.run(
+        ['gh', 'api', f'repos/{repo}/contents/{file_path}', '--jq', '.sha'],
+        capture_output=True,
+        text=True,
+    )
+    if get_res.returncode == 0:
+        sha = (get_res.stdout or '').strip() or None
+
+    cmd = [
+        'gh', 'api', '--method', 'PUT', f'repos/{repo}/contents/{file_path}',
+        '-f', f'message=chore(account-sync): update {account_slug}',
+        '-f', f'content={content_b64}',
+        '-f', 'branch=main',
+    ]
+    if sha:
+        cmd += ['-f', f'sha={sha}']
+
+    put_res = subprocess.run(cmd, capture_output=True, text=True)
+    if put_res.returncode != 0:
+        return False, f'GitHub 同步失败: {(put_res.stderr or put_res.stdout).strip()}'
+    return True, f'{repo}/{file_path}'
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Auth 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -873,35 +1087,10 @@ def discover_instances():
         flask_session['discover_sk'] = sk
 
         try:
-            from aliyunsdkcore.client import AcsClient
-            from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
-
-            client = AcsClient(ak, sk, region_id)
-            ecs_endpoint = f"ecs.{region_id}.aliyuncs.com"
-            client.add_endpoint(region_id, 'Ecs', ecs_endpoint)
-
-            req = DescribeInstancesRequest()
-            req.set_PageSize(100)
-            response = client.do_action_with_exception(req)
-            result = json.loads(response)
-
-            for inst in result.get('Instances', {}).get('Instance', []):
-                existing = EcsInstance.query.filter_by(instance_id=inst['InstanceId']).first()
-                
-                public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', [])
-                eip = inst.get('EipAddress', {}).get('IpAddress', '')
-                if eip: public_ips.append(eip)
-                private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', [])
-                ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', [])
-
+            for inst in _discover_ecs_instances_all_regions(ak, sk, region_id):
+                existing = EcsInstance.query.filter_by(instance_id=inst['instance_id']).first()
                 discovered.append({
-                    'instance_id': inst['InstanceId'],
-                    'name': inst.get('InstanceName', ''),
-                    'region_id': inst.get('RegionId', region_id),
-                    'status': inst.get('Status', 'Unknown'),
-                    'public_ip': public_ips[0] if public_ips else '',
-                    'private_ip': private_ips[0] if private_ips else '',
-                    'ipv6_addr': ipv6_ips[0] if ipv6_ips else '',
+                    **inst,
                     'already_added': existing is not None,
                 })
 
@@ -914,6 +1103,109 @@ def discover_instances():
             flash(f'扫描失败: {str(e)}', 'danger')
 
     return render_template('discover.html', discovered=discovered)
+
+
+@main.route('/account/import_text', methods=['GET', 'POST'])
+@login_required
+def import_account_text():
+    """Import Alibaba account text -> discover ECS -> upsert instances -> sync to GitHub."""
+    if request.method == 'GET':
+        return render_template('import_account_text.html')
+
+    raw_text = request.form.get('account_text', '')
+    parsed = _parse_account_text(raw_text)
+    ak = parsed.get('access_key_id', '')
+    sk = parsed.get('access_key_secret', '')
+    if not ak or not sk:
+        flash('解析失败：未识别到 AccessKey ID/Secret，请检查粘贴内容。', 'danger')
+        return render_template('import_account_text.html', raw_text=raw_text)
+
+    account_slug = parsed['account_slug']
+    default_region = parsed.get('region_id') or 'cn-hangzhou'
+    note_parts = [part for part in [parsed.get('remark', '').strip(), f'account:{account_slug}'] if part]
+    merged_note = ' | '.join(note_parts)
+
+    try:
+        discovered = _discover_ecs_instances_all_regions(ak, sk, default_region)
+    except Exception as e:
+        flash(f'自动发现失败: {str(e)}', 'danger')
+        return render_template('import_account_text.html', raw_text=raw_text)
+
+    imported = 0
+    updated = 0
+    for inst in discovered:
+        existing = EcsInstance.query.filter_by(instance_id=inst['instance_id']).first()
+        if existing:
+            existing.name = (inst.get('name') or existing.name or inst['instance_id']).strip()
+            existing.region_id = inst.get('region_id') or existing.region_id
+            existing.status = inst.get('status') or existing.status or 'Unknown'
+            existing.public_ip = inst.get('public_ip', '')
+            existing.private_ip = inst.get('private_ip', '')
+            existing.ipv6_addr = inst.get('ipv6_addr', '')
+            existing.notes = merged_note or (existing.notes or '')
+            existing.traffic_strategy = 'life'
+            existing.life_total_limit = 500
+            existing.auto_stop_enabled = False
+            existing.auto_start_enabled = True
+            existing.monitoring_enabled = True
+            existing.set_ak_sk(ak, sk)
+            updated += 1
+        else:
+            new_instance = EcsInstance(
+                name=(inst.get('name') or inst['instance_id']).strip(),
+                region_id=inst.get('region_id') or default_region,
+                instance_id=inst['instance_id'],
+                status=inst.get('status', 'Unknown'),
+                public_ip=inst.get('public_ip', ''),
+                private_ip=inst.get('private_ip', ''),
+                ipv6_addr=inst.get('ipv6_addr', ''),
+                notes=merged_note,
+                traffic_strategy='life',
+                life_total_limit=500,
+                auto_stop_enabled=False,
+                auto_start_enabled=True,
+                monitoring_enabled=True,
+            )
+            new_instance.set_ak_sk(ak, sk)
+            db.session.add(new_instance)
+            imported += 1
+
+    try:
+        db.session.flush()
+        payload = {
+            'account_slug': account_slug,
+            'account_identifier': parsed.get('login_name') or account_slug,
+            'login_name': parsed.get('login_name', ''),
+            'remark': parsed.get('remark', ''),
+            'access_key_id': ak,
+            'access_key_secret': sk,
+            'region': default_region,
+            'discovered_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'instances': discovered,
+        }
+        ok, sync_info = _sync_account_to_github('WithZeng/aliyun-accounts', account_slug, payload)
+        if not ok:
+            raise RuntimeError(sync_info)
+
+        log_operation('account_import_text', f'文本导入账号 {account_slug}，新增 {imported}，更新 {updated}')
+        db.session.commit()
+        flash(f'导入完成：发现 {len(discovered)} 台，新增 {imported}，更新 {updated}；GitHub 已同步 {sync_info}', 'success')
+        return render_template(
+            'import_account_text.html',
+            raw_text=raw_text,
+            result={
+                'account_slug': account_slug,
+                'discovered_count': len(discovered),
+                'imported_count': imported,
+                'updated_count': updated,
+                'sync_target': sync_info,
+                'instances': discovered,
+            },
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f'导入失败: {str(e)}', 'danger')
+        return render_template('import_account_text.html', raw_text=raw_text)
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Backup & Export 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
