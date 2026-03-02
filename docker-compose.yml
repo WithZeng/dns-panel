@@ -14,9 +14,26 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       PYTHONUNBUFFERED: "1"
       GH_TOKEN: ${GH_TOKEN:-}
+      DNS_PANEL_DISABLE_SCHEDULER: "1"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)\""]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  dns-panel-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dns-panel-scheduler
+    restart: unless-stopped
+    command: ["python", "scheduler_worker.py"]
+    volumes:
+      - ./instance:/app/instance
+      - ./.env:/app/.env
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      PYTHONUNBUFFERED: "1"
+      GH_TOKEN: ${GH_TOKEN:-}
+      DNS_PANEL_DISABLE_SCHEDULER: "0"

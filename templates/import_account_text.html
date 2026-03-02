@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">账号文本一键导入</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">粘贴阿里云账号信息文本，自动解析 AK/SK、发现实例、按默认策略入库并同步到 GitHub 私有仓库。</p>
 
-        <form method="POST" class="space-y-4">
+        <form method="POST" class="space-y-4" id="import-form">
             <div>
                 <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">账号信息文本</label>
                 <textarea name="account_text" rows="12" required placeholder="示例：&#10;登录名称：demo@example.com&#10;AccessKey ID：LTAIxxxxxxxxxxxx&#10;AccessKey Secret：xxxxxxxxxxxxxxxxxxxx&#10;备注：张三-生产账号"
@@ -20,11 +20,29 @@
                 扫描国内常用区域（北京/广州/上海/杭州/深圳）
             </label>
 
-            <button type="submit"
+            <button type="submit" id="import-submit-btn"
                 class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
                 🚀 一键导入并同步
             </button>
         </form>
+
+        <div id="import-job-meta" data-job-id="{{ job_id or '' }}"></div>
+        <div id="import-progress-wrap" class="mt-6 {% if not job_id %}hidden{% endif %}">
+            <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50/70 dark:bg-blue-900/20 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-sm font-semibold text-blue-700 dark:text-blue-300">导入进度</div>
+                        <div id="import-progress-step" class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">初始化中...</div>
+                    </div>
+                    <div id="import-progress-percent" class="text-sm font-bold text-blue-700 dark:text-blue-300">0%</div>
+                </div>
+                <div class="mt-3 h-2 w-full bg-blue-100 dark:bg-blue-900/50 rounded-full overflow-hidden">
+                    <div id="import-progress-bar" class="h-2 bg-blue-600 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+                <div id="import-progress-message" class="text-xs text-slate-600 dark:text-slate-300 mt-2">任务已创建，等待执行...</div>
+                <div id="import-progress-error" class="text-xs text-red-600 dark:text-red-300 mt-2 hidden"></div>
+            </div>
+        </div>
 
         {% if result %}
         <div class="mt-8 border-t border-slate-100 dark:border-slate-700 pt-5 space-y-3">
@@ -72,4 +90,80 @@
             class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-6">← 返回</a>
     </div>
 </div>
+
+{% if job_id %}
+<script>
+(function () {
+    const jobId = {{ job_id|tojson }};
+    if (!jobId) return;
+
+    const wrap = document.getElementById('import-progress-wrap');
+    const stepEl = document.getElementById('import-progress-step');
+    const percentEl = document.getElementById('import-progress-percent');
+    const barEl = document.getElementById('import-progress-bar');
+    const msgEl = document.getElementById('import-progress-message');
+    const errEl = document.getElementById('import-progress-error');
+    const submitBtn = document.getElementById('import-submit-btn');
+
+    if (wrap) wrap.classList.remove('hidden');
+    if (submitBtn) submitBtn.disabled = true;
+
+    function renderJob(job) {
+        const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
+        if (stepEl) stepEl.textContent = job.step || '处理中';
+        if (percentEl) percentEl.textContent = progress + '%';
+        if (barEl) barEl.style.width = progress + '%';
+        if (msgEl) msgEl.textContent = job.message || '';
+
+        if (job.status === 'error') {
+            if (errEl) {
+                errEl.classList.remove('hidden');
+                errEl.textContent = job.error || '导入失败';
+            }
+            if (submitBtn) submitBtn.disabled = false;
+            return true;
+        }
+
+        if (job.status === 'done') {
+            if (errEl) errEl.classList.add('hidden');
+            const target = new URL(window.location.href);
+            target.searchParams.set('job_done', job.id);
+            window.location.replace(target.toString());
+            return true;
+        }
+
+        return false;
+    }
+
+    async function poll() {
+        try {
+            const res = await fetch(`/api/account/import_text/status/${encodeURIComponent(jobId)}`, { credentials: 'same-origin' });
+            const data = await res.json();
+            if (!data.ok || !data.job) {
+                if (errEl) {
+                    errEl.classList.remove('hidden');
+                    errEl.textContent = data.message || '任务状态获取失败';
+                }
+                if (submitBtn) submitBtn.disabled = false;
+                return;
+            }
+
+            const done = renderJob(data.job);
+            if (!done) {
+                setTimeout(poll, 1200);
+            }
+        } catch (e) {
+            if (errEl) {
+                errEl.classList.remove('hidden');
+                errEl.textContent = '网络波动，正在重试...';
+            }
+            setTimeout(poll, 1500);
+        }
+    }
+
+    poll();
+})();
+</script>
+{% endif %}
+
 {% endblock %}
