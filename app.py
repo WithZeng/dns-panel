@@ -243,9 +243,12 @@ def bootstrap_database():
             # Check user columns
             cursor.execute("PRAGMA table_info(user)")
             user_cols = {row[1] for row in cursor.fetchall()}
-            if 'dashboard_layout' not in user_cols:
-                cursor.execute("ALTER TABLE user ADD COLUMN dashboard_layout TEXT DEFAULT ''")
-                print("Migration: added 'dashboard_layout' column to user.")
+            if 'dashboard_layout' in user_cols:
+                try:
+                    cursor.execute("ALTER TABLE user DROP COLUMN dashboard_layout")
+                    print("Migration: dropped deprecated 'dashboard_layout' column from user.")
+                except Exception as drop_err:
+                    print(f"Migration note: could not drop 'dashboard_layout' column: {drop_err}")
             if 'force_password_change' not in user_cols:
                 cursor.execute("ALTER TABLE user ADD COLUMN force_password_change BOOLEAN DEFAULT 0")
                 print("Migration: added 'force_password_change' column to user.")

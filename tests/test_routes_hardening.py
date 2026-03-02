@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import sys
@@ -116,28 +115,6 @@ class RoutesHardeningTests(unittest.TestCase):
         self.assertEqual(res.status_code, 302)
         with app.app_context():
             self.assertIsNone(db.session.get(EcsInstance, self.instance_id))
-
-    def test_dashboard_layout_reject_invalid_payload(self):
-        res = self.client.post(
-            '/api/dashboard_layout',
-            json={'order': 'not-a-list'},
-            headers={'X-CSRFToken': self.csrf_token},
-        )
-        self.assertEqual(res.status_code, 400)
-        data = res.get_json()
-        self.assertFalse(data.get('success', True))
-
-    def test_dashboard_layout_sanitize_and_fill_defaults(self):
-        res = self.client.post(
-            '/api/dashboard_layout',
-            json={'order': ['instances', 'bad', 'summary', 'instances']},
-            headers={'X-CSRFToken': self.csrf_token},
-        )
-        self.assertEqual(res.status_code, 200)
-        with app.app_context():
-            user = User.query.filter_by(username='tester').first()
-            saved = json.loads(user.dashboard_layout or '[]')
-            self.assertEqual(saved, ['instances', 'summary', 'actions', 'batch', 'region'])
 
     def test_schedule_reject_invalid_day(self):
         res = self.client.post(

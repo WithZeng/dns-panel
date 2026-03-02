@@ -7,25 +7,16 @@
       <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">控制台总览</h1>
       <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">核心指标、实例状态与区域流量统一视图</p>
     </div>
-    <div class="text-xs text-slate-500 dark:text-slate-400">支持拖拽模块，自定义布局</div>
+    <div class="text-xs text-slate-500 dark:text-slate-400">固定布局（已移除拖拽排序）</div>
   </div>
 </section>
 
-<!-- Widget container: sortable via SortableJS -->
+<!-- Widget container: fixed static layout -->
 <div id="widgetContainer" class="space-y-1">
 
-  {% for widget_id in widget_order %}
 
-  {% if widget_id == 'summary' %}
   <!-- ── Widget: Summary Cards ── -->
   <div class="widget mb-6" data-widget="summary">
-    <div
-      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
-      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-      </svg>
-      <span class="text-xs text-slate-400">拖拽排序</span>
-    </div>
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
       <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
         <div class="text-xs text-slate-500 dark:text-slate-400">实例总数</div>
@@ -86,16 +77,8 @@
     </div>
   </div>
 
-  {% elif widget_id == 'actions' %}
   <!-- ── Widget: Action Bar ── -->
   <div class="widget mb-6" data-widget="actions">
-    <div
-      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
-      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-      </svg>
-      <span class="text-xs text-slate-400">拖拽排序</span>
-    </div>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">实例仪表盘</h1>
@@ -126,16 +109,8 @@
     </div>
   </div>
 
-  {% elif widget_id == 'batch' %}
   <!-- ── Widget: Batch Operations ── -->
   <div class="widget mb-6" data-widget="batch">
-    <div
-      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
-      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-      </svg>
-      <span class="text-xs text-slate-400">拖拽排序</span>
-    </div>
     <form id="batchForm" method="POST" action="{{ url_for('main.batch_action') }}"
       class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 shadow-sm">
       <span class="text-sm text-slate-600 dark:text-slate-400 font-medium">批量操作:</span>
@@ -178,16 +153,8 @@
     </form>
   </div>
 
-  {% elif widget_id == 'instances' %}
   <!-- ── Widget: Instance Grid ── -->
   <div class="widget mb-6" data-widget="instances">
-    <div
-      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
-      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-      </svg>
-      <span class="text-xs text-slate-400">拖拽排序</span>
-    </div>
     {% if instances %}
     <div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {% for instance in instances %}
@@ -352,16 +319,8 @@
     {% endif %}
   </div>
 
-  {% elif widget_id == 'region' %}
   <!-- ── Widget: Region Traffic Chart ── -->
   <div class="widget mb-6" data-widget="region">
-    <div
-      class="widget-handle cursor-grab active:cursor-grabbing flex items-center gap-1 mb-2 opacity-0 hover:opacity-60 transition-opacity">
-      <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-      </svg>
-      <span class="text-xs text-slate-400">拖拽排序</span>
-    </div>
     <div
       class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8">
       <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">🌍 区域流量对比</h2>
@@ -372,8 +331,6 @@
     </div>
   </div>
 
-  {% endif %}
-  {% endfor %}
 </div><!-- /widgetContainer -->
 
 <!-- Release Confirm Modal -->
@@ -399,28 +356,9 @@
   </div>
 </div>
 
-<!-- SortableJS CDN -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 
 <script>
-  // ---- SortableJS Widget Drag-and-Drop ----
-  new Sortable(document.getElementById('widgetContainer'), {
-    animation: 200,
-    handle: '.widget-handle',
-    ghostClass: 'opacity-30',
-    filter: 'input, label, button, a, select, form',
-    preventOnFilter: false,
-    onEnd: function () {
-      const order = [...document.querySelectorAll('.widget')].map(w => w.dataset.widget).filter(Boolean);
-      fetch('/api/dashboard_layout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order })
-      });
-    }
-  });
-
   // ---- Region Chart ----
   fetch('/api/region_traffic')
     .then(r => r.json())

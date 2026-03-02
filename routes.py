@@ -355,23 +355,13 @@ def dashboard():
     # All available tags for filter dropdown (avoid loading all instance rows twice)
     all_tags = sorted(t for (t,) in db.session.query(EcsInstance.tag).filter(EcsInstance.tag.isnot(None)).distinct().all() if t)
 
-    # Widget order
-    default_order = ['summary', 'actions', 'batch', 'instances', 'region']
-    try:
-        layout_str = getattr(current_user, 'dashboard_layout', '') or ''
-        saved = json.loads(layout_str) if layout_str else []
-        widget_order = saved if saved else default_order
-    except Exception:
-        widget_order = default_order
-
     return render_template('dashboard.html',
                            instances=instances,
                            total=total, online=online, stopped=stopped,
                            total_traffic=total_traffic, total_cost=total_cost,
                            probe_total=probe_total, probe_online=probe_online, probe_offline=probe_offline,
                            dns_total=dns_total, dns_enabled=dns_enabled,
-                           all_tags=all_tags, current_tag=tag_filter,
-                           widget_order=widget_order)
+                           all_tags=all_tags, current_tag=tag_filter)
 
 
 @main.route('/api/instances')
@@ -1260,40 +1250,9 @@ def update_notes(id):
     return jsonify({'success': True, 'notes': instance.notes})
 
 
-# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Dashboard Layout (AJAX) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Dashboard Layout (Removed) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
-@main.route('/api/dashboard_layout', methods=['POST'])
-@login_required
-def save_dashboard_layout():
-    """Save widget order for the current user."""
-    data = request.get_json(silent=True) or {}
-    order = data.get('order', [])
-    default_order = ['summary', 'actions', 'batch', 'instances', 'region']
-    allowed = set(default_order)
-
-    if not isinstance(order, list):
-        return jsonify({'success': False, 'error': 'invalid order payload'}), 400
-
-    cleaned = []
-    for item in order:
-        if not isinstance(item, str):
-            continue
-        item = item.strip()
-        if item in allowed and item not in cleaned:
-            cleaned.append(item)
-
-    for item in default_order:
-        if item not in cleaned:
-            cleaned.append(item)
-
-    try:
-        current_user.dashboard_layout = json.dumps(cleaned)
-        db.session.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
+# Dashboard uses a static, fixed widget order.
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Scheduled Tasks 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 

@@ -16,8 +16,6 @@ class User(UserMixin, db.Model):
     failed_login_count = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
     force_password_change = db.Column(db.Boolean, default=False)
-    # Customizable dashboard widget order (JSON list)
-    dashboard_layout = db.Column(db.Text, default='')
 
 
 class EcsInstance(db.Model):
