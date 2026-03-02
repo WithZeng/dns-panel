@@ -124,16 +124,13 @@
                     permission_denied: '权限不足',
                     api_rate_limited: 'API 限流',
                     github_sync_failed: 'GitHub 同步失败',
+                    task_interrupted: '任务中断',
                     unknown_error: '未知错误'
                 };
                 const typeLabel = typeMap[job.error_type] || '未知错误';
                 const actionText = job.suggestion || '请检查配置后重试。';
                 const friendlyMsg = job.message || '导入失败';
-                errEl.innerHTML = `
-                    <div class="font-semibold">失败分类：${typeLabel}</div>
-                    <div class="mt-1">问题说明：${friendlyMsg}</div>
-                    <div class="mt-1">建议动作：${actionText}</div>
-                `;
+                errEl.textContent = `失败分类：${typeLabel}\n问题说明：${friendlyMsg}\n建议动作：${actionText}`;
             }
             if (submitBtn) submitBtn.disabled = false;
             return true;

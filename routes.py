@@ -37,8 +37,10 @@ main = Blueprint('main', __name__)
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
 
-_IMPORT_JOBS_LOCK = threading.Lock()
+_IMPORT_JOBS_LOCK = threading.RLock()
 _IMPORT_JOB_KEEP_HOURS = 24
+_IMPORT_JOB_TIMEOUT_MINUTES = 60
+_IMPORT_TEXT_MAX_CHARS = 20000
 
 
 def _is_probe_online(server):
@@ -285,6 +287,15 @@ def _classify_import_error(err):
     raw_error = str(err or '').strip() or '未知错误'
     text = raw_error.lower()
 
+    if any(k in text for k in ['task_interrupted', '任务中断', '进程中断']):
+        return {
+            'error_type': 'task_interrupted',
+            'error_code': 'TASK_INTERRUPTED',
+            'message': '导入任务中断，未能完成。',
+            'suggestion': '请重新发起导入；若频繁发生，请检查服务稳定性与后台日志。',
+            'raw_error': raw_error,
+        }
+
     def _meta(error_type, error_code, message, suggestion):
         return {
             'error_type': error_type,
@@ -294,7 +305,9 @@ def _classify_import_error(err):
             'raw_error': raw_error,
         }
 
-    if any(k in text for k in ['github', 'gh cli', 'gh auth', '仓库', 'repo']) and any(k in text for k in ['同步', 'sync', 'fail', '失败', 'error']):
+    github_keywords = ['github', 'gh cli', 'gh auth', '仓库', 'repo']
+    github_failure_hints = ['同步', 'sync', 'fail', '失败', 'error', 'token', 'forbidden', 'permission', '权限']
+    if any(k in text for k in github_keywords) and any(k in text for k in github_failure_hints):
         return _meta(
             'github_sync_failed',
             'GITHUB_SYNC_FAILED',
@@ -546,19 +559,21 @@ def _sync_account_to_github(repo, account_slug, payload):
 
 
 def _new_import_job():
-    job_id = uuid.uuid4().hex
-    job = ImportJob(
-        id=job_id,
-        status='queued',
-        step='排队中',
-        message='任务已创建，等待开始',
-        progress=0,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    db.session.add(job)
-    db.session.commit()
-    return job
+    with _IMPORT_JOBS_LOCK:
+        job_id = uuid.uuid4().hex
+        now = datetime.utcnow()
+        job = ImportJob(
+            id=job_id,
+            status='queued',
+            step='排队中',
+            message='任务已创建，等待开始',
+            progress=0,
+            created_at=now,
+            updated_at=now,
+        )
+        db.session.add(job)
+        db.session.commit()
+        return job
 
 
 def _job_is_done(job):
@@ -625,29 +640,74 @@ def _serialize_import_job(job):
 
 
 def _update_import_job(job_id, **updates):
-    job = db.session.get(ImportJob, job_id)
-    if not job:
-        return None
-    for k, v in updates.items():
-        if k == 'result':
-            job.set_result(v)
-        elif hasattr(job, k):
-            setattr(job, k, v)
-    job.updated_at = datetime.utcnow()
-    db.session.commit()
-    return job
+    with _IMPORT_JOBS_LOCK:
+        job = db.session.get(ImportJob, job_id)
+        if not job:
+            return None
+
+        if _job_is_done(job):
+            return job
+
+        for k, v in updates.items():
+            if k == 'result':
+                job.set_result(v)
+            elif hasattr(job, k):
+                setattr(job, k, v)
+
+        progress = getattr(job, 'progress', 0)
+        try:
+            progress = int(progress)
+        except (TypeError, ValueError):
+            progress = 0
+        job.progress = max(0, min(100, progress))
+        job.updated_at = datetime.utcnow()
+        db.session.commit()
+        return job
 
 
 def _cleanup_import_jobs():
     cutoff = datetime.utcnow() - timedelta(hours=_IMPORT_JOB_KEEP_HOURS)
-    try:
-        ImportJob.query.filter(
-            ImportJob.status.in_(['done', 'error']),
-            ImportJob.finished_at < cutoff
-        ).delete()
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    with _IMPORT_JOBS_LOCK:
+        try:
+            ImportJob.query.filter(
+                ImportJob.status.in_(['done', 'error']),
+                ImportJob.finished_at < cutoff
+            ).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
+def _mark_stale_import_job_if_needed(job):
+    if not job or _job_is_done(job):
+        return job
+
+    if not getattr(job, 'updated_at', None):
+        return job
+
+    timeout_cutoff = datetime.utcnow() - timedelta(minutes=_IMPORT_JOB_TIMEOUT_MINUTES)
+    if job.updated_at >= timeout_cutoff:
+        return job
+
+    elapsed_minutes = int((datetime.utcnow() - job.updated_at).total_seconds() // 60)
+    timeout_msg = (
+        f'任务长时间未更新（约 {max(elapsed_minutes, _IMPORT_JOB_TIMEOUT_MINUTES)} 分钟），'
+        '可能因进程中断导致。请重新发起导入。'
+    )
+    return _update_import_job(
+        job.id,
+        status='error',
+        step='中断',
+        message='导入任务中断，请重新发起。',
+        error=timeout_msg,
+        result={
+            'error_type': 'task_interrupted',
+            'error_code': 'TASK_INTERRUPTED',
+            'suggestion': '请重新发起导入；若频繁发生，请检查服务稳定性与后台日志。',
+            'message': '导入任务中断，未能完成。',
+        },
+        finished_at=datetime.utcnow(),
+    )
 
 
 def _run_account_import_job(app_obj, job_id, raw_text, scan_all_regions):
@@ -1442,6 +1502,10 @@ def import_account_text():
         flash('请先粘贴账号文本。', 'warning')
         return render_template('import_account_text.html', raw_text=raw_text)
 
+    if len(raw_text) > _IMPORT_TEXT_MAX_CHARS:
+        flash(f'账号文本过长（最多 {_IMPORT_TEXT_MAX_CHARS} 字符），请精简后重试。', 'warning')
+        return render_template('import_account_text.html', raw_text=raw_text[:_IMPORT_TEXT_MAX_CHARS])
+
     scan_all_regions = 'scan_all_regions' in request.form
 
     _cleanup_import_jobs()
@@ -1468,10 +1532,13 @@ def import_account_text():
 @login_required
 def import_account_text_status(job_id):
     _cleanup_import_jobs()
-    job = db.session.get(ImportJob, job_id)
+    with _IMPORT_JOBS_LOCK:
+        job = db.session.get(ImportJob, job_id)
     if not job:
         return jsonify({'ok': False, 'message': '任务不存在或已过期'}), 404
-    payload = _serialize_import_job(job)
+
+    refreshed = _mark_stale_import_job_if_needed(job)
+    payload = _serialize_import_job(refreshed or job)
     return jsonify({'ok': True, 'job': payload})
 
 
