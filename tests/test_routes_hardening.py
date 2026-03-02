@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import sys
 import tempfile
+import time
 import unittest
 from types import ModuleType
 
@@ -158,6 +160,39 @@ class RoutesHardeningTests(unittest.TestCase):
         data = res.get_json()
         self.assertFalse(data.get('success', True))
         self.assertTrue(data.get('message'))
+
+    def test_public_ipv6_script_token_valid(self):
+        detail = self.client.get(f'/instance/{self.instance_id}')
+        self.assertEqual(detail.status_code, 200)
+        html = detail.get_data(as_text=True)
+        m = re.search(r"/public/instance/(\d+)/ipv6_script\.sh\?token=([^'\"]+)", html)
+        self.assertIsNotNone(m)
+
+        script_res = self.client.get(f"/public/instance/{self.instance_id}/ipv6_script.sh?token={m.group(2)}")
+        self.assertEqual(script_res.status_code, 200)
+        body = script_res.get_data(as_text=True)
+        self.assertIn('set -euo pipefail', body)
+        self.assertIn('TARGET_IPV6=', body)
+
+    def test_public_ipv6_script_token_invalid_or_expired_forbidden(self):
+        # invalid token
+        bad = self.client.get(f'/public/instance/{self.instance_id}/ipv6_script.sh?token=bad-token')
+        self.assertEqual(bad.status_code, 403)
+
+        # expired token
+        old_expire = app.config.get('IPV6_SCRIPT_TOKEN_EXPIRES', 1800)
+        app.config['IPV6_SCRIPT_TOKEN_EXPIRES'] = 1
+        try:
+            detail = self.client.get(f'/instance/{self.instance_id}')
+            html = detail.get_data(as_text=True)
+            m = re.search(r"/public/instance/(\d+)/ipv6_script\.sh\?token=([^'\"]+)", html)
+            self.assertIsNotNone(m)
+            token = m.group(2)
+            time.sleep(2.2)
+            expired = self.client.get(f'/public/instance/{self.instance_id}/ipv6_script.sh?token={token}')
+            self.assertEqual(expired.status_code, 403)
+        finally:
+            app.config['IPV6_SCRIPT_TOKEN_EXPIRES'] = old_expire
 
 
 if __name__ == '__main__':

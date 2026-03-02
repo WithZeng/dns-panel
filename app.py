@@ -81,6 +81,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SCHEDULER_API_ENABLED'] = True
 app.config['WTF_CSRF_TIME_LIMIT'] = 7200
+app.config['IPV6_SCRIPT_TOKEN_EXPIRES'] = int(os.environ.get('IPV6_SCRIPT_TOKEN_EXPIRES', '1800'))
 
 # Session timeout: 30 minutes
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
