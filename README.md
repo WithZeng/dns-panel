@@ -170,7 +170,8 @@ bash panel.sh update
 | `PUBLIC_PANEL_URL` | 反代/NAT 场景的外网地址 | *(空)* |
 | `TZ` | 时区 | `Asia/Shanghai` |
 | `DNS_FAILOVER_TEST_MODE` | 故障检测模式（`panel_local` / `checker`） | `panel_local` |
-| `DNS_PANEL_DISABLE_SCHEDULER` | 禁用定时任务（测试用） | `0` |
+| `DNS_PANEL_DISABLE_SCHEDULER` | 强制禁用定时任务（测试用） | `0` |
+| `DNS_PANEL_ROLE` | 进程角色（`web`/`scheduler`/`all`），仅 `scheduler` 或 `all` 运行调度器 | `all` |
 
 ---
 

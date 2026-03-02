@@ -113,3 +113,6 @@ journalctl -u dns-panel-checker -f
 - `PUBLIC_PANEL_URL`: 反代/NAT 场景下用于生成外网部署命令（例如 `https://panel.example.com`）
 - `DNS_FAILOVER_TEST_MODE`: 自动故障转移检测模式，`panel_local` 或 `checker`
 - `DNS_PANEL_DISABLE_SCHEDULER`: 测试时可设为 `1` 关闭调度器
+- `DNS_PANEL_ROLE`: 进程角色，`web`（禁调度）/`scheduler`（仅调度）/`all`（兼容旧模式）
+
+> 生产建议：使用两个服务（`dns-panel` + `dns-panel-scheduler`），前者 `DNS_PANEL_ROLE=web` 且 `DNS_PANEL_DISABLE_SCHEDULER=1`，后者 `DNS_PANEL_ROLE=scheduler` 负责唯一调度。

@@ -10,6 +10,7 @@ import time
 
 # Force scheduler enabled in this process
 os.environ['DNS_PANEL_DISABLE_SCHEDULER'] = '0'
+os.environ['DNS_PANEL_ROLE'] = 'scheduler'
 
 from app import app  # noqa: E402
 
