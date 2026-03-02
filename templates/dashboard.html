@@ -1,8 +1,18 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<section class="mb-5 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">控制台总览</h1>
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">核心指标、实例状态与区域流量统一视图</p>
+    </div>
+    <div class="text-xs text-slate-500 dark:text-slate-400">支持拖拽模块，自定义布局</div>
+  </div>
+</section>
+
 <!-- Widget container: sortable via SortableJS -->
-<div id="widgetContainer">
+<div id="widgetContainer" class="space-y-1">
 
   {% for widget_id in widget_order %}
 
@@ -502,7 +512,7 @@
         fetchData();
         seconds = 30;
       }
-      countdownEl.textContent = seconds;
+      if (countdownEl) countdownEl.textContent = seconds;
     }
 
     function fetchData() {

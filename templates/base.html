@@ -4,28 +4,74 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>ECS 流量监控面板</title>
+  <title>{% block title %}ECS 流量监控面板{% endblock %}</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📳</text></svg>"
     type="image/svg+xml">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { darkMode: 'class' }
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: '0 6px 20px -10px rgba(15, 23, 42, .20)',
+            card: '0 10px 30px -15px rgba(15, 23, 42, .28)'
+          }
+        }
+      }
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    :root { color-scheme: light; }
+    .dark { color-scheme: dark; }
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background-image:
+        radial-gradient(circle at 0 0, rgba(99, 102, 241, 0.06), transparent 28%),
+        radial-gradient(circle at 100% 0, rgba(14, 165, 233, 0.06), transparent 26%);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .dark body {
+      background-image:
+        radial-gradient(circle at 0 0, rgba(99, 102, 241, 0.12), transparent 35%),
+        radial-gradient(circle at 100% 0, rgba(14, 165, 233, 0.08), transparent 30%);
+    }
+
+    *:focus-visible {
+      outline: 2px solid rgb(59 130 246 / .5);
+      outline-offset: 2px;
+      border-radius: 0.5rem;
+    }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, .38);
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background-clip: content-box;
+    }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    @media (max-width: 420px) {
+      html { font-size: 15px; }
+    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors">
-  <nav class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200/50 dark:bg-slate-800/80 dark:border-slate-700/50">
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-200">
+  <nav class="sticky top-0 z-30 bg-white/82 backdrop-blur-md border-b border-slate-200/60 dark:bg-slate-800/82 dark:border-slate-700/60 supports-[backdrop-filter]:bg-white/75 supports-[backdrop-filter]:dark:bg-slate-800/75">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="h-16 flex items-center justify-between">
-        <a href="{{ url_for('main.dashboard') }}" class="text-slate-900 dark:text-white font-extrabold tracking-tight text-lg">ECS Monitor</a>
+        <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center gap-2 text-slate-900 dark:text-white font-extrabold tracking-tight text-lg">
+          <span class="inline-grid place-items-center w-8 h-8 rounded-xl bg-slate-900 text-white dark:bg-blue-600 text-sm">E</span>
+          <span>ECS Monitor</span>
+        </a>
 
-        <div class="hidden sm:flex items-center gap-2 text-sm">
+        <div class="hidden sm:flex items-center gap-1.5 text-sm">
           {% if current_user.is_authenticated %}
           <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">仪表盘</a>
           <a href="{{ url_for('probe.probe_servers_page') }}" class="inline-flex items-center rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">探针服务器</a>
@@ -43,7 +89,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
             </svg>
           </button>
-          <span class="text-slate-500 dark:text-slate-400">{{ current_user.username }}</span>
+          <span class="text-slate-500 dark:text-slate-400 ml-1">{{ current_user.username }}</span>
           <a href="{{ url_for('main.change_password') }}" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition text-xs">改密</a>
           <a href="{{ url_for('main.logout') }}" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition text-xs">退出</a>
           {% else %}
@@ -72,7 +118,7 @@
     </div>
 
     {% if current_user.is_authenticated %}
-    <div id="mobileMenu" class="hidden sm:hidden border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pb-4 pt-2 space-y-1 text-sm">
+    <div id="mobileMenu" class="hidden sm:hidden border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 pb-4 pt-2 space-y-1 text-sm max-h-[70vh] overflow-y-auto">
       <a href="{{ url_for('main.dashboard') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">仪表盘</a>
       <a href="{{ url_for('probe.probe_servers_page') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">探针服务器</a>
       <a href="{{ url_for('probe.dns_failover_page') }}" class="block rounded-lg px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">DNS 管理</a>
@@ -90,7 +136,7 @@
   <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-10">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="space-y-2 mb-5">
+    <div class="space-y-2 mb-5" id="flashStack">
       {% for category, message in messages %}
       {% set cls = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600' %}
       {% if category == 'success' %}
@@ -155,7 +201,12 @@
       }
 
       const saved = localStorage.getItem('theme');
-      applyTheme(saved === 'dark');
+      if (saved === 'dark' || saved === 'light') {
+        applyTheme(saved === 'dark');
+      } else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark);
+      }
 
       document.querySelectorAll('#themeToggle, #themeToggleMobile').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -171,6 +222,31 @@
         menuToggle.addEventListener('click', function () {
           mobileMenu.classList.toggle('hidden');
         });
+      }
+
+      // 提升交互反馈：提交按钮显示加载态
+      document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', () => {
+          const submitter = form.querySelector('button[type="submit"]');
+          if (!submitter || submitter.disabled) return;
+          submitter.dataset.originalText = submitter.innerHTML;
+          submitter.disabled = true;
+          submitter.classList.add('opacity-70', 'cursor-not-allowed');
+          submitter.innerHTML = '<span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full border-2 border-current border-r-transparent animate-spin"></span>处理中...</span>';
+          setTimeout(() => {
+            submitter.disabled = false;
+            submitter.classList.remove('opacity-70', 'cursor-not-allowed');
+            if (submitter.dataset.originalText) submitter.innerHTML = submitter.dataset.originalText;
+          }, 10000);
+        });
+      });
+
+      const flashStack = document.getElementById('flashStack');
+      if (flashStack) {
+        setTimeout(() => {
+          flashStack.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+          setTimeout(() => flashStack.remove(), 520);
+        }, 3500);
       }
     })();
   </script>

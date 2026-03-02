@@ -1,108 +1,120 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-  <div>
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">探针服务器</h1>
-    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">实时刷新（3 秒）</p>
-  </div>
-  <button id="openAddModal" type="button"
-    class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px]">
-    添加探针服务器
-  </button>
-</div>
-
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-    <div class="text-xs text-slate-500 dark:text-slate-400">总数</div>
-    <div id="probeTotal" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ servers|length }}</div>
-  </div>
-  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-    <div class="text-xs text-slate-500 dark:text-slate-400">在线</div>
-    <div id="probeOnline" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ servers|selectattr('is_online')|list|length }}</div>
-  </div>
-  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-    <div class="text-xs text-slate-500 dark:text-slate-400">离线</div>
-    <div id="probeOffline" class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ servers|rejectattr('is_online')|list|length }}</div>
-  </div>
-  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-    <div class="text-xs text-slate-500 dark:text-slate-400">阿里云</div>
-    <div id="probeAliyun" class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ servers|selectattr('server_type', 'equalto', 'aliyun')|list|length }}</div>
-  </div>
-</div>
-
-<div class="flex flex-col sm:flex-row gap-3 mb-5">
-  <input id="searchInput" type="text" placeholder="搜索服务器名称或 IP..."
-    class="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
-  <select id="filterType" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
-    <option value="">全部类型</option>
-    <option value="aliyun">aliyun</option>
-    <option value="generic">generic</option>
-  </select>
-  <select id="filterStatus" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
-    <option value="">全部状态</option>
-    <option value="online">在线</option>
-    <option value="offline">离线</option>
-  </select>
-</div>
-
-<div id="probeCardGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-  {% for s in servers %}
-  <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-5"
-    data-id="{{ s.id }}" data-type="{{ s.server_type }}" data-online="{{ '1' if s.is_online else '0' }}">
-    <div class="flex items-start justify-between gap-3">
+<div class="space-y-5">
+  <section class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <a href="{{ url_for('probe.probe_server_detail_page', server_id=s.id) }}"
-          class="text-lg font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition">{{ s.name }}</a>
-        <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ s.ipv4 or '-' }}{% if s.ipv6 %} / {{ s.ipv6 }}{% endif %}</div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">探针服务器</h1>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">实时监控面板（每 3 秒自动刷新）</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium {{ 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' if s.server_type == 'aliyun' else 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' }}">{{ s.server_type }}</span>
-        {% if s.is_online %}
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 text-[11px] font-medium"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>在线</span>
-        {% else %}
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2.5 py-1 text-[11px] font-medium"><span class="h-2 w-2 rounded-full bg-rose-500"></span>离线</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 text-sm">
-      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-        <div class="text-xs text-slate-500 dark:text-slate-400">CPU</div>
-        <div class="font-semibold text-slate-900 dark:text-white" data-field="cpu">{{ '%.1f'|format(s.metrics.cpu_percent) }}%</div>
-      </div>
-      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-        <div class="text-xs text-slate-500 dark:text-slate-400">内存</div>
-        <div class="font-semibold text-slate-900 dark:text-white" data-field="mem">{{ '%.1f'|format(s.metrics.mem_percent) }}%</div>
-      </div>
-      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-        <div class="text-xs text-slate-500 dark:text-slate-400">磁盘</div>
-        <div class="font-semibold text-slate-900 dark:text-white" data-field="disk">{{ '%.1f'|format(s.metrics.disk_percent) }}%</div>
-      </div>
-      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-        <div class="text-xs text-slate-500 dark:text-slate-400">网络速率</div>
-        <div class="font-semibold text-slate-900 dark:text-white" data-field="net">↑ {{ (s.metrics.net_up/1024)|round(1) }} KB/s ↓ {{ (s.metrics.net_down/1024)|round(1) }} KB/s</div>
-      </div>
-      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-        <div class="text-xs text-slate-500 dark:text-slate-400">流量统计</div>
-        {% set net = s.metrics.get('report', {}).get('network', {}) if s.metrics is mapping else {} %}
-        <div class="font-semibold text-slate-900 dark:text-white" data-field="traffic">↑ {{ '%.2f'|format((net.get('totalUp', 0) or 0) / (1024**3)) }} GB ↓ {{ '%.2f'|format((net.get('totalDown', 0) or 0) / (1024**3)) }} GB</div>
-      </div>
-    </div>
-
-    <div class="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 relative">
-      <span>最后心跳：<span data-field="last_seen">{{ s.last_seen or '-' }}</span></span>
-      <div class="relative">
-        <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-sm js-more-btn" data-id="{{ s.id }}">⋯ 更多</button>
-        <div id="more-{{ s.id }}" class="hidden absolute right-0 mt-1 w-36 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg overflow-hidden z-20">
-          <button type="button" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600 js-deploy" data-token="{{ s.token }}">部署指令</button>
-          <a href="{{ url_for('probe.probe_server_detail_page', server_id=s.id) }}" class="block px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600">编辑</a>
-          <button type="button" class="w-full text-left px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-600 js-delete" data-id="{{ s.id }}">删除</button>
-        </div>
-      </div>
+      <button id="openAddModal" type="button"
+        class="inline-flex items-center justify-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px] shadow-soft">
+        添加探针服务器
+      </button>
     </div>
   </section>
-  {% endfor %}
+
+  <div id="pageAlert" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">总数</div>
+      <div id="probeTotal" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ servers|length }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">在线</div>
+      <div id="probeOnline" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ servers|selectattr('is_online')|list|length }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">离线</div>
+      <div id="probeOffline" class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ servers|rejectattr('is_online')|list|length }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">阿里云</div>
+      <div id="probeAliyun" class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ servers|selectattr('server_type', 'equalto', 'aliyun')|list|length }}</div>
+    </div>
+  </div>
+
+  <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-5 shadow-sm">
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3">
+      <input id="searchInput" type="text" placeholder="搜索服务器名称或 IP..."
+        class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm" />
+      <select id="filterType" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm min-h-[44px]">
+        <option value="">全部类型</option>
+        <option value="aliyun">aliyun</option>
+        <option value="generic">generic</option>
+      </select>
+      <select id="filterStatus" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm min-h-[44px]">
+        <option value="">全部状态</option>
+        <option value="online">在线</option>
+        <option value="offline">离线</option>
+      </select>
+    </div>
+  </section>
+
+  <div id="probeCardGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5" aria-live="polite">
+    {% for s in servers %}
+    <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-5 hover:shadow-md transition"
+      data-id="{{ s.id }}" data-type="{{ s.server_type }}" data-online="{{ '1' if s.is_online else '0' }}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <a href="{{ url_for('probe.probe_server_detail_page', server_id=s.id) }}"
+            class="text-lg font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition break-words">{{ s.name }}</a>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 break-all">{{ s.ipv4 or '-' }}{% if s.ipv6 %} / {{ s.ipv6 }}{% endif %}</div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium {{ 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' if s.server_type == 'aliyun' else 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' }}">{{ s.server_type }}</span>
+          <span data-field="statusBadge" class="inline-flex items-center gap-1.5 rounded-full {{ 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' if s.is_online else 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' }} px-2.5 py-1 text-[11px] font-medium">
+            <span data-field="statusDot" class="h-2 w-2 rounded-full {{ 'bg-emerald-500' if s.is_online else 'bg-rose-500' }}"></span>
+            <span data-field="statusText">{{ '在线' if s.is_online else '离线' }}</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 text-sm">
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">CPU</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="cpu">{{ '%.1f'|format(s.metrics.cpu_percent) }}%</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">内存</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="mem">{{ '%.1f'|format(s.metrics.mem_percent) }}%</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">磁盘</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="disk">{{ '%.1f'|format(s.metrics.disk_percent) }}%</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">网络速率</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="net">↑ {{ (s.metrics.net_up/1024)|round(1) }} KB/s ↓ {{ (s.metrics.net_down/1024)|round(1) }} KB/s</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3 sm:col-span-2 lg:col-span-1">
+          <div class="text-xs text-slate-500 dark:text-slate-400">流量统计</div>
+          {% set net = s.metrics.get('report', {}).get('network', {}) if s.metrics is mapping else {} %}
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="traffic">↑ {{ '%.2f'|format((net.get('totalUp', 0) or 0) / (1024**3)) }} GB ↓ {{ '%.2f'|format((net.get('totalDown', 0) or 0) / (1024**3)) }} GB</div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 relative gap-2">
+        <span class="truncate">最后心跳：<span data-field="last_seen">{{ s.last_seen or '-' }}</span></span>
+        <div class="relative">
+          <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-sm js-more-btn min-h-[36px]" data-id="{{ s.id }}">⋯ 更多</button>
+          <div id="more-{{ s.id }}" class="hidden absolute right-0 mt-1 w-36 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg overflow-hidden z-20">
+            <button type="button" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600 js-deploy" data-token="{{ s.token }}">部署指令</button>
+            <a href="{{ url_for('probe.probe_server_detail_page', server_id=s.id) }}" class="block px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600">编辑</a>
+            <button type="button" class="w-full text-left px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-600 js-delete" data-id="{{ s.id }}">删除</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+
+  <div id="emptyState" class="hidden rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/80 p-10 text-center">
+    <div class="text-base font-semibold text-slate-700 dark:text-slate-200">暂无匹配服务器</div>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">可尝试清空搜索关键词或筛选条件。</p>
+  </div>
 </div>
 
 <div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4">
@@ -142,7 +154,7 @@
       </div>
       <div class="sm:col-span-2 flex justify-end gap-2 mt-2">
         <button type="button" id="closeAddModal" class="rounded-lg border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm">取消</button>
-        <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">创建</button>
+        <button id="submitAddProbe" type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">创建</button>
       </div>
     </form>
   </div>
@@ -191,6 +203,18 @@
 <script>
   function kbps(v) { return ((v || 0) / 1024).toFixed(1); }
 
+  const pageAlert = document.getElementById('pageAlert');
+  function showAlert(type, text) {
+    if (!pageAlert) return;
+    const cls = type === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300';
+    pageAlert.className = `rounded-xl border px-4 py-3 text-sm ${cls}`;
+    pageAlert.textContent = text;
+    pageAlert.classList.remove('hidden');
+    setTimeout(() => pageAlert.classList.add('hidden'), 2500);
+  }
+
   const deployModal = document.getElementById('deployModal');
   const deployTokenEl = document.getElementById('deployToken');
   const deployCmdEl = document.getElementById('deployCmd');
@@ -217,6 +241,7 @@
     const typeFilter = document.getElementById('filterType').value;
     const statusFilter = document.getElementById('filterStatus').value;
 
+    let visible = 0;
     document.querySelectorAll('#probeCardGrid > section').forEach(card => {
       const name = (card.querySelector('a')?.textContent || '').toLowerCase();
       const ip = (card.querySelector('.text-xs')?.textContent || '').toLowerCase();
@@ -230,35 +255,69 @@
       if (statusFilter === 'offline' && isOnline) show = false;
 
       card.style.display = show ? '' : 'none';
+      if (show) visible++;
     });
+
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.classList.toggle('hidden', visible > 0);
+  }
+
+  function updateStatusChip(card, online) {
+    const badge = card.querySelector('[data-field="statusBadge"]');
+    const dot = card.querySelector('[data-field="statusDot"]');
+    const text = card.querySelector('[data-field="statusText"]');
+    if (!badge || !dot || !text) return;
+
+    if (online) {
+      badge.className = 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 text-[11px] font-medium';
+      dot.className = 'h-2 w-2 rounded-full bg-emerald-500';
+      text.textContent = '在线';
+    } else {
+      badge.className = 'inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2.5 py-1 text-[11px] font-medium';
+      dot.className = 'h-2 w-2 rounded-full bg-rose-500';
+      text.textContent = '离线';
+    }
   }
 
   async function refreshProbeCards() {
-    const res = await fetch('/api/probe/servers');
-    const data = await res.json();
-    const servers = data.servers || [];
+    const grid = document.getElementById('probeCardGrid');
+    if (grid) grid.setAttribute('aria-busy', 'true');
+    try {
+      const res = await fetch('/api/probe/servers');
+      if (!res.ok) throw new Error('network');
+      const data = await res.json();
+      const servers = data.servers || [];
 
-    document.getElementById('probeTotal').textContent = servers.length;
-    document.getElementById('probeOnline').textContent = servers.filter(s => s.is_online).length;
-    document.getElementById('probeOffline').textContent = servers.filter(s => !s.is_online).length;
-    document.getElementById('probeAliyun').textContent = servers.filter(s => s.server_type === 'aliyun').length;
+      document.getElementById('probeTotal').textContent = servers.length;
+      document.getElementById('probeOnline').textContent = servers.filter(s => s.is_online).length;
+      document.getElementById('probeOffline').textContent = servers.filter(s => !s.is_online).length;
+      document.getElementById('probeAliyun').textContent = servers.filter(s => s.server_type === 'aliyun').length;
 
-    servers.forEach(s => {
-      const card = document.querySelector(`section[data-id="${s.id}"]`);
-      if (!card) return;
-      card.dataset.type = s.server_type || '';
-      card.dataset.online = s.is_online ? '1' : '0';
-      card.querySelector('[data-field="cpu"]').textContent = `${(s.metrics.cpu_percent || 0).toFixed(1)}%`;
-      card.querySelector('[data-field="mem"]').textContent = `${(s.metrics.mem_percent || 0).toFixed(1)}%`;
-      card.querySelector('[data-field="disk"]').textContent = `${(s.metrics.disk_percent || 0).toFixed(1)}%`;
-      card.querySelector('[data-field="net"]').textContent = `↑ ${kbps(s.metrics.net_up)} KB/s ↓ ${kbps(s.metrics.net_down)} KB/s`;
-      const net = (s.metrics.report && s.metrics.report.network) || {};
-      const tUp = ((net.totalUp || 0) / (1024 ** 3)).toFixed(2);
-      const tDown = ((net.totalDown || 0) / (1024 ** 3)).toFixed(2);
-      const trafficEl = card.querySelector('[data-field="traffic"]');
-      if (trafficEl) trafficEl.textContent = `↑ ${tUp} GB ↓ ${tDown} GB`;
-      card.querySelector('[data-field="last_seen"]').textContent = s.last_seen || '-';
-    });
+      servers.forEach(s => {
+        const card = document.querySelector(`section[data-id="${s.id}"]`);
+        if (!card) return;
+        const metrics = s.metrics || {};
+        card.dataset.type = s.server_type || '';
+        card.dataset.online = s.is_online ? '1' : '0';
+        card.querySelector('[data-field="cpu"]').textContent = `${(metrics.cpu_percent || 0).toFixed(1)}%`;
+        card.querySelector('[data-field="mem"]').textContent = `${(metrics.mem_percent || 0).toFixed(1)}%`;
+        card.querySelector('[data-field="disk"]').textContent = `${(metrics.disk_percent || 0).toFixed(1)}%`;
+        card.querySelector('[data-field="net"]').textContent = `↑ ${kbps(metrics.net_up)} KB/s ↓ ${kbps(metrics.net_down)} KB/s`;
+        const net = (metrics.report && metrics.report.network) || {};
+        const tUp = ((net.totalUp || 0) / (1024 ** 3)).toFixed(2);
+        const tDown = ((net.totalDown || 0) / (1024 ** 3)).toFixed(2);
+        const trafficEl = card.querySelector('[data-field="traffic"]');
+        if (trafficEl) trafficEl.textContent = `↑ ${tUp} GB ↓ ${tDown} GB`;
+        card.querySelector('[data-field="last_seen"]').textContent = s.last_seen || '-';
+        updateStatusChip(card, !!s.is_online);
+      });
+
+      filterCards();
+    } catch (e) {
+      showAlert('error', '实时刷新失败，已自动重试。');
+    } finally {
+      if (grid) grid.setAttribute('aria-busy', 'false');
+    }
   }
 
   setInterval(() => { refreshProbeCards().catch(() => {}); }, 3000);
@@ -292,23 +351,34 @@
 
   addProbeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const payload = Object.fromEntries(formData.entries());
+    const submitBtn = document.getElementById('submitAddProbe');
+    const original = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '创建中...';
 
-    const res = await fetch('/api/probe/servers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      alert(data.message || '创建失败');
-      return;
+    try {
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/api/probe/servers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showAlert('error', data.message || '创建失败');
+        return;
+      }
+
+      addModal.classList.add('hidden');
+      addModal.classList.remove('flex');
+      openDeployModal(data.server.token, true);
+      showAlert('success', '创建成功，请复制部署命令。');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = original;
     }
-
-    addModal.classList.add('hidden');
-    addModal.classList.remove('flex');
-    openDeployModal(data.server.token, true);
   });
 
   document.querySelectorAll('.js-more-btn').forEach(btn => {
@@ -327,6 +397,12 @@
     document.querySelectorAll('[id^="more-"]').forEach(menu => menu.classList.add('hidden'));
   });
 
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('[id^="more-"]').forEach(menu => menu.classList.add('hidden'));
+    }
+  });
+
   document.querySelectorAll('.js-deploy').forEach(btn => {
     btn.addEventListener('click', () => openDeployModal(btn.dataset.token, false));
   });
@@ -337,6 +413,7 @@
       const id = btn.dataset.id;
       const res = await fetch(`/api/probe/servers/${id}`, { method: 'DELETE' });
       if (res.ok) window.location.reload();
+      else showAlert('error', '删除失败，请稍后重试。');
     });
   });
 
@@ -380,7 +457,7 @@
       document.execCommand('copy');
       showCopied(btn);
     } catch (e) {
-      alert('复制失败，请手动选择文本复制');
+      showAlert('error', '复制失败，请手动选择文本复制');
     }
     document.body.removeChild(textarea);
   }
@@ -405,5 +482,6 @@
   document.getElementById('searchInput').addEventListener('input', filterCards);
   document.getElementById('filterType').addEventListener('change', filterCards);
   document.getElementById('filterStatus').addEventListener('change', filterCards);
+  filterCards();
 </script>
 {% endblock %}
