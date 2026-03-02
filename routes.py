@@ -12,7 +12,7 @@ import threading
 import uuid
 from datetime import datetime, timedelta
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from flask import Blueprint, render_template, redirect, url_for, request, flash, send_file, jsonify, current_app, abort
+from flask import Blueprint, render_template, redirect, url_for, request, flash, send_file, jsonify, current_app, abort, has_request_context
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import (
@@ -162,13 +162,24 @@ echo "你也可以测试业务域名: ping -6 -c 3 <你的域名>"
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
-def log_operation(action, detail='', instance_id=None):
-    """Write an entry to the operation log."""
+def log_operation(action, detail='', instance_id=None, operator='system'):
+    """Write an entry to the operation log.
+
+    Safe for background threads without request/login context.
+    """
+    resolved_operator = operator
+    if has_request_context():
+        try:
+            if getattr(current_user, 'is_authenticated', False):
+                resolved_operator = current_user.username
+        except Exception:
+            resolved_operator = operator
+
     op = OperationLog(
         instance_id=instance_id,
         action=action,
         detail=detail,
-        operator=current_user.username if current_user.is_authenticated else 'system'
+        operator=resolved_operator or 'system'
     )
     db.session.add(op)
 
