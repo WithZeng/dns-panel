@@ -28,7 +28,22 @@ from models import (
     DnsFailover,
     ImportJob,
 )
-from monitor import check_and_manage_instance, ecs_stop, ecs_start, ecs_release, get_region_traffic, get_client, get_security_groups, describe_sg_rules, authorize_sg, revoke_sg, ecs_enable_ipv6, get_ecs_ipv6_info
+from monitor import (
+    check_and_manage_instance,
+    ecs_stop,
+    ecs_start,
+    ecs_release,
+    get_region_traffic,
+    get_client,
+    get_security_groups,
+    describe_sg_rules,
+    authorize_sg,
+    revoke_sg,
+    ecs_enable_ipv6,
+    get_ecs_ipv6_info,
+    get_cdt_three_month_billing,
+    BillingQueryError,
+)
 from notifier import send_alert
 
 main = Blueprint('main', __name__)
@@ -366,6 +381,64 @@ def _classify_import_error(err):
         '未知错误，导入未完成。',
         '请重试一次；若仍失败，请联系管理员并提供错误时间与账号标识。',
     )
+
+
+def _classify_billing_error(err):
+    raw_error = str(err or '').strip() or '未知错误'
+    text = raw_error.lower()
+
+    if isinstance(err, BillingQueryError):
+        return {
+            'error_code': err.error_code,
+            'message': err.message,
+            'raw_error': err.raw_error or raw_error,
+        }
+
+    if any(k in text for k in [
+        'invalidaccesskeyid', 'signaturedoesnotmatch', 'access key id is not valid',
+        'accesskey secret', 'ak/sk', '认证失败', '鉴权失败'
+    ]):
+        return {
+            'error_code': 'AUTH_FAILED',
+            'message': '认证失败：AK/SK 无效或签名不正确，请核对后重试。',
+            'raw_error': raw_error,
+        }
+
+    if any(k in text for k in [
+        'forbidden', 'unauthorized', 'no permission', 'permission denied',
+        'ram', 'accessdenied', 'operationdenied', '权限不足'
+    ]):
+        return {
+            'error_code': 'PERMISSION_DENIED',
+            'message': '权限不足：当前 RAM 权限无法查询账单/CDT 数据。',
+            'raw_error': raw_error,
+        }
+
+    if any(k in text for k in [
+        'throttl', 'ratelimit', 'rate limit', 'too many requests',
+        'requestlimitexceeded', 'frequency', '限流', '频率限制'
+    ]):
+        return {
+            'error_code': 'API_RATE_LIMITED',
+            'message': '请求过于频繁，账单接口已限流，请稍后重试。',
+            'raw_error': raw_error,
+        }
+
+    if any(k in text for k in [
+        'timeout', 'timed out', 'connection', 'max retries exceeded',
+        'name or service not known', 'temporarily unavailable', '网络错误', '连接失败'
+    ]):
+        return {
+            'error_code': 'NETWORK_ERROR',
+            'message': '网络连接异常，无法访问阿里云账单接口，请稍后重试。',
+            'raw_error': raw_error,
+        }
+
+    return {
+        'error_code': 'UNKNOWN_ERROR',
+        'message': '查询 CDT 账单数据失败，请稍后重试。',
+        'raw_error': raw_error,
+    }
 
 
 def _parse_account_text(raw_text):
@@ -1778,6 +1851,52 @@ def import_csv():
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Region Traffic Comparison API 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+
+@main.route('/api/billing/cdt/three_months')
+@login_required
+def api_billing_cdt_three_months():
+    """Return CDT billing traffic summary for recent 3 natural months."""
+    query_instance_id = (request.args.get('instance_id') or '').strip()
+
+    target_instance = None
+    if query_instance_id:
+        target_instance = EcsInstance.query.filter_by(instance_id=query_instance_id).first()
+        if not target_instance:
+            return jsonify({
+                'success': False,
+                'message': f'未找到实例：{query_instance_id}',
+                'error_code': 'INSTANCE_NOT_FOUND',
+            }), 404
+    else:
+        target_instance = EcsInstance.query.order_by(EcsInstance.id.asc()).first()
+        if not target_instance:
+            return jsonify({
+                'success': False,
+                'message': '当前无可用实例凭据，无法查询 CDT 账单数据。请先添加实例或传入 instance_id。',
+                'error_code': 'NO_CREDENTIAL_SOURCE',
+            }), 400
+
+    try:
+        client = get_client(target_instance)
+        summary = get_cdt_three_month_billing(client, instance_id=query_instance_id)
+        return jsonify({
+            'success': True,
+            'instance_id': query_instance_id or None,
+            'scope': summary.get('scope', 'account'),
+            'months': summary.get('months', []),
+            'total_traffic': summary.get('total_traffic', 0.0),
+            'total_amount': summary.get('total_amount', 0.0),
+            'currency': summary.get('currency', 'CNY'),
+            'provider': summary.get('provider', ''),
+        })
+    except Exception as e:
+        detail = _classify_billing_error(e)
+        return jsonify({
+            'success': False,
+            'message': detail['message'],
+            'error_code': detail['error_code'],
+        }), 502
+
 
 @main.route('/api/region_traffic')
 @login_required

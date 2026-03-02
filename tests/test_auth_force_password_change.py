@@ -23,6 +23,8 @@ monitor_stub.authorize_sg = lambda *args, **kwargs: (True, 'ok')
 monitor_stub.revoke_sg = lambda *args, **kwargs: (True, 'ok')
 monitor_stub.ecs_enable_ipv6 = lambda *args, **kwargs: (True, 'ok')
 monitor_stub.get_ecs_ipv6_info = lambda *args, **kwargs: {}
+monitor_stub.get_cdt_three_month_billing = lambda *args, **kwargs: {'months': [], 'total_traffic': 0, 'total_amount': 0, 'currency': 'CNY', 'scope': 'account', 'provider': 'stub'}
+monitor_stub.BillingQueryError = type('BillingQueryError', (Exception,), {})
 sys.modules.setdefault('monitor', monitor_stub)
 
 flask_sock_stub = ModuleType('flask_sock')

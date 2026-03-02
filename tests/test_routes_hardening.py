@@ -5,6 +5,7 @@ import tempfile
 import time
 import unittest
 from types import ModuleType
+from unittest.mock import patch
 
 os.environ.setdefault('DNS_PANEL_DISABLE_SCHEDULER', '1')
 _test_db_dir = tempfile.mkdtemp(prefix='dns_panel_test_routes_')
@@ -25,6 +26,8 @@ monitor_stub.authorize_sg = lambda *args, **kwargs: (True, 'ok')
 monitor_stub.revoke_sg = lambda *args, **kwargs: (True, 'ok')
 monitor_stub.ecs_enable_ipv6 = lambda *args, **kwargs: (True, 'ok', [])
 monitor_stub.get_ecs_ipv6_info = lambda *args, **kwargs: {}
+monitor_stub.get_cdt_three_month_billing = lambda *args, **kwargs: {'months': [], 'total_traffic': 0, 'total_amount': 0, 'currency': 'CNY', 'scope': 'account', 'provider': 'stub'}
+monitor_stub.BillingQueryError = type('BillingQueryError', (Exception,), {})
 sys.modules.setdefault('monitor', monitor_stub)
 
 flask_sock_stub = ModuleType('flask_sock')
@@ -170,6 +173,46 @@ class RoutesHardeningTests(unittest.TestCase):
             self.assertEqual(expired.status_code, 403)
         finally:
             app.config['IPV6_SCRIPT_TOKEN_EXPIRES'] = old_expire
+
+    @patch('routes.get_cdt_three_month_billing')
+    def test_api_billing_cdt_three_months_success(self, mock_billing):
+        mock_billing.return_value = {
+            'months': [
+                {'month': '2026-01', 'traffic': 12.3, 'traffic_unit': 'GB', 'amount': 3.2},
+                {'month': '2026-02', 'traffic': 23.4, 'traffic_unit': 'GB', 'amount': 6.4},
+                {'month': '2026-03', 'traffic': 34.5, 'traffic_unit': 'GB', 'amount': 9.6},
+            ],
+            'total_traffic': 70.2,
+            'total_amount': 19.2,
+            'currency': 'CNY',
+            'scope': 'instance',
+            'provider': 'aliyun_billing_query_bill_overview',
+        }
+
+        res = self.client.get(f'/api/billing/cdt/three_months?instance_id={self.instance.instance_id}')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['scope'], 'instance')
+        self.assertEqual(len(data['months']), 3)
+        self.assertIn('total_traffic', data)
+        self.assertIn('total_amount', data)
+        self.assertEqual(data['currency'], 'CNY')
+
+    @patch('routes.get_cdt_three_month_billing', side_effect=Exception('RequestLimitExceeded throttling'))
+    def test_api_billing_cdt_three_months_rate_limited(self, _mock_billing):
+        res = self.client.get(f'/api/billing/cdt/three_months?instance_id={self.instance.instance_id}')
+        self.assertEqual(res.status_code, 502)
+        data = res.get_json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['error_code'], 'API_RATE_LIMITED')
+
+    def test_api_billing_cdt_three_months_instance_not_found(self):
+        res = self.client.get('/api/billing/cdt/three_months?instance_id=i-not-exist')
+        self.assertEqual(res.status_code, 404)
+        data = res.get_json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['error_code'], 'INSTANCE_NOT_FOUND')
 
 
 if __name__ == '__main__':

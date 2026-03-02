@@ -319,6 +319,44 @@
     {% endif %}
   </div>
 
+  <!-- ── Widget: CDT Billing (3 Months) ── -->
+  <div class="widget mb-6" data-widget="cdt_billing">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">📊 近3个月 CDT 计费流量</h2>
+        <span id="cdtScopeBadge" class="text-xs rounded-full px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">加载中</span>
+      </div>
+
+      <div id="cdtBillingError" class="hidden rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 mb-3"></div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-left text-slate-500 dark:text-slate-400">
+            <tr>
+              <th class="py-2">月份</th>
+              <th class="py-2">计费流量</th>
+              <th class="py-2">金额</th>
+            </tr>
+          </thead>
+          <tbody id="cdtBillingTbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+            <tr><td colspan="3" class="py-3 text-slate-400">正在加载...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计流量</div>
+          <div id="cdtTotalTraffic" class="text-lg font-semibold text-slate-900 dark:text-white mt-1">-</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计金额</div>
+          <div id="cdtTotalAmount" class="text-lg font-semibold text-slate-900 dark:text-white mt-1">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Widget: Region Traffic Chart ── -->
   <div class="widget mb-6" data-widget="region">
     <div
@@ -359,6 +397,68 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 
 <script>
+  // ---- CDT Billing (3 Months) ----
+  (function () {
+    const tbody = document.getElementById('cdtBillingTbody');
+    const totalTraffic = document.getElementById('cdtTotalTraffic');
+    const totalAmount = document.getElementById('cdtTotalAmount');
+    const scopeBadge = document.getElementById('cdtScopeBadge');
+    const errorBox = document.getElementById('cdtBillingError');
+
+    function renderError(msg) {
+      if (errorBox) {
+        errorBox.textContent = msg || 'CDT 计费数据加载失败，请稍后重试';
+        errorBox.classList.remove('hidden');
+      }
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+      }
+      if (scopeBadge) scopeBadge.textContent = '加载失败';
+      if (totalTraffic) totalTraffic.textContent = '-';
+      if (totalAmount) totalAmount.textContent = '-';
+    }
+
+    fetch('/api/billing/cdt/three_months')
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok || !data.success) {
+          throw new Error(data.message || 'CDT 计费数据加载失败，请稍后重试');
+        }
+        return data;
+      })
+      .then((data) => {
+        if (errorBox) errorBox.classList.add('hidden');
+        const months = data.months || [];
+        const currency = data.currency || 'CNY';
+
+        if (scopeBadge) {
+          scopeBadge.textContent = data.scope === 'instance' ? '实例级' : '账号级';
+        }
+
+        if (tbody) {
+          if (!months.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+          } else {
+            tbody.innerHTML = months.map((m) => {
+              const traffic = Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB');
+              const amount = Number(m.amount || 0).toFixed(2) + ' ' + currency;
+              return `<tr>
+                <td class="py-2 text-slate-700 dark:text-slate-200">${m.month || '-'}</td>
+                <td class="py-2 text-slate-700 dark:text-slate-200">${traffic}</td>
+                <td class="py-2 text-slate-700 dark:text-slate-200">${amount}</td>
+              </tr>`;
+            }).join('');
+          }
+        }
+
+        if (totalTraffic) totalTraffic.textContent = Number(data.total_traffic || 0).toFixed(2) + ' GB';
+        if (totalAmount) totalAmount.textContent = Number(data.total_amount || 0).toFixed(2) + ' ' + currency;
+      })
+      .catch((err) => {
+        renderError((err && err.message) || 'CDT 计费数据加载失败，请稍后重试');
+      });
+  })();
+
   // ---- Region Chart ----
   fetch('/api/region_traffic')
     .then(r => r.json())
