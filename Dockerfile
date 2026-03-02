@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
     iputils-ping \
+    gh \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
