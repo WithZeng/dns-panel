@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>ECS 流量监控面板</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📳</text></svg>"
@@ -112,6 +113,33 @@
 
   <script>
     (function () {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+      document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(form => {
+        if (!form.querySelector('input[name="csrf_token"]')) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'csrf_token';
+          input.value = csrfToken;
+          form.appendChild(input);
+        }
+      });
+
+      const originalFetch = window.fetch?.bind(window);
+      if (originalFetch) {
+        window.fetch = function (input, init = {}) {
+          const method = String(init.method || 'GET').toUpperCase();
+          if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+            const headers = new Headers(init.headers || {});
+            if (csrfToken && !headers.has('X-CSRFToken')) {
+              headers.set('X-CSRFToken', csrfToken);
+            }
+            init.headers = headers;
+          }
+          return originalFetch(input, init);
+        };
+      }
+
       const html = document.documentElement;
 
       function applyTheme(dark) {

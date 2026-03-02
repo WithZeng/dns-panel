@@ -13,8 +13,11 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ instance.name }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ instance.instance_id }} · {{
-                instance.region_id }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                {{ instance.instance_id }} · {{ instance.region_id }}
+                {% if instance.public_ip %}<span class="ml-2 font-mono text-blue-600">Public: {{ instance.public_ip }}</span>{% endif %}
+                {% if instance.private_ip %}<span class="ml-2 font-mono text-slate-400">Private: {{ instance.private_ip }}</span>{% endif %}
+            </p>
         </div>
         <div class="flex items-center gap-3">
             {% set is_online = instance.status in ['Running', 'Starting'] %}

@@ -23,6 +23,7 @@ from models import (
     DnsFailover,
     DnsFailoverLog,
 )
+from extensions import csrf
 
 probe = Blueprint('probe', __name__)
 sock = Sock()
@@ -449,7 +450,7 @@ def _check_reachability_via_tester(tester_ip: str, host: str, port: int = 0):
 def select_best_available_server(failover: DnsFailover, tester_ip: str):
     ids = [failover.primary_server_id] + failover.backup_ids
     for sid in ids:
-        server = ProbeServer.query.get(sid)
+        server = db.session.get(ProbeServer, sid)
         if not server:
             continue
         if not is_probe_online(server):
@@ -491,9 +492,9 @@ def apply_dns_switch(failover: DnsFailover, target_server: ProbeServer, trigger=
 def evaluate_failover_rule(failover: DnsFailover, tester_ip: str, send_alert_func=None, alert_cfg=None):
     failover.last_check_time = _utcnow()
 
-    current_server = ProbeServer.query.get(failover.current_active_server_id) if failover.current_active_server_id else None
+    current_server = db.session.get(ProbeServer, failover.current_active_server_id) if failover.current_active_server_id else None
     if not current_server:
-        current_server = ProbeServer.query.get(failover.primary_server_id)
+        current_server = db.session.get(ProbeServer, failover.primary_server_id)
 
     should_switch = False
     reason = ''
@@ -523,7 +524,7 @@ def evaluate_failover_rule(failover: DnsFailover, tester_ip: str, send_alert_fun
 
     target = None
     for sid in candidate_ids:
-        srv = ProbeServer.query.get(sid)
+        srv = db.session.get(ProbeServer, sid)
         if not srv:
             continue
         ip_val = _get_target_ip(srv)
@@ -636,6 +637,7 @@ def ws_agent(ws):
 
 
 @probe.route('/api/probe/report', methods=['POST'])
+@csrf.exempt
 def api_probe_report():
     """Agent HTTP 上报接口（不需要登录，基于 token 鉴权）。"""
     data = request.get_json(silent=True)
@@ -758,7 +760,7 @@ def serve_port_checker_script():
 @login_required
 def probe_server_detail_page(server_id):
     refresh_probe_online_statuses()
-    server = ProbeServer.query.get_or_404(server_id)
+    server = db.get_or_404(ProbeServer, server_id)
     data = _serialize_server(server, include_realtime=True)
     ecs_instance = server.ecs_instance if server.server_type == 'aliyun' else None
     ecs_instances = EcsInstance.query.order_by(EcsInstance.name.asc()).all()
@@ -831,7 +833,7 @@ def api_probe_servers():
 @login_required
 def api_probe_server_detail(server_id):
     refresh_probe_online_statuses()
-    server = ProbeServer.query.get_or_404(server_id)
+    server = db.get_or_404(ProbeServer, server_id)
     return jsonify({'server': _serialize_server(server, include_realtime=True)})
 
 
@@ -873,7 +875,7 @@ def api_create_probe_server():
 @probe.route('/api/probe/servers/<int:server_id>', methods=['DELETE'])
 @login_required
 def api_delete_probe_server(server_id):
-    server = ProbeServer.query.get_or_404(server_id)
+    server = db.get_or_404(ProbeServer, server_id)
     name = server.name
     _clear_runtime_cache(server.id)
     db.session.delete(server)
@@ -888,7 +890,7 @@ def api_delete_probe_server(server_id):
 @probe.route('/api/probe/servers/<int:server_id>', methods=['POST'])
 @login_required
 def api_update_probe_server(server_id):
-    server = ProbeServer.query.get_or_404(server_id)
+    server = db.get_or_404(ProbeServer, server_id)
     data = request.get_json(silent=True) or request.form
 
     server.name = (data.get('name') or server.name).strip()
@@ -911,7 +913,7 @@ def api_update_probe_server(server_id):
 @probe.route('/api/probe/servers/<int:server_id>/reset-token', methods=['POST'])
 @login_required
 def api_reset_probe_token(server_id):
-    server = ProbeServer.query.get_or_404(server_id)
+    server = db.get_or_404(ProbeServer, server_id)
     server.token = secrets.token_urlsafe(32)
     db.session.commit()
 
@@ -1039,7 +1041,7 @@ def create_dns_failover_rule():
 @probe.route('/dns/failover/rule/<int:rule_id>/edit', methods=['POST'])
 @login_required
 def edit_dns_failover_rule(rule_id):
-    rule = DnsFailover.query.get_or_404(rule_id)
+    rule = db.get_or_404(DnsFailover, rule_id)
 
     domain = request.form.get('domain', '').strip()
     primary_server_id = _to_int(request.form.get('primary_server_id'), 0)
@@ -1064,7 +1066,7 @@ def edit_dns_failover_rule(rule_id):
 @probe.route('/dns/failover/rule/<int:rule_id>/toggle', methods=['POST'])
 @login_required
 def toggle_dns_failover_rule(rule_id):
-    rule = DnsFailover.query.get_or_404(rule_id)
+    rule = db.get_or_404(DnsFailover, rule_id)
     rule.enabled = not rule.enabled
 
     _record_failover_log(rule.id, 'toggle', f'规则 {rule.domain} 已{"启用" if rule.enabled else "禁用"}')
@@ -1079,9 +1081,9 @@ def toggle_dns_failover_rule(rule_id):
 @probe.route('/dns/failover/rule/<int:rule_id>/switch', methods=['POST'])
 @login_required
 def manual_switch_dns(rule_id):
-    rule = DnsFailover.query.get_or_404(rule_id)
+    rule = db.get_or_404(DnsFailover, rule_id)
     target_server_id = _to_int(request.form.get('target_server_id') or (request.get_json(silent=True) or {}).get('target_server_id'), 0)
-    target = ProbeServer.query.get(target_server_id)
+    target = db.session.get(ProbeServer, target_server_id)
     if not target:
         return jsonify({'success': False, 'message': '鐩爣鏈嶅姟鍣ㄤ笉瀛樺湪'}), 400
 
@@ -1101,7 +1103,7 @@ def manual_switch_dns(rule_id):
 @probe.route('/dns/failover/rule/<int:rule_id>/delete', methods=['POST'])
 @login_required
 def delete_dns_failover_rule(rule_id):
-    rule = DnsFailover.query.get_or_404(rule_id)
+    rule = db.get_or_404(DnsFailover, rule_id)
     domain = rule.domain
     db.session.delete(rule)
 
@@ -1123,7 +1125,7 @@ def api_dns_failover_summary():
 
     active = 0
     for rule in enabled_rules:
-        cur = ProbeServer.query.get(rule.current_active_server_id) if rule.current_active_server_id else None
+        cur = db.session.get(ProbeServer, rule.current_active_server_id) if rule.current_active_server_id else None
         if cur and is_probe_online(cur):
             active += 1
 

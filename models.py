@@ -53,6 +53,9 @@ class EcsInstance(db.Model):
 
     # 7. Meta
     status = db.Column(db.String(50), default='Unknown')
+    public_ip = db.Column(db.String(100), default='')
+    private_ip = db.Column(db.String(100), default='')
+    ipv6_addr = db.Column(db.String(100), default='')
     auto_stop_enabled = db.Column(db.Boolean, default=False)
     auto_start_enabled = db.Column(db.Boolean, default=False)
     monitoring_enabled = db.Column(db.Boolean, default=True)

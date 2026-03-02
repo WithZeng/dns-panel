@@ -4,7 +4,7 @@ import csv
 import json
 import zipfile
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, redirect, url_for, request, flash, send_file, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, send_file, jsonify, current_app, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import (
@@ -94,6 +94,38 @@ def _compute_instance_stats(inst):
         'percent': round(percent, 1),
         'cost': cost,
     }
+
+
+def _parse_non_negative_float(value, field_label):
+    try:
+        num = float(value or 0)
+    except (TypeError, ValueError):
+        raise ValueError(f'{field_label} 必须是数字')
+    if num < 0:
+        raise ValueError(f'{field_label} 不能为负数')
+    return num
+
+
+def _normalize_days_of_week(value):
+    raw = (value or '*').strip()
+    if not raw or raw == '*':
+        return '*', None
+
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    if not parts:
+        return '*', None
+
+    normalized = []
+    for p in parts:
+        if not p.isdigit():
+            return None, '日期格式无效，请使用 * 或 1-7 的逗号分隔值'
+        day = int(p)
+        if day < 1 or day > 7:
+            return None, '日期范围无效，请使用 1-7（1=周一，7=周日）'
+        if str(day) not in normalized:
+            normalized.append(str(day))
+
+    return ','.join(normalized), None
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Auth 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -206,8 +238,8 @@ def dashboard():
     dns_total = len(dns_rules)
     dns_enabled = sum(1 for r in dns_rules if r.enabled)
 
-    # All available tags for filter dropdown
-    all_tags = sorted(set(t for t in (i.tag for i in EcsInstance.query.all()) if t))
+    # All available tags for filter dropdown (avoid loading all instance rows twice)
+    all_tags = sorted(t for (t,) in db.session.query(EcsInstance.tag).filter(EcsInstance.tag.isnot(None)).distinct().all() if t)
 
     # Widget order
     default_order = ['summary', 'actions', 'batch', 'instances', 'region']
@@ -232,7 +264,12 @@ def dashboard():
 @login_required
 def api_instances():
     """JSON endpoint for AJAX dashboard refresh."""
-    instances = EcsInstance.query.all()
+    tag_filter = request.args.get('tag', '').strip()
+    query = EcsInstance.query
+    if tag_filter:
+        query = query.filter_by(tag=tag_filter)
+    instances = query.all()
+
     data = []
     for inst in instances:
         stats = _compute_instance_stats(inst)
@@ -242,6 +279,9 @@ def api_instances():
             'instance_id': inst.instance_id,
             'region_id': inst.region_id,
             'status': inst.status,
+            'public_ip': inst.public_ip or '-',
+            'private_ip': inst.private_ip or '-',
+            'ipv6_addr': inst.ipv6_addr or '-',
             'strategy': inst.traffic_strategy,
             'tag': inst.tag or '',
             'monthly_used': stats['monthly_used'],
@@ -317,8 +357,9 @@ def health_check():
     try:
         db.session.execute(db.text('SELECT 1'))
         return jsonify({'status': 'ok', 'database': 'connected'}), 200
-    except Exception as e:
-        return jsonify({'status': 'error', 'database': str(e)}), 500
+    except Exception:
+        current_app.logger.exception('Health check failed')
+        return jsonify({'status': 'error', 'database': 'unavailable'}), 500
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Instance CRUD 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -327,17 +368,28 @@ def health_check():
 @login_required
 def add_instance():
     if request.method == 'POST':
-        name = request.form.get('name')
-        region_id = request.form.get('region_id')
-        instance_id = request.form.get('instance_id')
-        ak = request.form.get('access_key_id')
-        sk = request.form.get('access_key_secret')
+        name = (request.form.get('name') or '').strip()
+        region_id = (request.form.get('region_id') or '').strip()
+        instance_id = (request.form.get('instance_id') or '').strip()
+        ak = (request.form.get('access_key_id') or '').strip()
+        sk = (request.form.get('access_key_secret') or '').strip()
         tag = request.form.get('tag', '').strip()
 
-        traffic_strategy = request.form.get('traffic_strategy', 'cycle')
-        monthly_limit = float(request.form.get('monthly_limit') or 0)
-        life_total_limit = float(request.form.get('life_total_limit') or 0)
-        monthly_free_allowance = float(request.form.get('monthly_free_allowance') or 0)
+        traffic_strategy = (request.form.get('traffic_strategy', 'cycle') or 'cycle').strip().lower()
+        if traffic_strategy not in ('cycle', 'life'):
+            traffic_strategy = 'cycle'
+
+        try:
+            monthly_limit = _parse_non_negative_float(request.form.get('monthly_limit'), '月度限额')
+            life_total_limit = _parse_non_negative_float(request.form.get('life_total_limit'), '生命周期总限额')
+            monthly_free_allowance = _parse_non_negative_float(request.form.get('monthly_free_allowance'), '月度免费额度')
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return render_template('add_instance.html', instance=None, prefill={})
+
+        if not all([name, region_id, instance_id, ak, sk]):
+            flash('请完整填写名称、地域、实例ID、Access Key ID、Access Key Secret', 'warning')
+            return render_template('add_instance.html', instance=None, prefill={})
 
         auto_stop_enabled = 'auto_stop_enabled' in request.form
         auto_start_enabled = 'auto_start_enabled' in request.form
@@ -392,20 +444,40 @@ def add_instance():
 @main.route('/instance/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_instance(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     if request.method == 'POST':
-        instance.name = request.form.get('name')
-        new_ak = request.form.get('access_key_id')
-        new_sk = request.form.get('access_key_secret')
-        instance.region_id = request.form.get('region_id')
-        instance.instance_id = request.form.get('instance_id')
+        name = (request.form.get('name') or '').strip()
+        region_id = (request.form.get('region_id') or '').strip()
+        instance_id = (request.form.get('instance_id') or '').strip()
+        new_ak = (request.form.get('access_key_id') or '').strip()
+        new_sk = (request.form.get('access_key_secret') or '').strip()
+        traffic_strategy = (request.form.get('traffic_strategy', 'cycle') or 'cycle').strip().lower()
+        if traffic_strategy not in ('cycle', 'life'):
+            traffic_strategy = 'cycle'
+
+        if not all([name, region_id, instance_id]):
+            flash('名称、地域、实例ID 不能为空', 'warning')
+            return render_template('edit_instance.html', instance=instance)
+
+        try:
+            monthly_limit = _parse_non_negative_float(request.form.get('monthly_limit'), '月度限额')
+            life_total_limit = _parse_non_negative_float(request.form.get('life_total_limit'), '生命周期总限额')
+            hourly_price = _parse_non_negative_float(request.form.get('hourly_price'), '小时价格')
+            monthly_free_allowance = _parse_non_negative_float(request.form.get('monthly_free_allowance'), '月度免费额度')
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return render_template('edit_instance.html', instance=instance)
+
+        instance.name = name
+        instance.region_id = region_id
+        instance.instance_id = instance_id
         instance.tag = request.form.get('tag', '').strip()
         instance.notes = request.form.get('notes', '').strip()
-        instance.traffic_strategy = request.form.get('traffic_strategy', 'cycle')
-        instance.monthly_limit = float(request.form.get('monthly_limit') or 0)
-        instance.life_total_limit = float(request.form.get('life_total_limit') or 0)
-        instance.hourly_price = float(request.form.get('hourly_price') or 0)
-        instance.monthly_free_allowance = float(request.form.get('monthly_free_allowance') or 0)
+        instance.traffic_strategy = traffic_strategy
+        instance.monthly_limit = monthly_limit
+        instance.life_total_limit = life_total_limit
+        instance.hourly_price = hourly_price
+        instance.monthly_free_allowance = monthly_free_allowance
         instance.auto_stop_enabled = 'auto_stop_enabled' in request.form
         instance.auto_start_enabled = 'auto_start_enabled' in request.form
         instance.monitoring_enabled = 'monitoring_enabled' in request.form
@@ -417,23 +489,31 @@ def edit_instance(id):
         if new_ak and new_sk:
             instance.set_ak_sk(new_ak, new_sk)
 
-        log_operation('edit', f'编辑实例 {instance.name}', instance_id=instance.id)
-        db.session.commit()
-        flash('实例更新成功', 'success')
-        return redirect(url_for('main.dashboard'))
+        try:
+            log_operation('edit', f'编辑实例 {instance.name}', instance_id=instance.id)
+            db.session.commit()
+            flash('实例更新成功', 'success')
+            return redirect(url_for('main.dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'实例更新失败: {str(e)}', 'danger')
 
     return render_template('edit_instance.html', instance=instance)
 
 
-@main.route('/instance/delete/<int:id>')
+@main.route('/instance/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_instance_local(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     name = instance.name
-    log_operation('delete', f'删除本地实例 {name}', instance_id=id)
-    db.session.delete(instance)
-    db.session.commit()
-    flash('本地记录已删除', 'info')
+    try:
+        log_operation('delete', f'删除本地实例 {name}', instance_id=id)
+        db.session.delete(instance)
+        db.session.commit()
+        flash('本地记录已删除', 'info')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败: {str(e)}', 'danger')
     return redirect(url_for('main.dashboard'))
 
 
@@ -464,7 +544,7 @@ def check_all():
 @main.route('/stop_instance/<int:id>', methods=['POST'])
 @login_required
 def stop_instance(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     try:
         client = get_client(instance)
         success, msg = ecs_stop(client, instance.instance_id)
@@ -484,7 +564,7 @@ def stop_instance(id):
 @main.route('/start_instance/<int:id>', methods=['POST'])
 @login_required
 def start_instance(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     try:
         client = get_client(instance)
         success, msg = ecs_start(client, instance.instance_id)
@@ -504,7 +584,7 @@ def start_instance(id):
 @main.route('/release_instance/<int:id>', methods=['POST'])
 @login_required
 def release_instance(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     try:
         client = get_client(instance)
         success, msg = ecs_release(client, instance.instance_id)
@@ -526,7 +606,7 @@ def release_instance(id):
 @main.route('/instance/<int:id>')
 @login_required
 def instance_detail(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     logs = OperationLog.query.filter_by(instance_id=id).order_by(OperationLog.timestamp.desc()).limit(50).all()
     ipv6_info = {'enabled': False, 'addresses': [], 'message': ''}
     try:
@@ -540,7 +620,7 @@ def instance_detail(id):
 @main.route('/instance/<int:id>/enable_ipv6', methods=['POST'])
 @login_required
 def enable_ipv6(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     try:
         client = get_client(instance)
         success, msg, _ = ecs_enable_ipv6(client, instance)
@@ -556,7 +636,7 @@ def enable_ipv6(id):
 @main.route('/instance/<int:id>/ipv6_script.sh', methods=['GET'])
 @login_required
 def download_ipv6_script(id):
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
 
     ipv6_candidates = []
     try:
@@ -753,11 +833,21 @@ def discover_instances():
 
             for inst in result.get('Instances', {}).get('Instance', []):
                 existing = EcsInstance.query.filter_by(instance_id=inst['InstanceId']).first()
+                
+                public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', [])
+                eip = inst.get('EipAddress', {}).get('IpAddress', '')
+                if eip: public_ips.append(eip)
+                private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', [])
+                ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', [])
+
                 discovered.append({
                     'instance_id': inst['InstanceId'],
                     'name': inst.get('InstanceName', ''),
                     'region_id': inst.get('RegionId', region_id),
                     'status': inst.get('Status', 'Unknown'),
+                    'public_ip': public_ips[0] if public_ips else '',
+                    'private_ip': private_ips[0] if private_ips else '',
+                    'ipv6_addr': ipv6_ips[0] if ipv6_ips else '',
                     'already_added': existing is not None,
                 })
 
@@ -1043,7 +1133,7 @@ def api_region_traffic():
 @login_required
 def api_traffic_forecast(id):
     """Predict when the traffic quota will be exhausted based on recent usage trend."""
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     logs = TrafficLog.query.filter_by(instance_id=id).order_by(
         TrafficLog.timestamp.asc()).all()
 
@@ -1098,7 +1188,7 @@ def api_traffic_forecast(id):
 @login_required
 def update_notes(id):
     """Update the notes field for an instance."""
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     data = request.get_json(silent=True) or {}
     instance.notes = data.get('notes', '').strip()
     log_operation('notes', f'更新备注 {instance.name}', instance_id=id)
@@ -1114,12 +1204,31 @@ def save_dashboard_layout():
     """Save widget order for the current user."""
     data = request.get_json(silent=True) or {}
     order = data.get('order', [])
+    default_order = ['summary', 'actions', 'batch', 'instances', 'region']
+    allowed = set(default_order)
+
+    if not isinstance(order, list):
+        return jsonify({'success': False, 'error': 'invalid order payload'}), 400
+
+    cleaned = []
+    for item in order:
+        if not isinstance(item, str):
+            continue
+        item = item.strip()
+        if item in allowed and item not in cleaned:
+            cleaned.append(item)
+
+    for item in default_order:
+        if item not in cleaned:
+            cleaned.append(item)
+
     try:
-        current_user.dashboard_layout = json.dumps(order)
+        current_user.dashboard_layout = json.dumps(cleaned)
         db.session.commit()
-    except Exception:
+        return jsonify({'success': True})
+    except Exception as e:
         db.session.rollback()
-    return jsonify({'success': True})
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Scheduled Tasks 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -1128,13 +1237,29 @@ def save_dashboard_layout():
 @login_required
 def instance_schedules(id):
     """View and add scheduled start/stop tasks for an instance."""
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
 
     if request.method == 'POST':
-        action = request.form.get('action', 'stop')
-        hour = int(request.form.get('hour', 0))
-        minute = int(request.form.get('minute', 0))
-        days = request.form.get('days_of_week', '*').strip() or '*'
+        action = (request.form.get('action', 'stop') or 'stop').strip().lower()
+        if action not in ('start', 'stop'):
+            flash('操作类型无效，仅支持 start / stop', 'danger')
+            return redirect(url_for('main.instance_schedules', id=id))
+
+        try:
+            hour = int(request.form.get('hour', 0))
+            minute = int(request.form.get('minute', 0))
+        except (TypeError, ValueError):
+            flash('时间格式无效，请选择正确的小时和分钟', 'danger')
+            return redirect(url_for('main.instance_schedules', id=id))
+
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            flash('时间范围无效，小时应为 0-23，分钟应为 0-59', 'danger')
+            return redirect(url_for('main.instance_schedules', id=id))
+
+        days, days_err = _normalize_days_of_week(request.form.get('days_of_week', '*'))
+        if days_err:
+            flash(days_err, 'danger')
+            return redirect(url_for('main.instance_schedules', id=id))
 
         task = ScheduleTask(
             instance_id=id,
@@ -1144,11 +1269,15 @@ def instance_schedules(id):
             days_of_week=days,
             enabled=True,
         )
-        db.session.add(task)
-        log_operation('schedule', f'添加定时{"启动" if action=="start" else "停止"} '
-                      f'{instance.name} {hour:02d}:{minute:02d} days={days}', instance_id=id)
-        db.session.commit()
-        flash(f'已添加定时任务: {hour:02d}:{minute:02d} {"启动" if action=="start" else "停止"}', 'success')
+        try:
+            db.session.add(task)
+            log_operation('schedule', f'添加定时{"启动" if action=="start" else "停止"} '
+                          f'{instance.name} {hour:02d}:{minute:02d} days={days}', instance_id=id)
+            db.session.commit()
+            flash(f'已添加定时任务: {hour:02d}:{minute:02d} {"启动" if action=="start" else "停止"}', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'添加定时任务失败: {str(e)}', 'danger')
         return redirect(url_for('main.instance_schedules', id=id))
 
     schedules = ScheduleTask.query.filter_by(instance_id=id).order_by(ScheduleTask.created_at.desc()).all()
@@ -1159,10 +1288,14 @@ def instance_schedules(id):
 @login_required
 def toggle_schedule(id):
     """Enable or disable a scheduled task."""
-    task = ScheduleTask.query.get_or_404(id)
-    task.enabled = not task.enabled
-    db.session.commit()
-    flash(f'定时任务已{"启用" if task.enabled else "禁用"}', 'success')
+    task = db.get_or_404(ScheduleTask, id)
+    try:
+        task.enabled = not task.enabled
+        db.session.commit()
+        flash(f'定时任务已{"启用" if task.enabled else "禁用"}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'更新定时任务失败: {str(e)}', 'danger')
     return redirect(url_for('main.instance_schedules', id=task.instance_id))
 
 
@@ -1170,11 +1303,15 @@ def toggle_schedule(id):
 @login_required
 def delete_schedule(id):
     """Delete a scheduled task."""
-    task = ScheduleTask.query.get_or_404(id)
+    task = db.get_or_404(ScheduleTask, id)
     inst_id = task.instance_id
-    db.session.delete(task)
-    db.session.commit()
-    flash('定时任务已删除', 'success')
+    try:
+        db.session.delete(task)
+        db.session.commit()
+        flash('定时任务已删除', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除定时任务失败: {str(e)}', 'danger')
     return redirect(url_for('main.instance_schedules', id=inst_id))
 
 
@@ -1184,7 +1321,7 @@ def delete_schedule(id):
 @login_required
 def security_group(id):
     """View and manage security group rules for an instance."""
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     client = get_client(instance)
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
 
@@ -1263,7 +1400,7 @@ def security_group(id):
 @login_required
 def sg_delete_rule(id):
     """Delete a security group inbound rule."""
-    instance = EcsInstance.query.get_or_404(id)
+    instance = db.get_or_404(EcsInstance, id)
     client = get_client(instance)
     sg_ids, sg_err = get_security_groups(client, instance.instance_id)
     if not sg_ids:

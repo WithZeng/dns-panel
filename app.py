@@ -1,10 +1,14 @@
 ﻿import os
 import shutil
 import secrets
+import uuid
+import logging
 from datetime import timedelta, datetime
-from flask import Flask
-from flask_login import LoginManager
+from flask import Flask, jsonify, request, current_app, g, flash, redirect, url_for, has_request_context
+from flask_login import LoginManager, current_user
 from flask_apscheduler import APScheduler
+from werkzeug.exceptions import HTTPException
+from extensions import csrf, CSRFError
 from werkzeug.security import generate_password_hash
 from models import (
     db,
@@ -76,6 +80,7 @@ app.config['SECRET_KEY'] = _get_secret_key()
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SCHEDULER_API_ENABLED'] = True
+app.config['WTF_CSRF_TIME_LIMIT'] = 7200
 
 # Session timeout: 30 minutes
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
@@ -87,6 +92,7 @@ PORT_CHECKER_TESTER_IP = os.environ.get('PORT_CHECKER_TESTER_IP', '').strip()
 print(f"Database Path: {DB_PATH}")
 
 db.init_app(app)
+csrf.init_app(app)
 
 login_manager = LoginManager()
 login_manager.login_view = 'main.login'
@@ -95,7 +101,54 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
+
+
+class _RequestContextFilter(logging.Filter):
+    def filter(self, record):
+        if has_request_context():
+            record.request_id = getattr(g, 'request_id', '-')
+            record.path = request.path
+            record.method = request.method
+            record.remote_addr = request.remote_addr
+        else:
+            record.request_id = '-'
+            record.path = '-'
+            record.method = '-'
+            record.remote_addr = '-'
+        return True
+
+
+def _ensure_request_id():
+    rid = getattr(g, 'request_id', None)
+    if rid:
+        return rid
+    rid = request.headers.get('X-Request-ID', '').strip() or uuid.uuid4().hex[:16]
+    g.request_id = rid
+    return rid
+
+
+def _is_api_request():
+    if request.path.startswith('/api/'):
+        return True
+    best = request.accept_mimetypes.best
+    if best == 'application/json':
+        return True
+    return bool(request.accept_mimetypes['application/json'] > request.accept_mimetypes['text/html'])
+
+
+def _handle_business_error(status_code, message, html_redirect=False):
+    if _is_api_request():
+        return jsonify({'success': False, 'message': message}), status_code
+    if html_redirect:
+        flash(message, 'danger')
+        if current_user.is_authenticated:
+            return redirect(url_for('main.dashboard'))
+        return redirect(url_for('main.login'))
+    return message, status_code
 
 
 @app.before_request
@@ -103,6 +156,53 @@ def make_session_permanent():
     """Ensure session uses PERMANENT_SESSION_LIFETIME for timeout."""
     from flask import session
     session.permanent = True
+    g.request_id = request.headers.get('X-Request-ID', '').strip() or uuid.uuid4().hex[:16]
+
+
+@app.after_request
+def add_request_id_header(response):
+    rid = getattr(g, 'request_id', None)
+    if rid:
+        response.headers['X-Request-ID'] = rid
+    return response
+
+
+# Attach request-aware log context to app logger (idempotent)
+_request_filter_exists = any(isinstance(f, _RequestContextFilter) for f in app.logger.filters)
+if not _request_filter_exists:
+    app.logger.addFilter(_RequestContextFilter())
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    rid = _ensure_request_id()
+    current_app.logger.warning(
+        'CSRF validation failed (request_id=%s): %s',
+        rid,
+        getattr(e, 'description', str(e)),
+    )
+    return _handle_business_error(
+        400,
+        'CSRF token missing or invalid' if _is_api_request() else '请求校验失败，请刷新页面后重试。',
+        html_redirect=not _is_api_request(),
+    )
+
+
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    message = e.description or e.name or '请求处理失败'
+    if e.code >= 500:
+        current_app.logger.exception('HTTP exception: %s', message)
+        message = '服务器内部错误，请稍后重试'
+    else:
+        current_app.logger.warning('HTTP exception %s: %s', e.code, message)
+    return _handle_business_error(e.code or 500, message)
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_exception(e):
+    current_app.logger.exception('Unhandled exception: %s', e)
+    return _handle_business_error(500, '服务器内部错误，请稍后重试')
 
 
 def bootstrap_database():
@@ -126,6 +226,18 @@ def bootstrap_database():
             if 'auto_start_enabled' not in existing_cols:
                 cursor.execute("ALTER TABLE ecs_instance ADD COLUMN auto_start_enabled BOOLEAN DEFAULT 0")
                 print("Migration: added 'auto_start_enabled' column to ecs_instance.")
+
+            if 'public_ip' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN public_ip TEXT DEFAULT ''")
+                print("Migration: added 'public_ip' column to ecs_instance.")
+
+            if 'private_ip' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN private_ip TEXT DEFAULT ''")
+                print("Migration: added 'private_ip' column to ecs_instance.")
+
+            if 'ipv6_addr' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN ipv6_addr TEXT DEFAULT ''")
+                print("Migration: added 'ipv6_addr' column to ecs_instance.")
 
             # Check user columns
             cursor.execute("PRAGMA table_info(user)")
@@ -327,7 +439,7 @@ def run_scheduled_tasks():
                 if current_dow not in allowed_days:
                     continue
 
-            inst = EcsInstance.query.get(task.instance_id)
+            inst = db.session.get(EcsInstance, task.instance_id)
             if not inst:
                 continue
 

@@ -41,6 +41,18 @@ from app import app
 from models import db, User
 
 
+def _extract_csrf_token(client):
+    resp = client.get('/', follow_redirects=True)
+    html = resp.get_data(as_text=True)
+    marker = 'name="csrf-token" content="'
+    idx = html.find(marker)
+    if idx < 0:
+        return ''
+    start = idx + len(marker)
+    end = html.find('"', start)
+    return html[start:end] if end > start else ''
+
+
 class AuthForcePasswordChangeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -65,16 +77,24 @@ class AuthForcePasswordChangeTests(unittest.TestCase):
             db.session.commit()
 
     def test_login_redirects_to_change_password_when_forced(self):
-        res = self.client.post('/login', data={'username': 'first_user', 'password': 'oldpass123'}, follow_redirects=False)
+        token = _extract_csrf_token(self.client)
+        res = self.client.post('/login', data={'username': 'first_user', 'password': 'oldpass123', 'csrf_token': token}, follow_redirects=False)
         self.assertEqual(res.status_code, 302)
         self.assertIn('/change_password', res.headers.get('Location', ''))
 
+    def test_csrf_required_for_login_post(self):
+        res = self.client.post('/login', data={'username': 'first_user', 'password': 'oldpass123'}, follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+
     def test_change_password_clears_force_flag(self):
-        self.client.post('/login', data={'username': 'first_user', 'password': 'oldpass123'}, follow_redirects=True)
+        login_token = _extract_csrf_token(self.client)
+        self.client.post('/login', data={'username': 'first_user', 'password': 'oldpass123', 'csrf_token': login_token}, follow_redirects=True)
+        change_token = _extract_csrf_token(self.client)
         res = self.client.post('/change_password', data={
             'old_password': 'oldpass123',
             'new_password': 'newpass123',
             'confirm_password': 'newpass123',
+            'csrf_token': change_token,
         }, follow_redirects=False)
         self.assertEqual(res.status_code, 302)
 

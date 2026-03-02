@@ -228,8 +228,10 @@
             <a href="{{ url_for('main.instance_detail', id=instance.id) }}"
               class="text-lg font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition">{{
               instance.name }}</a>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ instance.instance_id }} · {{
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-field="meta_line">{{ instance.instance_id }} · {{
               instance.region_id }}
+              {% if instance.public_ip %}<span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]" data-field="public_ip">{{ instance.public_ip }}</span>{% endif %}
+              {% if instance.ipv6_addr %}<span class="ml-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono text-[10px]" data-field="ipv6_addr">{{ instance.ipv6_addr }}</span>{% endif %}
               {% if instance.tag %}<span
                 class="inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">{{
                 instance.tag }}</span>{% endif %}
@@ -302,9 +304,12 @@
           <a href="{{ url_for('main.edit_instance', id=instance.id) }}"
             class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">✏️
             编辑</a>
-          <a href="{{ url_for('main.delete_instance_local', id=instance.id) }}"
-            class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]"
-            onclick="return confirm('确认仅删除本地记录？')">🗑️ 移除</a>
+          <form method="POST" action="{{ url_for('main.delete_instance_local', id=instance.id) }}" class="inline"
+            onsubmit="return confirm('确认仅删除本地记录？')">
+            <button type="submit"
+              class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">🗑️
+              移除</button>
+          </form>
 
           {% if instance.status == 'Stopped' %}
           <form method="POST" action="{{ url_for('main.start_instance', id=instance.id) }}" class="inline">
@@ -501,7 +506,10 @@
     }
 
     function fetchData() {
-      fetch('/api/instances')
+      const qs = new URLSearchParams(window.location.search || '');
+      const tag = qs.get('tag');
+      const apiUrl = tag ? `/api/instances?tag=${encodeURIComponent(tag)}` : '/api/instances';
+      fetch(apiUrl)
         .then(r => r.json())
         .then(data => {
           try {
@@ -515,6 +523,34 @@
             data.instances.forEach(inst => {
               const card = document.querySelector(`section[data-id="${inst.id}"]`);
               if (!card) return;
+
+              const metaLine = card.querySelector('[data-field="meta_line"]');
+              if (metaLine) {
+                metaLine.innerHTML = '';
+                metaLine.appendChild(document.createTextNode(`${inst.instance_id} · ${inst.region_id}`));
+
+                if (inst.public_ip && inst.public_ip !== '-') {
+                  const chip = document.createElement('span');
+                  chip.className = 'ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]';
+                  chip.textContent = inst.public_ip;
+                  metaLine.appendChild(chip);
+                }
+
+                if (inst.ipv6_addr && inst.ipv6_addr !== '-') {
+                  const chip6 = document.createElement('span');
+                  chip6.className = 'ml-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono text-[10px]';
+                  chip6.textContent = inst.ipv6_addr;
+                  metaLine.appendChild(chip6);
+                }
+
+                if (inst.tag) {
+                  const tagChip = document.createElement('span');
+                  tagChip.className = 'inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300';
+                  tagChip.textContent = inst.tag;
+                  metaLine.appendChild(tagChip);
+                }
+              }
+
               const lc = card.querySelector('[data-field="last_checked"]');
               if (lc) lc.textContent = '最后检查：' + inst.last_checked;
             });

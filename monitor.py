@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import datetime
 from aliyunsdkcore.client import AcsClient
@@ -75,19 +75,73 @@ def ecs_release(client, instance_id):
 
 
 # ================== 4. Get ECS Runtime Status ==================
-def get_ecs_status(client, instance_id):
+def get_ecs_info(client, instance_id):
+    """Fetch instance status and IP addresses."""
     try:
         request = DescribeInstancesRequest()
         request.set_InstanceIds(json.dumps([instance_id]))
         response = client.do_action_with_exception(request)
         response_json = json.loads(response)
         if response_json.get('Instances') and response_json['Instances'].get('Instance'):
-            return response_json['Instances']['Instance'][0].get('Status', 'Unknown')
-        return "Unknown"
+            inst = response_json['Instances']['Instance'][0]
+            status = inst.get('Status', 'Unknown')
+            
+            public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', [])
+            eip = inst.get('EipAddress', {}).get('IpAddress', '')
+            if eip: public_ips.append(eip)
+            
+            private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', [])
+            
+            # Simple IPv6 extraction from instance info
+            ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', [])
+            if not ipv6_ips:
+                for ni in inst.get('NetworkInterfaces', {}).get('NetworkInterface', []):
+                    for i6 in ni.get('Ipv6Sets', {}).get('Ipv6Set', []):
+                        if i6.get('Ipv6Address'): ipv6_ips.append(i6['Ipv6Address'])
+            
+            return {
+                'status': status,
+                'public_ip': public_ips[0] if public_ips else '',
+                'private_ip': private_ips[0] if private_ips else '',
+                'ipv6_addr': ipv6_ips[0] if ipv6_ips else ''
+            }
+        return None
     except Exception as e:
-        logger.error(f"Failed to get status: {e}")
-        return "Unknown"
+        logger.error(f"Failed to get info for {instance_id}: {e}")
+        return None
 
+def get_ecs_status(client, instance_id):
+    info = get_ecs_info(client, instance_id)
+    return info['status'] if info else "Unknown"
+
+
+def _collect_ipv6_from_items(item, addresses):
+    if not item:
+        return
+    
+    if isinstance(item, str):
+        if ':' in item:
+            ip = item.split('/')[0].strip()
+            if ip not in addresses: addresses.append(ip)
+        return
+
+    if isinstance(item, list):
+        for sub in item:
+            _collect_ipv6_from_items(sub, addresses)
+        return
+
+    if isinstance(item, dict):
+        # Specific known keys
+        for k in ['Ipv6Address', 'Ipv6AddressSet', 'Ipv6Set', 'Ipv6Sets', 'Ipv6Addresses']:
+            val = item.get(k)
+            if val:
+                _collect_ipv6_from_items(val, addresses)
+        
+        # General search for other Strukturen
+        for k, v in item.items():
+             if k not in ['Ipv6Address', 'Ipv6AddressSet', 'Ipv6Set', 'Ipv6Sets', 'Ipv6Addresses']:
+                 if isinstance(v, (dict, list)):
+                     _collect_ipv6_from_items(v, addresses)
 
 def get_ecs_ipv6_info(client, instance):
     """Fetch instance IPv6 addresses and primary ENI information."""
@@ -107,59 +161,44 @@ def get_ecs_ipv6_info(client, instance):
 
         inst = instances[0]
         addresses = []
-
-        def _collect_ipv6_from_items(items):
-            if not isinstance(items, list):
-                return
-            for item in items:
-                if isinstance(item, dict):
-                    ip_val = (item.get('Ipv6Address') or '').strip()
-                    if ip_val:
-                        addresses.append(ip_val)
-                elif isinstance(item, str):
-                    ip_val = item.strip()
-                    if ip_val:
-                        addresses.append(ip_val)
-
-        vpc_attrs = inst.get('VpcAttributes', {})
-        ipv6_objs = vpc_attrs.get('Ipv6Addresses', {}).get('Ipv6Address', [])
-        if isinstance(ipv6_objs, list):
-            addresses.extend([str(ip).strip() for ip in ipv6_objs if str(ip).strip()])
+        _collect_ipv6_from_items(inst, addresses)
 
         eni_id = ''
-        enis = inst.get('NetworkInterfaces', {}).get('NetworkInterface', [])
-        if isinstance(enis, list) and enis:
-            eni_id = (enis[0].get('NetworkInterfaceId') or '').strip()
-            for eni in enis:
-                eni_ipv6 = eni.get('Ipv6Sets', {}).get('Ipv6Set', [])
-                _collect_ipv6_from_items(eni_ipv6)
-                eni_ipv6_alt = eni.get('Ipv6AddressSets', {}).get('Ipv6AddressSet', [])
-                _collect_ipv6_from_items(eni_ipv6_alt)
+        ni_list = inst.get('NetworkInterfaces', {}).get('NetworkInterface', [])
+        if isinstance(ni_list, list) and ni_list:
+            eni_id = (ni_list[0].get('NetworkInterfaceId') or '').strip()
 
         if eni_id and not addresses:
             try:
-                req = CommonRequest()
-                req.set_domain(f'ecs.{instance.region_id}.aliyuncs.com')
-                req.set_version('2014-05-26')
-                req.set_action_name('DescribeNetworkInterfaces')
-                req.set_method('POST')
-                req.set_protocol_type('https')
-                req.add_query_param('RegionId', instance.region_id)
-                req.add_query_param('NetworkInterfaceId.1', eni_id)
+                from aliyunsdkecs.request.v20140526.DescribeNetworkInterfacesRequest import DescribeNetworkInterfacesRequest
+                req = DescribeNetworkInterfacesRequest()
+                req.set_NetworkInterfaceId(eni_id)
+                req.set_RegionId(instance.region_id)
                 eni_resp = client.do_action_with_exception(req)
                 eni_data = json.loads(eni_resp.decode('utf-8') if isinstance(eni_resp, (bytes, bytearray)) else eni_resp)
-                eni_sets = eni_data.get('NetworkInterfaceSets', {}).get('NetworkInterfaceSet', [])
-                if isinstance(eni_sets, list) and eni_sets:
-                    eni0 = eni_sets[0]
-                    _collect_ipv6_from_items(eni0.get('Ipv6Sets', {}).get('Ipv6Set', []))
-                    _collect_ipv6_from_items(eni0.get('Ipv6AddressSets', {}).get('Ipv6AddressSet', []))
-            except Exception as sub_e:
-                logger.warning(f"DescribeNetworkInterfaces fallback failed for {instance.instance_id}: {sub_e}")
+                _collect_ipv6_from_items(eni_data, addresses)
+            except Exception:
+                try:
+                    # CommonRequest fallback if typed request fails
+                    req = CommonRequest()
+                    req.set_domain(f'ecs.{instance.region_id}.aliyuncs.com')
+                    req.set_version('2014-05-26')
+                    req.set_action_name('DescribeNetworkInterfaces')
+                    req.set_method('POST')
+                    req.set_protocol_type('https')
+                    req.add_query_param('RegionId', instance.region_id)
+                    req.add_query_param('NetworkInterfaceId.1', eni_id)
+                    eni_resp = client.do_action_with_exception(req)
+                    eni_data = json.loads(eni_resp.decode('utf-8') if isinstance(eni_resp, (bytes, bytearray)) else eni_resp)
+                    _collect_ipv6_from_items(eni_data, addresses)
+                except Exception as sub_e2:
+                    logger.warning(f"DescribeNetworkInterfaces fallback failed for {instance.instance_id}: {sub_e2}")
 
         unique = []
         for ip in addresses:
-            if ip not in unique:
-                unique.append(ip)
+            if ip and isinstance(ip, str) and ip.strip() and ip not in unique:
+                if ':' in ip:
+                    unique.append(ip.strip())
 
         return {
             'enabled': len(unique) > 0,
@@ -203,27 +242,7 @@ def ecs_enable_ipv6(client, instance):
         payload = json.loads(resp.decode('utf-8') if isinstance(resp, (bytes, bytearray)) else resp)
 
         new_ips = []
-        for key in ('Ipv6Sets', 'Ipv6Set'):
-            if key in payload:
-                val = payload.get(key)
-                if isinstance(val, dict):
-                    lst = val.get('Ipv6Set', [])
-                    if isinstance(lst, list):
-                        for item in lst:
-                            if isinstance(item, dict):
-                                ip_val = (item.get('Ipv6Address') or '').strip()
-                                if ip_val:
-                                    new_ips.append(ip_val)
-                            elif isinstance(item, str) and item.strip():
-                                new_ips.append(item.strip())
-                elif isinstance(val, list):
-                    for item in val:
-                        if isinstance(item, dict):
-                            ip_val = (item.get('Ipv6Address') or '').strip()
-                            if ip_val:
-                                new_ips.append(ip_val)
-                        elif isinstance(item, str) and item.strip():
-                            new_ips.append(item.strip())
+        _collect_ipv6_from_items(payload, new_ips)
 
         refresh = get_ecs_ipv6_info(client, instance)
         final_ips = refresh.get('addresses', []) or new_ips
@@ -338,11 +357,11 @@ def authorize_sg(client, security_group_id, region_id, ip_protocol, port_range, 
         req.set_protocol_type('https')
         req.add_query_param('SecurityGroupId', security_group_id)
         req.add_query_param('RegionId', region_id)
-        req.add_query_param('NicType', 'intranet')  # VPC 安全组必须为 intranet
+        req.add_query_param('NicType', 'intranet')  # VPC 安全组 must be intranet
         req.add_query_param('IpProtocol', ip_protocol)  # tcp, udp, icmp, all
         req.add_query_param('PortRange', port_range)      # e.g. 80/80, 1/65535, -1/-1
         if ':' in str(source_cidr):
-            # IPv6 规则: 同时设置 Ipv6SourceCidrIp
+            # IPv6 
             req.add_query_param('Ipv6SourceCidrIp', source_cidr)
         else:
             req.add_query_param('SourceCidrIp', source_cidr)
@@ -392,8 +411,13 @@ def revoke_sg(client, security_group_id, region_id, ip_protocol, port_range, sou
 
 # ================== 6. Main Logic ==================
 def check_and_manage_instance(instance_id):
-    instance = EcsInstance.query.get(instance_id)
+    instance = db.session.get(EcsInstance, instance_id)
     if not instance:
+        return
+
+    # Basic error handling for missing AK/SK
+    if not instance.access_key_id or not instance.access_key_secret:
+        logger.error(f"Missing AK/SK for instance {instance.name}")
         return
 
     logger.info(f"Checking: {instance.name} ({instance.instance_id})...")
@@ -413,38 +437,57 @@ def check_and_manage_instance(instance_id):
                 delta_gb = max(current_api_gb - previous_api_gb, 0)
 
             # Monthly counter is always incremental, reset by monthly scheduler.
-            instance.current_month_traffic = (instance.current_month_traffic or 0) + delta_gb
-            instance.last_api_traffic = current_api_gb
+            instance.current_month_traffic = (instance.current_month_traffic or 0) + (delta_gb or 0)
+            instance.last_api_traffic = current_api_gb if current_api_gb is not None else (instance.last_api_traffic or 0)
 
             # LIFE accumulates forever; CYCLE keeps total aligned with current month for compatibility.
             if instance.traffic_strategy == 'life':
-                instance.total_traffic_sum = (instance.total_traffic_sum or 0) + delta_gb
+                instance.total_traffic_sum = (instance.total_traffic_sum or 0) + (delta_gb or 0)
             else:
-                instance.total_traffic_sum = instance.current_month_traffic
+                instance.total_traffic_sum = instance.current_month_traffic or 0
 
             # Write traffic log using displayed usage metric.
             display_usage = (instance.total_traffic_sum or 0) if instance.traffic_strategy == 'life' else (instance.current_month_traffic or 0)
-            traffic_log = TrafficLog(instance_id=instance.id, traffic_gb=display_usage)
-            db.session.add(traffic_log)
+            
+            # Rate limit traffic logs to once per minute to optimize DB
+            last_log = TrafficLog.query.filter_by(instance_id=instance.id).order_by(TrafficLog.timestamp.desc()).first()
+            if not last_log or (datetime.datetime.utcnow() - last_log.timestamp).total_seconds() >= 60:
+                traffic_log = TrafficLog(instance_id=instance.id, traffic_gb=display_usage)
+                db.session.add(traffic_log)
         else:
             # Preserve previous values when API temporarily fails.
             current_api_gb = previous_api_gb
             delta_gb = 0
 
-        # Fetch status
-        current_status = get_ecs_status(client, instance.instance_id)
-        instance.status = current_status
+        # Fetch status and IPs
+        try:
+            ecs_info = get_ecs_info(client, instance.instance_id)
+            if ecs_info:
+                instance.status = ecs_info['status']
+                instance.public_ip = ecs_info['public_ip']
+                instance.private_ip = ecs_info['private_ip']
+                if ecs_info['ipv6_addr']:
+                    instance.ipv6_addr = ecs_info['ipv6_addr']
+        except Exception as info_err:
+            logger.error(f"Error updating instance info: {info_err}")
+            if not instance.status: instance.status = "Error"
+        
+        current_status = instance.status
 
         probe_server = ProbeServer.query.filter_by(server_type='aliyun', ecs_instance_id=instance.id).first()
         probe_online = _is_probe_online(probe_server)
 
         # Determine the appropriate threshold per strategy
+        log_api_gb = current_api_gb or 0
+        log_month_traffic = instance.current_month_traffic or 0
+        log_total_traffic = instance.total_traffic_sum or 0
+        
         if instance.traffic_strategy == 'life':
             life_limit = instance.life_total_limit or 0
-            logger.info(f"Status: {current_status} | API: {current_api_gb:.2f} GB | Month: {instance.current_month_traffic or 0:.2f} GB | Total: {instance.total_traffic_sum or 0:.2f} GB | Life limit: {life_limit} GB")
+            logger.info(f"Status: {current_status} | API: {log_api_gb:.2f} GB | Month: {log_month_traffic:.2f} GB | Total: {log_total_traffic:.2f} GB | Life limit: {life_limit} GB")
         else:
             monthly_quota = instance.monthly_limit or 0
-            logger.info(f"Status: {current_status} | API: {current_api_gb:.2f} GB | Month: {instance.current_month_traffic or 0:.2f} GB / Monthly limit: {monthly_quota} GB")
+            logger.info(f"Status: {current_status} | API: {log_api_gb:.2f} GB | Month: {log_month_traffic:.2f} GB / Monthly limit: {monthly_quota} GB")
 
         # Auto start logic (probe-first): if probe offline and ECS appears stopped/pending, auto start when enabled.
         if instance.auto_start_enabled:
@@ -479,44 +522,46 @@ def check_and_manage_instance(instance_id):
                         if success:
                             instance.status = 'Stopping'
 
-        # Alert: threshold notification
         try:
-            if instance.traffic_strategy == 'life':
-                limit = life_limit
-                # LIFE: total_traffic_sum directly compared against life_total_limit
-                alert_traffic = instance.total_traffic_sum or 0
-            else:
-                limit = monthly_quota
-                alert_traffic = instance.current_month_traffic or 0
+            limit = life_limit if instance.traffic_strategy == 'life' else monthly_quota
+            alert_traffic = instance.total_traffic_sum if instance.traffic_strategy == 'life' else instance.current_month_traffic
+            alert_traffic = alert_traffic or 0
 
             threshold_pct = instance.alert_threshold_pct or 80
-            if limit > 0:
+            if limit and limit > 0:
                 usage_pct = (alert_traffic / limit) * 100
                 if usage_pct >= threshold_pct:
                     alert_cfg = AlertConfig.query.first()
                     if alert_cfg and alert_cfg.enabled and alert_cfg.webhook_url:
-                        msg = (f"⚠️ [{instance.name}] 流量告警\n"
-                               f"已用: {alert_traffic:.2f} GB / 上限: {limit:.0f} GB ({usage_pct:.1f}%)\n"
-                               f"状态: {current_status}")
-                        send_alert(alert_cfg.notify_type, alert_cfg.webhook_url, msg,
-                                   instance_name=instance.name)
+                        # Shared cooldown check to avoid alert storms (once per hour per instance)
+                        # We use instance.id in the cooldown to distinguish alerts
+                        last_notif = NotificationLog.query.filter(NotificationLog.message.like(f"%{instance.name}%")).order_by(NotificationLog.timestamp.desc()).first()
+                        if not last_notif or (datetime.datetime.utcnow() - last_notif.timestamp).total_seconds() > 3600:
+                            msg = (f"⚠️ [{instance.name}] 流量告警\n"
+                                   f"已用: {alert_traffic:.2f} GB / 上限: {limit:.0f} GB ({usage_pct:.1f}%)\n"
+                                   f"状态: {current_status}")
+                            send_alert(alert_cfg.notify_type, alert_cfg.webhook_url, msg,
+                                       instance_name=instance.name)
         except Exception as e:
             logger.error(f"Alert check failed: {e}")
 
         # Anomaly detection: alert if traffic spiked significantly
         try:
-            if previous_api_gb > 0 and current_api_gb > previous_api_gb:
+            if previous_api_gb and previous_api_gb > 0 and current_api_gb and current_api_gb > previous_api_gb:
                 increase_pct = ((current_api_gb - previous_api_gb) / previous_api_gb) * 100
                 if increase_pct >= ANOMALY_INCREASE_PCT:
                     alert_cfg = AlertConfig.query.first()
                     if alert_cfg and alert_cfg.enabled and alert_cfg.webhook_url:
-                        msg = (f"🚨 [{instance.name}] 流量异常\n"
-                               f"API读数从 {previous_api_gb:.2f} GB 增至 {current_api_gb:.2f} GB (+{increase_pct:.1f}%)\n"
-                               f"本月累计: {(instance.current_month_traffic or 0):.2f} GB\n"
-                               f"状态: {current_status}")
-                        send_alert(alert_cfg.notify_type, alert_cfg.webhook_url, msg,
-                                   instance_name=instance.name)
-                        logger.warning(f"Anomaly detected for {instance.name}: +{increase_pct:.1f}%")
+                        # Shared cooldown check to avoid alert storms (once per 30 mins)
+                        last_notif = NotificationLog.query.filter(NotificationLog.message.like(f"%{instance.name}%")).order_by(NotificationLog.timestamp.desc()).first()
+                        if not last_notif or (datetime.datetime.utcnow() - last_notif.timestamp).total_seconds() > 1800:
+                            msg = (f"🚨 [{instance.name}] 流量异常\n"
+                                   f"API读数从 {previous_api_gb:.2f} GB 增至 {current_api_gb:.2f} GB (+{increase_pct:.1f}%)\n"
+                                   f"本月累计: {(instance.current_month_traffic or 0):.2f} GB\n"
+                                   f"状态: {current_status}")
+                            send_alert(alert_cfg.notify_type, alert_cfg.webhook_url, msg,
+                                       instance_name=instance.name)
+                            logger.warning(f"Anomaly detected for {instance.name}: +{increase_pct:.1f}%")
         except Exception as e:
             logger.error(f"Anomaly check failed: {e}")
 
