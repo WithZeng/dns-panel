@@ -281,6 +281,80 @@ def _safe_yaml_str(value):
     return f'"{s}"'
 
 
+def _classify_import_error(err):
+    raw_error = str(err or '').strip() or '未知错误'
+    text = raw_error.lower()
+
+    def _meta(error_type, error_code, message, suggestion):
+        return {
+            'error_type': error_type,
+            'error_code': error_code,
+            'message': message,
+            'suggestion': suggestion,
+            'raw_error': raw_error,
+        }
+
+    if any(k in text for k in ['github', 'gh cli', 'gh auth', '仓库', 'repo']) and any(k in text for k in ['同步', 'sync', 'fail', '失败', 'error']):
+        return _meta(
+            'github_sync_failed',
+            'GITHUB_SYNC_FAILED',
+            'GitHub 同步失败，请检查登录状态与仓库权限。',
+            '请先执行 gh auth status/gh auth login，确认仓库可写后重试。',
+        )
+
+    if any(k in text for k in [
+        'invalidaccesskeyid', 'signaturedoesnotmatch', 'incomplete signatures',
+        'access key id is not valid', 'accesskey secret', 'ak/sk', '认证失败', '鉴权失败',
+        '未识别到 accesskey', '未识别到 accesskey id/secret'
+    ]):
+        return _meta(
+            'auth_failed',
+            'AUTH_FAILED',
+            '认证失败（AK/SK 可能错误或格式不正确）。',
+            '请核对 AccessKey ID/Secret 是否完整、未过期，并确认粘贴内容正确。',
+        )
+
+    if any(k in text for k in [
+        'forbidden', 'unauthorized', 'no permission', 'permission denied',
+        'ram', 'accessdenied', 'operationdenied', '权限不足'
+    ]):
+        return _meta(
+            'permission_denied',
+            'PERMISSION_DENIED',
+            '权限不足（RAM 权限不满足）。',
+            '请为该 AK 分配 ECS 只读/管理所需权限（如 ecs:Describe*）后重试。',
+        )
+
+    if any(k in text for k in [
+        'throttl', 'ratelimit', 'rate limit', 'too many requests',
+        'requestlimitexceeded', 'frequency', '限流', '频率限制'
+    ]):
+        return _meta(
+            'api_rate_limited',
+            'API_RATE_LIMITED',
+            'API 调用过于频繁，已被限流。',
+            '请稍后重试，或降低并发/调用频率。',
+        )
+
+    if any(k in text for k in [
+        'timeout', 'timed out', 'connection', 'max retries exceeded',
+        'name or service not known', 'temporarily unavailable', '网络错误', '连接失败'
+    ]):
+        return _meta(
+            'network_error',
+            'NETWORK_ERROR',
+            '网络连接异常（超时或连接失败）。',
+            '请检查当前网络、DNS/代理设置，稍后重试。',
+        )
+
+    return _meta(
+        'unknown_error',
+        'UNKNOWN_ERROR',
+        '未知错误，导入未完成。',
+        '请重试一次；若仍失败，请联系管理员并提供错误时间与账号标识。',
+    )
+
+
 def _parse_account_text(raw_text):
     """Parse AK/SK and optional metadata from free-form text (CN/EN labels)."""
     text = (raw_text or '').replace('\r\n', '\n')
@@ -497,7 +571,7 @@ def _job_is_done(job):
 
 def _serialize_import_job(job):
     if isinstance(job, ImportJob):
-        return {
+        payload = {
             'id': job.id,
             'status': job.status,
             'step': job.step,
@@ -509,18 +583,45 @@ def _serialize_import_job(job):
             'updated_at': job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ') if job.updated_at else '',
             'finished_at': job.finished_at.strftime('%Y-%m-%dT%H:%M:%SZ') if job.finished_at else '',
         }
-    return {
-        'id': job.get('id'),
-        'status': job.get('status'),
-        'step': job.get('step'),
-        'message': job.get('message'),
-        'progress': job.get('progress'),
-        'error': job.get('error', ''),
-        'result': job.get('result'),
-        'created_at': job.get('created_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('created_at') else '',
-        'updated_at': job.get('updated_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('updated_at') else '',
-        'finished_at': job.get('finished_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('finished_at') else '',
-    }
+    else:
+        payload = {
+            'id': job.get('id'),
+            'status': job.get('status'),
+            'step': job.get('step'),
+            'message': job.get('message'),
+            'progress': job.get('progress'),
+            'error': job.get('error', ''),
+            'result': job.get('result'),
+            'created_at': job.get('created_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('created_at') else '',
+            'updated_at': job.get('updated_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('updated_at') else '',
+            'finished_at': job.get('finished_at').strftime('%Y-%m-%dT%H:%M:%SZ') if job.get('finished_at') else '',
+        }
+
+    error_type = ''
+    error_code = ''
+    suggestion = ''
+
+    if payload.get('status') == 'error':
+        result = payload.get('result') or {}
+        if isinstance(result, dict) and result.get('error_type'):
+            error_type = result.get('error_type') or ''
+            error_code = result.get('error_code') or ''
+            suggestion = result.get('suggestion') or ''
+            if result.get('message'):
+                payload['message'] = result.get('message')
+        else:
+            meta = _classify_import_error(payload.get('error') or payload.get('message') or '')
+            error_type = meta.get('error_type', '')
+            error_code = meta.get('error_code', '')
+            suggestion = meta.get('suggestion', '')
+            payload['message'] = meta.get('message') or payload.get('message')
+
+    payload.update({
+        'error_type': error_type,
+        'error_code': error_code,
+        'suggestion': suggestion,
+    })
+    return payload
 
 
 def _update_import_job(job_id, **updates):
@@ -646,12 +747,19 @@ def _run_account_import_job(app_obj, job_id, raw_text, scan_all_regions):
             )
         except Exception as e:
             db.session.rollback()
+            meta = _classify_import_error(e)
             _update_import_job(
                 job_id,
                 status='error',
                 step='失败',
-                message='导入失败',
-                error=str(e),
+                message=meta.get('message', '导入失败'),
+                error=meta.get('raw_error', str(e)),
+                result={
+                    'error_type': meta.get('error_type', ''),
+                    'error_code': meta.get('error_code', ''),
+                    'suggestion': meta.get('suggestion', ''),
+                    'message': meta.get('message', '导入失败'),
+                },
                 finished_at=datetime.utcnow(),
             )
 
@@ -1322,7 +1430,11 @@ def import_account_text():
                 )
                 return render_template('import_account_text.html', result=result)
             if done_job and done_job.status == 'error':
-                flash(f"导入失败: {done_job.error or '未知错误'}", 'danger')
+                err_result = done_job.get_result() or {}
+                err_type = err_result.get('error_type') or 'unknown_error'
+                err_message = err_result.get('message') or done_job.message or '导入失败'
+                err_suggestion = err_result.get('suggestion') or '请检查后重试。'
+                flash(f"导入失败（{err_type}）：{err_message} 建议：{err_suggestion}", 'danger')
         return render_template('import_account_text.html')
 
     raw_text = request.form.get('account_text', '')

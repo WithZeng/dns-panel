@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from urllib.parse import urlparse, parse_qs
 from unittest.mock import patch
 
 os.environ.setdefault('DNS_PANEL_DISABLE_SCHEDULER', '1')
@@ -10,7 +11,7 @@ os.environ.setdefault('SECRET_KEY', 'test_secret_key')
 
 from werkzeug.security import generate_password_hash
 from app import app
-from models import db, User, EcsInstance
+from models import db, User, EcsInstance, ImportJob
 
 
 def _extract_csrf_token(client):
@@ -23,6 +24,14 @@ def _extract_csrf_token(client):
     start = idx + len(marker)
     end = html.find('"', start)
     return html[start:end] if end > start else ''
+
+
+def _extract_job_id_from_redirect(resp):
+    location = resp.headers.get('Location', '')
+    if not location:
+        return ''
+    q = parse_qs(urlparse(location).query)
+    return (q.get('job_done') or [''])[0]
 
 
 class AccountImportTextTests(unittest.TestCase):
@@ -43,6 +52,7 @@ class AccountImportTextTests(unittest.TestCase):
         self.csrf_token = _extract_csrf_token(self.client)
         with app.app_context():
             EcsInstance.query.delete()
+            ImportJob.query.delete()
             db.session.commit()
 
     def tearDown(self):
@@ -100,6 +110,50 @@ class AccountImportTextTests(unittest.TestCase):
             self.assertEqual(inst.status, 'Stopped')
 
         self.assertTrue(mock_sync.called)
+
+    @patch('routes._discover_ecs_instances_all_regions', side_effect=Exception('InvalidAccessKeyId.NotFound: bad ak'))
+    def test_import_text_status_contains_error_classification_auth(self, _mock_discover):
+        payload = '登录名称: demo\nAccessKey ID: LTAI1234567890ABCDEF\nAccessKey Secret: abcdefghijklmnopqrstuvwx123456\n备注: 测试账号'
+        resp = self.client.post('/account/import_text', data={'account_text': payload, 'csrf_token': self.csrf_token}, follow_redirects=False)
+        self.assertEqual(resp.status_code, 302)
+
+        job_id = _extract_job_id_from_redirect(resp)
+        self.assertTrue(job_id)
+
+        status_res = self.client.get(f'/api/account/import_text/status/{job_id}')
+        self.assertEqual(status_res.status_code, 200)
+        data = status_res.get_json()
+        self.assertTrue(data.get('ok'))
+        job = data.get('job') or {}
+
+        self.assertEqual(job.get('status'), 'error')
+        self.assertEqual(job.get('error_type'), 'auth_failed')
+        self.assertEqual(job.get('error_code'), 'AUTH_FAILED')
+        self.assertTrue(job.get('suggestion'))
+        # backward compatibility
+        self.assertTrue(job.get('error'))
+        self.assertTrue(job.get('message'))
+
+    @patch('routes._sync_account_to_github', return_value=(False, 'GitHub 同步失败: gh auth token missing'))
+    @patch('routes._discover_ecs_instances_all_regions', return_value=[])
+    def test_import_text_status_contains_error_classification_github(self, _mock_discover, _mock_sync):
+        payload = '登录名称: demo\nAccessKey ID: LTAI1234567890ABCDEF\nAccessKey Secret: abcdefghijklmnopqrstuvwx123456\n备注: 测试账号'
+        resp = self.client.post('/account/import_text', data={'account_text': payload, 'csrf_token': self.csrf_token}, follow_redirects=False)
+        self.assertEqual(resp.status_code, 302)
+
+        job_id = _extract_job_id_from_redirect(resp)
+        self.assertTrue(job_id)
+
+        status_res = self.client.get(f'/api/account/import_text/status/{job_id}')
+        data = status_res.get_json()
+        job = data.get('job') or {}
+
+        self.assertEqual(job.get('status'), 'error')
+        self.assertEqual(job.get('error_type'), 'github_sync_failed')
+        self.assertEqual(job.get('error_code'), 'GITHUB_SYNC_FAILED')
+        self.assertIn('gh auth', (job.get('suggestion') or '').lower())
+        self.assertTrue(job.get('error'))
+        self.assertTrue(job.get('message'))
 
 
 if __name__ == '__main__':

@@ -40,7 +40,7 @@
                     <div id="import-progress-bar" class="h-2 bg-blue-600 rounded-full transition-all" style="width: 0%"></div>
                 </div>
                 <div id="import-progress-message" class="text-xs text-slate-600 dark:text-slate-300 mt-2">任务已创建，等待执行...</div>
-                <div id="import-progress-error" class="text-xs text-red-600 dark:text-red-300 mt-2 hidden"></div>
+                <div id="import-progress-error" class="mt-3 hidden rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-700 dark:text-red-200 leading-5"></div>
             </div>
         </div>
 
@@ -118,7 +118,22 @@
         if (job.status === 'error') {
             if (errEl) {
                 errEl.classList.remove('hidden');
-                errEl.textContent = job.error || '导入失败';
+                const typeMap = {
+                    auth_failed: '认证失败',
+                    network_error: '网络错误',
+                    permission_denied: '权限不足',
+                    api_rate_limited: 'API 限流',
+                    github_sync_failed: 'GitHub 同步失败',
+                    unknown_error: '未知错误'
+                };
+                const typeLabel = typeMap[job.error_type] || '未知错误';
+                const actionText = job.suggestion || '请检查配置后重试。';
+                const friendlyMsg = job.message || '导入失败';
+                errEl.innerHTML = `
+                    <div class="font-semibold">失败分类：${typeLabel}</div>
+                    <div class="mt-1">问题说明：${friendlyMsg}</div>
+                    <div class="mt-1">建议动作：${actionText}</div>
+                `;
             }
             if (submitBtn) submitBtn.disabled = false;
             return true;
