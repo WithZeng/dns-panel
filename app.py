@@ -1,4 +1,4 @@
-﻿import os
+import os
 import shutil
 import secrets
 import uuid
@@ -20,6 +20,7 @@ from models import (
     ScheduleTask,
     DnsFailover,
     CloudflareConfig,
+    ImportJob,
 )
 from monitor import check_all_instances, get_client, ecs_start, ecs_stop
 from crypto_utils import encrypt
@@ -270,6 +271,25 @@ def bootstrap_database():
             if 'report_updated_at' not in probe_cols:
                 cursor.execute("ALTER TABLE probe_server ADD COLUMN report_updated_at DATETIME")
                 print("Migration: added 'report_updated_at' column to probe_server.")
+
+            # Check import_job table
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='import_job'")
+            if not cursor.fetchone():
+                cursor.execute('''
+                    CREATE TABLE import_job (
+                        id VARCHAR(50) NOT NULL PRIMARY KEY,
+                        status VARCHAR(20) DEFAULT 'queued',
+                        step VARCHAR(100) DEFAULT '',
+                        message VARCHAR(500) DEFAULT '',
+                        progress INTEGER DEFAULT 0,
+                        error TEXT DEFAULT '',
+                        result_json TEXT DEFAULT 'null',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        finished_at DATETIME
+                    )
+                ''')
+                print("Migration: created 'import_job' table.")
 
             conn.commit()
         except Exception as e:

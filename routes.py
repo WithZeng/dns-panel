@@ -26,6 +26,7 @@ from models import (
     ScheduleTask,
     ProbeServer,
     DnsFailover,
+    ImportJob,
 )
 from monitor import check_and_manage_instance, ecs_stop, ecs_start, ecs_release, get_region_traffic, get_client, get_security_groups, describe_sg_rules, authorize_sg, revoke_sg, ecs_enable_ipv6, get_ecs_ipv6_info
 from notifier import send_alert
@@ -36,9 +37,8 @@ main = Blueprint('main', __name__)
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_MINUTES = 10
 
-_IMPORT_JOBS = {}
 _IMPORT_JOBS_LOCK = threading.Lock()
-_IMPORT_JOB_KEEP_HOURS = 2
+_IMPORT_JOB_KEEP_HOURS = 24
 
 
 def _is_probe_online(server):
@@ -462,26 +462,42 @@ def _sync_account_to_github(repo, account_slug, payload):
 
 def _new_import_job():
     job_id = uuid.uuid4().hex
-    now = datetime.utcnow()
-    return {
-        'id': job_id,
-        'status': 'queued',
-        'step': '排队中',
-        'message': '任务已创建，等待开始',
-        'progress': 0,
-        'error': '',
-        'result': None,
-        'created_at': now,
-        'updated_at': now,
-        'finished_at': None,
-    }
+    job = ImportJob(
+        id=job_id,
+        status='queued',
+        step='排队中',
+        message='任务已创建，等待开始',
+        progress=0,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.session.add(job)
+    db.session.commit()
+    return job
 
 
 def _job_is_done(job):
-    return (job or {}).get('status') in ('done', 'error')
+    if not job:
+        return False
+    if hasattr(job, 'status'):
+        return job.status in ('done', 'error')
+    return job.get('status') in ('done', 'error')
 
 
 def _serialize_import_job(job):
+    if isinstance(job, ImportJob):
+        return {
+            'id': job.id,
+            'status': job.status,
+            'step': job.step,
+            'message': job.message,
+            'progress': job.progress,
+            'error': job.error or '',
+            'result': job.get_result(),
+            'created_at': job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') if job.created_at else '',
+            'updated_at': job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ') if job.updated_at else '',
+            'finished_at': job.finished_at.strftime('%Y-%m-%dT%H:%M:%SZ') if job.finished_at else '',
+        }
     return {
         'id': job.get('id'),
         'status': job.get('status'),
@@ -497,25 +513,29 @@ def _serialize_import_job(job):
 
 
 def _update_import_job(job_id, **updates):
-    with _IMPORT_JOBS_LOCK:
-        job = _IMPORT_JOBS.get(job_id)
-        if not job:
-            return None
-        for k, v in updates.items():
-            job[k] = v
-        job['updated_at'] = datetime.utcnow()
-        return job
+    job = db.session.get(ImportJob, job_id)
+    if not job:
+        return None
+    for k, v in updates.items():
+        if k == 'result':
+            job.set_result(v)
+        elif hasattr(job, k):
+            setattr(job, k, v)
+    job.updated_at = datetime.utcnow()
+    db.session.commit()
+    return job
 
 
 def _cleanup_import_jobs():
     cutoff = datetime.utcnow() - timedelta(hours=_IMPORT_JOB_KEEP_HOURS)
-    with _IMPORT_JOBS_LOCK:
-        to_delete = [
-            jid for jid, job in _IMPORT_JOBS.items()
-            if _job_is_done(job) and job.get('finished_at') and job['finished_at'] < cutoff
-        ]
-        for jid in to_delete:
-            _IMPORT_JOBS.pop(jid, None)
+    try:
+        ImportJob.query.filter(
+            ImportJob.status.in_(['done', 'error']),
+            ImportJob.finished_at < cutoff
+        ).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def _run_account_import_job(app_obj, job_id, raw_text, scan_all_regions):
@@ -1282,17 +1302,16 @@ def import_account_text():
         _cleanup_import_jobs()
         done_job_id = request.args.get('job_done', '').strip()
         if done_job_id:
-            with _IMPORT_JOBS_LOCK:
-                done_job = _IMPORT_JOBS.get(done_job_id)
-            if done_job and done_job.get('status') == 'done':
-                result = done_job.get('result') or {}
+            done_job = db.session.get(ImportJob, done_job_id)
+            if done_job and done_job.status == 'done':
+                result = done_job.get_result() or {}
                 flash(
                     f"导入完成：发现 {result.get('discovered_count', 0)} 台，新增 {result.get('imported_count', 0)}，更新 {result.get('updated_count', 0)}；GitHub 已同步 {result.get('sync_target', '-')}",
                     'success'
                 )
                 return render_template('import_account_text.html', result=result)
-            if done_job and done_job.get('status') == 'error':
-                flash(f"导入失败: {done_job.get('error', '未知错误')}", 'danger')
+            if done_job and done_job.status == 'error':
+                flash(f"导入失败: {done_job.error or '未知错误'}", 'danger')
         return render_template('import_account_text.html')
 
     raw_text = request.form.get('account_text', '')
@@ -1304,35 +1323,32 @@ def import_account_text():
 
     _cleanup_import_jobs()
     job = _new_import_job()
-    with _IMPORT_JOBS_LOCK:
-        _IMPORT_JOBS[job['id']] = job
 
     app_obj = current_app._get_current_object()
 
     # Tests expect deterministic completion after POST; run inline in testing mode.
     if current_app.config.get('TESTING'):
-        _run_account_import_job(app_obj, job['id'], raw_text, scan_all_regions)
-        return redirect(url_for('main.import_account_text', job_done=job['id']))
+        _run_account_import_job(app_obj, job.id, raw_text, scan_all_regions)
+        return redirect(url_for('main.import_account_text', job_done=job.id))
 
     t = threading.Thread(
         target=_run_account_import_job,
-        args=(app_obj, job['id'], raw_text, scan_all_regions),
+        args=(app_obj, job.id, raw_text, scan_all_regions),
         daemon=True,
     )
     t.start()
 
-    return render_template('import_account_text.html', raw_text=raw_text, job_id=job['id'])
+    return render_template('import_account_text.html', raw_text=raw_text, job_id=job.id)
 
 
 @main.route('/api/account/import_text/status/<job_id>')
 @login_required
 def import_account_text_status(job_id):
     _cleanup_import_jobs()
-    with _IMPORT_JOBS_LOCK:
-        job = _IMPORT_JOBS.get(job_id)
-        if not job:
-            return jsonify({'ok': False, 'message': '任务不存在或已过期'}), 404
-        payload = _serialize_import_job(job)
+    job = db.session.get(ImportJob, job_id)
+    if not job:
+        return jsonify({'ok': False, 'message': '任务不存在或已过期'}), 404
+    payload = _serialize_import_job(job)
     return jsonify({'ok': True, 'job': payload})
 
 

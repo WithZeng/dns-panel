@@ -259,3 +259,31 @@ class DnsFailoverLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     failover = db.relationship('DnsFailover', backref=db.backref('logs', lazy='dynamic', cascade='all, delete-orphan'))
+
+
+class ImportJob(db.Model):
+    __tablename__ = 'import_job'
+    id = db.Column(db.String(50), primary_key=True)
+    status = db.Column(db.String(20), default='queued')  # queued, running, done, error
+    step = db.Column(db.String(100), default='')
+    message = db.Column(db.String(500), default='')
+    progress = db.Column(db.Integer, default=0)
+    error = db.Column(db.Text, default='')
+    result_json = db.Column(db.Text, default='null')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    def set_result(self, result):
+        if result is None:
+            self.result_json = 'null'
+        else:
+            self.result_json = json.dumps(result, ensure_ascii=False)
+
+    def get_result(self):
+        if not self.result_json or self.result_json == 'null':
+            return None
+        try:
+            return json.loads(self.result_json)
+        except Exception:
+            return None
