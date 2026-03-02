@@ -32,6 +32,7 @@ INSTANCE_PATH = os.path.join(BASE_DIR, 'instance')
 DB_PATH = os.environ.get('DNS_PANEL_DB_PATH', '').strip() or os.path.join(INSTANCE_PATH, 'ecs_monitor.db')
 BACKUP_DIR = os.path.join(INSTANCE_PATH, 'backups')
 DISABLE_SCHEDULER = os.environ.get('DNS_PANEL_DISABLE_SCHEDULER', '').strip().lower() in ('1', 'true', 'yes', 'on')
+SCHEDULER_ROLE = os.environ.get('DNS_PANEL_ROLE', 'all').strip().lower()
 
 if not os.path.exists(INSTANCE_PATH):
     os.makedirs(INSTANCE_PATH)
@@ -317,10 +318,11 @@ bootstrap_database()
 # 4. Initialize Scheduler
 scheduler = APScheduler()
 scheduler.init_app(app)
-if not DISABLE_SCHEDULER:
+if not DISABLE_SCHEDULER and SCHEDULER_ROLE in ('all', 'scheduler'):
     scheduler.start()
+    print(f"Scheduler started (DNS_PANEL_ROLE={SCHEDULER_ROLE}).")
 else:
-    print("Scheduler disabled by DNS_PANEL_DISABLE_SCHEDULER.")
+    print(f"Scheduler disabled (DNS_PANEL_DISABLE_SCHEDULER={DISABLE_SCHEDULER}, DNS_PANEL_ROLE={SCHEDULER_ROLE}).")
 
 
 @scheduler.task('interval', id='check_all_instances', minutes=5)

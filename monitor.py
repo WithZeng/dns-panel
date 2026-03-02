@@ -1,13 +1,16 @@
 import json
+import os
+import fcntl
 import logging
 import datetime
+from sqlalchemy import text
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.request import CommonRequest
 from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
 from aliyunsdkecs.request.v20140526.StopInstanceRequest import StopInstanceRequest
 from aliyunsdkecs.request.v20140526.StartInstanceRequest import StartInstanceRequest
 from aliyunsdkecs.request.v20140526.DeleteInstanceRequest import DeleteInstanceRequest
-from models import db, EcsInstance, TrafficLog, AlertConfig, ProbeServer
+from models import db, EcsInstance, TrafficLog, AlertConfig, ProbeServer, NotificationLog
 from notifier import send_alert
 
 # ================== 1. Configure Logging ==================
@@ -16,12 +19,106 @@ logger = logging.getLogger(__name__)
 
 # Anomaly detection: alert if traffic increases by more than this % in a single check
 ANOMALY_INCREASE_PCT = 20.0
+_TRAFFIC_LOCK_ACQUIRED_SQL = "SELECT pg_try_advisory_lock(922337001)"
+_TRAFFIC_LOCK_RELEASE_SQL = "SELECT pg_advisory_unlock(922337001)"
 
 
 def _is_probe_online(server):
     if not server or not server.last_seen:
         return False
     return (datetime.datetime.utcnow() - server.last_seen).total_seconds() <= 30
+
+
+def _scheduler_lock_file_path():
+    return os.environ.get('DNS_PANEL_SCHEDULER_LOCK_FILE', '/tmp/dns-panel-scheduler.lock')
+
+
+def _instance_lock_file_path(instance_id):
+    base_dir = os.environ.get('DNS_PANEL_INSTANCE_LOCK_DIR', '/tmp')
+    return os.path.join(base_dir, f'dns-panel-instance-{instance_id}.lock')
+
+
+def _try_acquire_instance_lock(instance_id):
+    lock_handle = None
+    try:
+        lock_handle = open(_instance_lock_file_path(instance_id), 'a+')
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return lock_handle
+    except Exception:
+        if lock_handle:
+            try:
+                lock_handle.close()
+            except Exception:
+                pass
+        return None
+
+
+def _release_instance_lock(lock_handle):
+    if not lock_handle:
+        return
+    try:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+    try:
+        lock_handle.close()
+    except Exception:
+        pass
+
+
+def _try_acquire_run_lock():
+    """Best-effort cross-process lock to prevent duplicate scheduled runs."""
+    lock_handle = None
+    db_locked = False
+    file_locked = False
+    try:
+        lock_handle = open(_scheduler_lock_file_path(), 'a+')
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        file_locked = True
+
+        # Optional DB advisory lock (effective on PostgreSQL; ignored on SQLite)
+        try:
+            lock_result = db.session.execute(text(_TRAFFIC_LOCK_ACQUIRED_SQL)).scalar()
+            db_locked = bool(lock_result)
+            if not db_locked:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+                lock_handle.close()
+                return None, 'db_lock_busy'
+        except Exception:
+            # SQLite / unsupported backend: file lock alone is sufficient for single-host deployment
+            db_locked = False
+
+        return {'fh': lock_handle, 'db_locked': db_locked, 'file_locked': file_locked}, 'ok'
+    except Exception:
+        if lock_handle:
+            try:
+                lock_handle.close()
+            except Exception:
+                pass
+        return None, 'file_lock_busy'
+
+
+def _release_run_lock(lock_ctx):
+    if not lock_ctx:
+        return
+    try:
+        if lock_ctx.get('db_locked'):
+            try:
+                db.session.execute(text(_TRAFFIC_LOCK_RELEASE_SQL))
+            except Exception:
+                pass
+        fh = lock_ctx.get('fh')
+        if fh:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+            except Exception:
+                pass
+            try:
+                fh.close()
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 # ================== 2. Init Client (Dynamic Endpoint) ==================
@@ -411,8 +508,14 @@ def revoke_sg(client, security_group_id, region_id, ip_protocol, port_range, sou
 
 # ================== 6. Main Logic ==================
 def check_and_manage_instance(instance_id):
+    instance_lock = _try_acquire_instance_lock(instance_id)
+    if not instance_lock:
+        logger.info(f"Skip duplicate instance check for {instance_id}: instance lock busy")
+        return
+
     instance = db.session.get(EcsInstance, instance_id)
     if not instance:
+        _release_instance_lock(instance_lock)
         return
 
     # Basic error handling for missing AK/SK
@@ -569,12 +672,19 @@ def check_and_manage_instance(instance_id):
         db.session.commit()
 
     except Exception as e:
-        logger.error(f"Check flow error {instance.name}: {e}")
+        inst_name = instance.name if instance else instance_id
+        logger.error(f"Check flow error {inst_name}: {e}")
         db.session.rollback()
+    finally:
+        _release_instance_lock(instance_lock)
 
 
 def check_all_instances():
     logger.info("Starting scheduled check for all instances...")
+    lock_ctx, lock_state = _try_acquire_run_lock()
+    if not lock_ctx:
+        logger.info(f"Skip duplicate scheduled round: lock not acquired ({lock_state})")
+        return
     try:
         instances = EcsInstance.query.all()
         for instance in instances:
@@ -584,3 +694,5 @@ def check_all_instances():
             check_and_manage_instance(instance.id)
     except Exception as e:
         logger.error(f"Error in check_all_instances: {e}")
+    finally:
+        _release_run_lock(lock_ctx)
