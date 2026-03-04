@@ -58,6 +58,9 @@ class EcsInstance(db.Model):
     auto_start_enabled = db.Column(db.Boolean, default=False)
     monitoring_enabled = db.Column(db.Boolean, default=True)
     is_encrypted = db.Column(db.Boolean, default=False)
+    credential_status = db.Column(db.String(50), default='ok', nullable=False)
+    credential_error = db.Column(db.String(500), default='')
+    credential_last_failed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     real_creation_time = db.Column(db.DateTime, nullable=True)
     last_checked = db.Column(db.DateTime, default=datetime.utcnow)
@@ -86,6 +89,10 @@ class EcsInstance(db.Model):
         self.access_key_id = encrypt(ak)
         self.access_key_secret = encrypt(sk)
         self.is_encrypted = True
+        # Reset credential alarm status when credentials are updated.
+        self.credential_status = 'ok'
+        self.credential_error = ''
+        self.credential_last_failed_at = None
 
 
 class TrafficLog(db.Model):

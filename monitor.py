@@ -33,6 +33,30 @@ class BillingQueryError(Exception):
         self.raw_error = raw_error
 
 
+def _update_credential_status(instance, status='ok', error_msg=''):
+    """Persist explicit credential/auth state for dashboard alerts."""
+    normalized = (status or 'ok').strip().lower()
+    if normalized not in ('ok', 'invalid_access_key', 'unauthorized'):
+        normalized = 'ok'
+
+    instance.credential_status = normalized
+    if normalized == 'ok':
+        instance.credential_error = ''
+        instance.credential_last_failed_at = None
+    else:
+        instance.credential_error = (error_msg or '')[:500]
+        instance.credential_last_failed_at = datetime.datetime.utcnow()
+
+
+def _credential_status_from_billing_error(err):
+    code = (getattr(err, 'error_code', '') or '').upper()
+    if code == 'AUTH_FAILED':
+        return 'invalid_access_key'
+    if code == 'PERMISSION_DENIED':
+        return 'unauthorized'
+    return 'ok'
+
+
 def _is_probe_online(server):
     if not server or not server.last_seen:
         return False
@@ -655,7 +679,7 @@ def _region_matches(target_region, detail_region):
     return False
 
 
-def get_total_traffic_gb(client, region_id):
+def get_total_traffic_gb(client, region_id, raise_on_error=False):
     request = CommonRequest()
     request.set_domain('cdt.aliyuncs.com')
     request.set_version('2021-08-13')
@@ -686,6 +710,8 @@ def get_total_traffic_gb(client, region_id):
 
         return total_bytes / (1024 ** 3)
     except Exception as e:
+        if raise_on_error:
+            raise _classify_billing_api_error(e)
         logger.error(f"Failed to fetch CDT traffic for {region_id}: {e}")
         return None
 
@@ -820,8 +846,24 @@ def check_and_manage_instance(instance_id):
         client = get_client(instance)
 
         # Fetch traffic (CDT reading is cumulative for the period; we persist by delta to avoid jump/reset bugs)
-        current_api_gb = get_total_traffic_gb(client, instance.region_id)
         previous_api_gb = instance.last_api_traffic or 0
+        try:
+            current_api_gb = get_total_traffic_gb(client, instance.region_id, raise_on_error=True)
+            _update_credential_status(instance, 'ok')
+        except BillingQueryError as billing_err:
+            current_api_gb = previous_api_gb
+            delta_gb = 0
+            cred_state = _credential_status_from_billing_error(billing_err)
+            if cred_state in ('invalid_access_key', 'unauthorized'):
+                _update_credential_status(instance, cred_state, billing_err.raw_error or billing_err.message)
+            else:
+                # Keep prior auth alarm on transient network/rate-limit errors.
+                if (instance.credential_status or 'ok') == 'ok':
+                    _update_credential_status(instance, 'ok')
+            logger.error(
+                f"Failed to fetch CDT traffic for {instance.region_id} ({instance.name}): "
+                f"{billing_err.error_code} {billing_err.raw_error or billing_err.message}"
+            )
 
         if current_api_gb is not None:
             # If the upstream counter resets (new cycle/account reset), treat current reading as fresh delta.
@@ -842,7 +884,7 @@ def check_and_manage_instance(instance_id):
 
             # Write traffic log using displayed usage metric.
             display_usage = (instance.total_traffic_sum or 0) if instance.traffic_strategy == 'life' else (instance.current_month_traffic or 0)
-            
+
             # Rate limit traffic logs to once per minute to optimize DB
             last_log = TrafficLog.query.filter_by(instance_id=instance.id).order_by(TrafficLog.timestamp.desc()).first()
             if not last_log or (datetime.datetime.utcnow() - last_log.timestamp).total_seconds() >= 60:

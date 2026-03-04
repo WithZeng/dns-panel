@@ -160,6 +160,7 @@
       {% for instance in instances %}
       {% set strategy = instance.traffic_strategy %}
       {% set is_online = instance.status in ['Running', 'Starting'] %}
+      {% set cred_status = (instance.credential_status or 'ok') %}
 
       {# ── Monthly stats (CYCLE only) ── #}
       {% if strategy != 'life' %}
@@ -228,6 +229,18 @@
           </span>
           {% endif %}
         </div>
+
+        {% if cred_status != 'ok' %}
+        <div data-field="credential_alert" class="mt-3 rounded-xl border px-3 py-2 text-xs {% if cred_status == 'invalid_access_key' %}border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300{% else %}border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300{% endif %}">
+          <div class="font-semibold">{% if cred_status == 'invalid_access_key' %}🚨 凭据失效（InvalidAccessKeyId / 签名错误）{% else %}⚠️ Unauthorized / 权限不足{% endif %}</div>
+          {% if instance.credential_error %}
+          <div class="mt-1 break-all opacity-80">{{ instance.credential_error }}</div>
+          {% endif %}
+          {% if instance.credential_last_failed_at %}
+          <div class="mt-1 opacity-70">最近失败：{{ instance.credential_last_failed_at.strftime('%Y-%m-%d %H:%M') }}</div>
+          {% endif %}
+        </div>
+        {% endif %}
 
         {# ── Monthly progress (CYCLE only) ── #}
         {% if strategy != 'life' %}
@@ -597,6 +610,33 @@
                   tagChip.textContent = inst.tag;
                   metaLine.appendChild(tagChip);
                 }
+              }
+
+              let credBox = card.querySelector('[data-field="credential_alert"]');
+              if (inst.credential_status && inst.credential_status !== 'ok') {
+                const isInvalid = inst.credential_status === 'invalid_access_key';
+                const boxCls = isInvalid
+                  ? 'mt-3 rounded-xl border px-3 py-2 text-xs border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                  : 'mt-3 rounded-xl border px-3 py-2 text-xs border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300';
+                const title = isInvalid
+                  ? '🚨 凭据失效（InvalidAccessKeyId / 签名错误）'
+                  : '⚠️ Unauthorized / 权限不足';
+                const errText = inst.credential_error ? `<div class="mt-1 break-all opacity-80">${inst.credential_error}</div>` : '';
+                const failAt = inst.credential_last_failed_at ? `<div class="mt-1 opacity-70">最近失败：${inst.credential_last_failed_at}</div>` : '';
+                if (!credBox) {
+                  credBox = document.createElement('div');
+                  credBox.setAttribute('data-field', 'credential_alert');
+                  const anchor = card.querySelector('[data-field="last_checked"]');
+                  if (anchor && anchor.parentNode) {
+                    anchor.parentNode.insertBefore(credBox, anchor);
+                  } else {
+                    card.appendChild(credBox);
+                  }
+                }
+                credBox.className = boxCls;
+                credBox.innerHTML = `<div class="font-semibold">${title}</div>${errText}${failAt}`;
+              } else if (credBox) {
+                credBox.remove();
               }
 
               const lc = card.querySelector('[data-field="last_checked"]');

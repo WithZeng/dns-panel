@@ -242,6 +242,18 @@ def bootstrap_database():
                 cursor.execute("ALTER TABLE ecs_instance ADD COLUMN ipv6_addr TEXT DEFAULT ''")
                 print("Migration: added 'ipv6_addr' column to ecs_instance.")
 
+            if 'credential_status' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_status TEXT DEFAULT 'ok'")
+                print("Migration: added 'credential_status' column to ecs_instance.")
+
+            if 'credential_error' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_error TEXT DEFAULT ''")
+                print("Migration: added 'credential_error' column to ecs_instance.")
+
+            if 'credential_last_failed_at' not in existing_cols:
+                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_last_failed_at DATETIME")
+                print("Migration: added 'credential_last_failed_at' column to ecs_instance.")
+
             # Check user columns
             cursor.execute("PRAGMA table_info(user)")
             user_cols = {row[1] for row in cursor.fetchall()}

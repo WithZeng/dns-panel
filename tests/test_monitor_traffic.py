@@ -6,6 +6,7 @@ from monitor import (
     _detail_traffic_bytes,
     _region_matches,
     get_total_traffic_gb,
+    BillingQueryError,
 )
 
 
@@ -15,6 +16,14 @@ class _FakeClient:
 
     def do_action_with_exception(self, _request):
         return json.dumps(self.payload)
+
+
+class _RaiseClient:
+    def __init__(self, message):
+        self.message = message
+
+    def do_action_with_exception(self, _request):
+        raise Exception(self.message)
 
 
 class MonitorTrafficTests(unittest.TestCase):
@@ -56,6 +65,16 @@ class MonitorTrafficTests(unittest.TestCase):
         }
         gb = get_total_traffic_gb(_FakeClient(payload), 'cn-shenzhen')
         self.assertAlmostEqual(gb, 1.0, places=6)
+
+    def test_get_total_traffic_gb_raise_on_error_auth(self):
+        with self.assertRaises(BillingQueryError) as cm:
+            get_total_traffic_gb(_RaiseClient('InvalidAccessKeyId.NotFound: bad key'), 'cn-shenzhen', raise_on_error=True)
+        self.assertEqual(cm.exception.error_code, 'AUTH_FAILED')
+
+    def test_get_total_traffic_gb_raise_on_error_permission(self):
+        with self.assertRaises(BillingQueryError) as cm:
+            get_total_traffic_gb(_RaiseClient('Unauthorized operation denied'), 'cn-shenzhen', raise_on_error=True)
+        self.assertEqual(cm.exception.error_code, 'PERMISSION_DENIED')
 
 
 if __name__ == '__main__':

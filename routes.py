@@ -1053,6 +1053,9 @@ def api_instances():
             'life_percent': stats['life_percent'],
             'percent': stats['percent'],
             'cost': stats['cost'],
+            'credential_status': (inst.credential_status or 'ok'),
+            'credential_error': inst.credential_error or '',
+            'credential_last_failed_at': inst.credential_last_failed_at.strftime('%Y-%m-%d %H:%M') if inst.credential_last_failed_at else '',
             'last_checked': inst.last_checked.strftime('%Y-%m-%d %H:%M') if inst.last_checked else '-',
         })
 
