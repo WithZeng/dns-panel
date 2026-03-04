@@ -604,12 +604,18 @@ def get_total_traffic_gb(client, region_id):
         response = client.do_action_with_exception(request)
         response_json = _decode_json_response(response)
         total_bytes = 0
-        for detail in response_json.get('TrafficDetails', []):
-            if detail.get('BusinessRegionId') == region_id:
+        details = response_json.get('TrafficDetails', [])
+        
+        # Bug Fix: 兼容处理 RegionId 匹配，CDT 返回的 ID 可能与 ECS 不同
+        target_region = region_id.lower()
+        for detail in details:
+            biz_region = str(detail.get('BusinessRegionId', '')).lower()
+            if target_region in biz_region or biz_region in target_region:
                 total_bytes += detail.get('Traffic', 0)
+        
         return total_bytes / (1024 ** 3)
     except Exception as e:
-        logger.error(f"Failed to fetch CDT traffic: {e}")
+        logger.error(f"Failed to fetch CDT traffic for {region_id}: {e}")
         return None
 
 
