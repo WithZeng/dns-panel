@@ -180,6 +180,47 @@
     </div>
 </div>
 
+<!-- ── CDT Billing (3 Months, Per Instance) ── -->
+<div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+    <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">📊 近三月流量统计（CDT）</h2>
+        <span id="instanceCdtScope"
+            class="text-xs rounded-full px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">加载中</span>
+    </div>
+
+    <div id="instanceCdtError"
+        class="hidden rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 mb-3"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
+            <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计流量</div>
+            <div id="instanceCdtTotalTraffic" class="text-xl font-semibold text-slate-900 dark:text-white mt-1">-</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
+            <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计费用</div>
+            <div id="instanceCdtTotalAmount" class="text-xl font-semibold text-slate-900 dark:text-white mt-1">-</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
+            <div class="text-xs text-slate-500 dark:text-slate-400">实例ID</div>
+            <div class="text-sm font-mono text-slate-900 dark:text-white mt-1 break-all">{{ instance.instance_id }}</div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-slate-500 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700">
+                <tr>
+                    <th class="py-2">月份</th>
+                    <th class="py-2">流量（GB）</th>
+                    <th class="py-2">费用</th>
+                </tr>
+            </thead>
+            <tbody id="instanceCdtTbody" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ── Traffic Chart ── -->
 <div
     class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
@@ -307,6 +348,62 @@
 </script>
 
 <script>
+    // Instance CDT billing (recent 3 months)
+    (function loadInstanceCdtBilling() {
+        const tbody = document.getElementById('instanceCdtTbody');
+        const totalTraffic = document.getElementById('instanceCdtTotalTraffic');
+        const totalAmount = document.getElementById('instanceCdtTotalAmount');
+        const scope = document.getElementById('instanceCdtScope');
+        const errBox = document.getElementById('instanceCdtError');
+
+        const showError = (msg) => {
+            if (errBox) {
+                errBox.textContent = msg || 'CDT 近三月统计加载失败，请稍后重试';
+                errBox.classList.remove('hidden');
+            }
+        };
+
+        fetch('/api/billing/cdt/three_months?instance_id={{ instance.instance_id }}')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'CDT 近三月统计加载失败');
+                }
+
+                const months = Array.isArray(data.months) ? data.months : [];
+                tbody.innerHTML = '';
+                months.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/30 transition';
+                    tr.innerHTML = `
+                        <td class="py-2 text-slate-700 dark:text-slate-200">${row.month || '-'}</td>
+                        <td class="py-2 text-slate-700 dark:text-slate-200">${Number(row.traffic || 0).toFixed(4)} GB</td>
+                        <td class="py-2 text-slate-700 dark:text-slate-200">${Number(row.amount || 0).toFixed(4)} ${data.currency || 'CNY'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (!months.length) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="3" class="py-3 text-slate-400">暂无 CDT 近三月计费数据</td>';
+                    tbody.appendChild(tr);
+                }
+
+                totalTraffic.textContent = `${Number(data.total_traffic || 0).toFixed(4)} GB`;
+                totalAmount.textContent = `${Number(data.total_amount || 0).toFixed(4)} ${data.currency || 'CNY'}`;
+                scope.textContent = data.scope === 'instance' ? '实例级' : '账号级';
+                scope.className = `text-xs rounded-full px-2 py-1 ${data.scope === 'instance'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`;
+            })
+            .catch(err => {
+                showError((err && err.message) || 'CDT 近三月统计加载失败，请稍后重试');
+                totalTraffic.textContent = '-';
+                totalAmount.textContent = '-';
+                scope.textContent = '加载失败';
+            });
+    })();
+
     // Forecast
     fetch('/api/traffic_forecast/{{ instance.id }}')
         .then(r => r.json())
