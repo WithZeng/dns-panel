@@ -473,6 +473,51 @@ def _month_keys_for_recent_three(now=None):
     return keys
 
 
+def _normalize_billing_month(value):
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    if len(text) == 6 and text.isdigit():
+        return f'{text[:4]}-{text[4:6]}'
+    if len(text) >= 7 and text[4] == '-':
+        return text[:7]
+    return ''
+
+
+def _coerce_bill_items(data):
+    if not isinstance(data, dict):
+        return []
+    items = (data.get('Data') or {}).get('Items')
+    return _coerce_traffic_details(items)
+
+
+def _is_cdt_like_bill_row(row):
+    product_detail = str((row or {}).get('ProductDetail') or '').lower()
+    product_code = str((row or {}).get('ProductCode') or '').lower()
+    item = str((row or {}).get('BillItem') or '').lower()
+    return ('cdt' in product_detail) or ('cdt' in product_code) or ('流量' in item) or ('traffic' in item)
+
+
+def _usage_to_traffic_gb(usage, usage_unit):
+    usage_value = _to_float(usage, 0.0)
+    if usage_value <= 0:
+        return 0.0
+
+    unit_lower = str(usage_unit or '').lower()
+    if unit_lower in ('gb', 'gbyte', 'gbytes', 'gib', 'gibibyte'):
+        return usage_value
+    if unit_lower in ('mb', 'mbyte', 'mbytes', 'mib', 'mibibyte'):
+        return usage_value / 1024
+    if unit_lower in ('kb', 'kbyte', 'kbytes', 'kib'):
+        return usage_value / (1024 * 1024)
+    if unit_lower in ('byte', 'bytes', 'b'):
+        return usage_value / (1024 ** 3)
+    if unit_lower in ('tb', 'tbyte', 'tbytes', 'tib'):
+        return usage_value * 1024
+    # Fallback: many billing usage fields are bytes when unit is absent
+    return usage_value / (1024 ** 3)
+
+
 def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
     month_keys = _month_keys_for_recent_three()
     by_month = {
@@ -489,16 +534,10 @@ def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
     matched_scope = 'account'
     instance_key = (instance_id or '').strip().lower()
 
-    # 先判断账单明细里是否存在实例维度（仅针对 CDT/流量相关行）。
-    # 若无实例维度且前端传了 instance_id，则回退为账号维度聚合，避免“明细全为 0”。
     cdt_rows = []
     saw_instance_dimension = False
     for row in (monthly_rows or []):
-        product_detail = str((row or {}).get('ProductDetail') or '').lower()
-        product_code = str((row or {}).get('ProductCode') or '').lower()
-        item = str((row or {}).get('BillItem') or '').lower()
-        is_cdt_like = ('cdt' in product_detail) or ('cdt' in product_code) or ('流量' in item) or ('traffic' in item)
-        if not is_cdt_like:
+        if not _is_cdt_like_bill_row(row):
             continue
         cdt_rows.append(row)
         instance_no = str((row or {}).get('InstanceID') or (row or {}).get('InstanceId') or '').strip()
@@ -508,21 +547,12 @@ def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
     use_account_fallback = bool(instance_key) and not saw_instance_dimension
 
     for row in cdt_rows:
-        month = str((row or {}).get('BillingCycle') or (row or {}).get('BillCycle') or '').strip()
-        if month and len(month) == 6 and month.isdigit():
-            month = f'{month[:4]}-{month[4:6]}'
+        month = _normalize_billing_month((row or {}).get('BillingCycle') or (row or {}).get('BillCycle') or (row or {}).get('BillingDate'))
         if month not in by_month:
             continue
 
-        pretax_amount = float((row or {}).get('PretaxAmount') or 0)
+        pretax_amount = _to_float((row or {}).get('PretaxAmount'), 0.0)
         currency = (row or {}).get('Currency') or by_month[month]['currency']
-
-        usage = (row or {}).get('Usage')
-        usage_unit = (row or {}).get('UsageUnit') or (row or {}).get('UsageUnitType') or ''
-        try:
-            usage_value = float(usage) if usage is not None else 0.0
-        except (TypeError, ValueError):
-            usage_value = 0.0
 
         instance_no = str((row or {}).get('InstanceID') or (row or {}).get('InstanceId') or '').strip()
 
@@ -538,22 +568,9 @@ def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
         by_month[month]['amount'] += pretax_amount
         by_month[month]['currency'] = currency or by_month[month]['currency']
 
-        if usage_value > 0:
-            unit_lower = str(usage_unit or '').lower()
-            if unit_lower in ('gb', 'gbyte', 'gbytes', 'gib', 'gibibyte'):
-                traffic_gb = usage_value
-            elif unit_lower in ('mb', 'mbyte', 'mbytes', 'mib', 'mibibyte'):
-                traffic_gb = usage_value / 1024
-            elif unit_lower in ('kb', 'kbyte', 'kbytes', 'kib'):
-                traffic_gb = usage_value / (1024 * 1024)
-            elif unit_lower in ('byte', 'bytes', 'b'):
-                traffic_gb = usage_value / (1024 ** 3)
-            elif unit_lower in ('tb', 'tbyte', 'tbytes', 'tib'):
-                traffic_gb = usage_value * 1024
-            else:
-                # Fallback: many billing usage fields are bytes when unit is absent
-                traffic_gb = usage_value / (1024 ** 3)
-            by_month[month]['traffic'] += traffic_gb
+        usage = (row or {}).get('Usage')
+        usage_unit = (row or {}).get('UsageUnit') or (row or {}).get('UsageUnitType') or ''
+        by_month[month]['traffic'] += _usage_to_traffic_gb(usage, usage_unit)
 
     months = []
     total_traffic = 0.0
@@ -574,7 +591,6 @@ def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
         total_traffic += traffic
         total_amount += amount
 
-    # 如果传了实例 ID 但账单维度无法识别实例，则显式标注 account
     if instance_key and not saw_instance_dimension and matched_scope != 'instance':
         matched_scope = 'account'
 
@@ -587,34 +603,106 @@ def _build_cdt_monthly_summary(monthly_rows, instance_id=''):
     }
 
 
-def get_cdt_three_month_billing(client, instance_id=''):
-    month_keys = _month_keys_for_recent_three()
-    start_time = _normalize_month_start(month_keys[0])
+def _query_instance_bill_rows(client, month_key):
+    month = _normalize_billing_month(month_key)
+    if not month:
+        return []
 
-    req = CommonRequest()
-    req.set_domain('business.aliyuncs.com')
-    req.set_version('2017-12-14')
-    req.set_action_name('QueryBillOverview')
-    req.set_method('POST')
-    req.set_protocol_type('https')
-    req.add_query_param('ProductCode', 'cdt')
-    req.add_query_param('SubscriptionType', 'PayAsYouGo')
-    req.add_query_param('BillingCycle', month_keys[-1].replace('-', ''))
-    req.add_query_param('Granularity', 'MONTHLY')
-    if start_time:
-        req.add_query_param('StartTime', start_time)
+    rows = []
+    page_num = 1
+    page_size = 300
 
-    try:
+    while True:
+        req = CommonRequest()
+        req.set_domain('business.aliyuncs.com')
+        req.set_version('2017-12-14')
+        req.set_action_name('QueryInstanceBill')
+        req.set_method('POST')
+        req.set_protocol_type('https')
+        req.add_query_param('ProductCode', 'cdt')
+        req.add_query_param('SubscriptionType', 'PayAsYouGo')
+        req.add_query_param('BillingCycle', month)
+        req.add_query_param('Granularity', 'MONTHLY')
+        req.add_query_param('IsBillingItem', 'true')
+        req.add_query_param('PageNum', page_num)
+        req.add_query_param('PageSize', page_size)
+
         response = client.do_action_with_exception(req)
         data = _decode_json_response(response)
+        page_items = _coerce_bill_items(data)
+        rows.extend(page_items)
+
+        data_node = data.get('Data', {}) if isinstance(data, dict) else {}
+        total_count = int(_to_float(data_node.get('TotalCount'), 0.0))
+        if not page_items:
+            break
+        if total_count > 0 and len(rows) >= total_count:
+            break
+        if len(page_items) < page_size:
+            break
+        page_num += 1
+
+    return rows
+
+
+def _inject_cdt_api_fallback(summary, client, region_id=''):
+    """When bill rows cannot map to instance, use CDT traffic API as last fallback.
+
+    NOTE: ListCdtInternetTraffic is cumulative for the current period. We only patch
+    the latest month's traffic to avoid fabricating historical monthly splits.
+    """
+    try:
+        if region_id:
+            traffic_gb = get_total_traffic_gb(client, region_id)
+        else:
+            req = CommonRequest()
+            req.set_domain('cdt.aliyuncs.com')
+            req.set_version('2021-08-13')
+            req.set_action_name('ListCdtInternetTraffic')
+            req.set_method('POST')
+            req.set_protocol_type('https')
+            response = client.do_action_with_exception(req)
+            payload = _decode_json_response(response)
+            details = _coerce_traffic_details(payload.get('TrafficDetails', []))
+            traffic_gb = sum(_detail_traffic_bytes(item) for item in details) / (1024 ** 3)
+
+        traffic_gb = _to_float(traffic_gb, 0.0)
+        if traffic_gb <= 0:
+            return summary
+
+        months = summary.get('months') or []
+        if not months:
+            return summary
+
+        latest = months[-1]
+        latest['traffic'] = round(max(_to_float(latest.get('traffic'), 0.0), traffic_gb), 4)
+        summary['months'] = months
+        summary['total_traffic'] = round(sum(_to_float(m.get('traffic'), 0.0) for m in months), 4)
+        summary['scope'] = 'instance_cdt_fallback' if region_id else 'account_cdt_fallback'
+        summary['provider'] = f"{summary.get('provider', '')}+aliyun_cdt_list_internet_traffic".strip('+')
+        return summary
+    except Exception as e:
+        logger.warning(f"CDT fallback traffic query failed: {e}")
+        return summary
+
+
+def get_cdt_three_month_billing(client, instance_id='', region_id=''):
+    month_keys = _month_keys_for_recent_three()
+
+    try:
+        rows = []
+        for month in month_keys:
+            rows.extend(_query_instance_bill_rows(client, month))
+
+        summary = _build_cdt_monthly_summary(rows, instance_id=instance_id)
+        summary['provider'] = 'aliyun_billing_query_instance_bill'
+
+        # 兜底：明细接口无法映射到实例时，尝试 CDT 专用流量接口做跨表聚合
+        if instance_id and _to_float(summary.get('total_traffic'), 0.0) <= 0:
+            summary = _inject_cdt_api_fallback(summary, client, region_id=region_id)
+        return summary
     except Exception as e:
         raise _classify_billing_api_error(e)
-
-    rows = data.get('Data', {}).get('Items', []) if isinstance(data, dict) else []
-    summary = _build_cdt_monthly_summary(rows, instance_id=instance_id)
-    summary['provider'] = 'aliyun_billing_query_bill_overview'
-    return summary
-
 
 def _coerce_traffic_details(raw_details):
     """Normalize CDT traffic details to a list across SDK payload variants."""

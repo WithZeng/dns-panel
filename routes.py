@@ -1881,7 +1881,11 @@ def api_billing_cdt_three_months():
 
     try:
         client = get_client(target_instance)
-        summary = get_cdt_three_month_billing(client, instance_id=query_instance_id)
+        summary = get_cdt_three_month_billing(
+            client,
+            instance_id=query_instance_id,
+            region_id=(target_instance.region_id if query_instance_id else ''),
+        )
         return jsonify({
             'success': True,
             'instance_id': query_instance_id or None,
