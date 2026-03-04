@@ -592,6 +592,69 @@ def get_cdt_three_month_billing(client, instance_id=''):
     return summary
 
 
+def _coerce_traffic_details(raw_details):
+    """Normalize CDT traffic details to a list across SDK payload variants."""
+    if isinstance(raw_details, list):
+        return raw_details
+    if isinstance(raw_details, dict):
+        # Some SDK responses wrap items as {'TrafficDetail': [...]} or {'Item': [...]}.
+        for key in ('TrafficDetail', 'TrafficDetails', 'Items', 'Item'):
+            nested = raw_details.get(key)
+            if isinstance(nested, list):
+                return nested
+            if isinstance(nested, dict):
+                return [nested]
+        return [raw_details]
+    return []
+
+
+def _to_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _detail_traffic_bytes(detail):
+    """Extract traffic bytes from a detail row (top-level or product breakdown)."""
+    total = _to_float((detail or {}).get('Traffic'), 0.0)
+    if total > 0:
+        return total
+
+    products = (detail or {}).get('ProductTrafficDetails')
+    products = _coerce_traffic_details(products)
+    for item in products:
+        total += _to_float((item or {}).get('Traffic'), 0.0)
+    return total
+
+
+def _region_aliases(region):
+    text = str(region or '').strip().lower().replace('_', '-')
+    if not text:
+        return set()
+    aliases = {text}
+
+    # cn-hangzhou-finance -> cn-hangzhou (match ECS region naming)
+    parts = [p for p in text.split('-') if p]
+    if len(parts) >= 2:
+        aliases.add('-'.join(parts[:2]))
+    return aliases
+
+
+def _region_matches(target_region, detail_region):
+    target_aliases = _region_aliases(target_region)
+    detail_aliases = _region_aliases(detail_region)
+    if not target_aliases or not detail_aliases:
+        return False
+
+    # Exact or prefix/suffix overlap between normalized aliases.
+    for t in target_aliases:
+        for d in detail_aliases:
+            if t == d or t in d or d in t:
+                return True
+    return False
+
+
 def get_total_traffic_gb(client, region_id):
     request = CommonRequest()
     request.set_domain('cdt.aliyuncs.com')
@@ -603,16 +666,24 @@ def get_total_traffic_gb(client, region_id):
     try:
         response = client.do_action_with_exception(request)
         response_json = _decode_json_response(response)
-        total_bytes = 0
-        details = response_json.get('TrafficDetails', [])
-        
-        # Bug Fix: 兼容处理 RegionId 匹配，CDT 返回的 ID 可能与 ECS 不同
-        target_region = region_id.lower()
+        details = _coerce_traffic_details(response_json.get('TrafficDetails', []))
+
+        total_bytes = 0.0
+        matched_rows = 0
         for detail in details:
-            biz_region = str(detail.get('BusinessRegionId', '')).lower()
-            if target_region in biz_region or biz_region in target_region:
-                total_bytes += detail.get('Traffic', 0)
-        
+            biz_region = (detail or {}).get('BusinessRegionId') or (detail or {}).get('RegionId') or ''
+            if _region_matches(region_id, biz_region):
+                total_bytes += _detail_traffic_bytes(detail)
+                matched_rows += 1
+
+        # Fallback for single-row payloads where region metadata is empty/abnormal.
+        if matched_rows == 0 and len(details) == 1:
+            total_bytes = _detail_traffic_bytes(details[0])
+            logger.warning(
+                f"CDT region match fallback used for region={region_id}; "
+                f"detail region={details[0].get('BusinessRegionId') or details[0].get('RegionId') or '<empty>'}"
+            )
+
         return total_bytes / (1024 ** 3)
     except Exception as e:
         logger.error(f"Failed to fetch CDT traffic for {region_id}: {e}")
