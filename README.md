@@ -108,7 +108,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/inst
 bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) restart
 ```
 
-> 默认安装目录 `/opt/dns-panel`，可通过 `INSTALL_DIR=/your/path` 环境变量自定义。
+> 新安装默认目录仍为 `/opt/dns-panel`；远程更新脚本会优先自动识别已有安装目录并原地升级（如 `/root/dns-panel`、当前项目目录），也可通过 `INSTALL_DIR=/your/path` 强制指定。
 
 <details>
 <summary>手动 clone 部署（备选）</summary>

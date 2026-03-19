@@ -17,7 +17,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/WithZeng/dns-panel.git"
 DEFAULT_INSTALL_DIR="/opt/dns-panel"
-INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+INSTALL_DIR="${INSTALL_DIR:-}"
 
 # ── 输出 ─────────────────────────────────────────────────────────────────────
 info()  { echo "[信息] $*"; }
@@ -25,6 +25,56 @@ ok()    { echo "[完成] $*"; }
 warn()  { echo "[警告] $*"; }
 fail()  { echo "[错误] $*" >&2; exit 1; }
 step()  { echo ""; echo "========== $* =========="; }
+
+is_dns_panel_repo_dir() {
+  local dir="$1"
+  [[ -n "$dir" && -d "$dir" ]] || return 1
+  [[ -f "$dir/panel.sh" && -f "$dir/docker-compose.yml" ]] || return 1
+  if [[ -d "$dir/.git" ]]; then
+    local remote_url
+    remote_url="$(git -C "$dir" config --get remote.origin.url 2>/dev/null || true)"
+    [[ "$remote_url" == *"WithZeng/dns-panel"* ]] || [[ "$remote_url" == *"dns-panel.git"* ]] || return 1
+  fi
+  return 0
+}
+
+discover_install_dir() {
+  if [[ -n "$INSTALL_DIR" ]]; then
+    echo "$INSTALL_DIR"
+    return 0
+  fi
+
+  if is_dns_panel_repo_dir "$PWD"; then
+    echo "$PWD"
+    return 0
+  fi
+
+  local candidates=(
+    "/root/dns-panel"
+    "/opt/dns-panel"
+    "$HOME/dns-panel"
+    "/srv/dns-panel"
+    "/var/lib/dns-panel"
+  )
+
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    local sudo_home
+    sudo_home="$(eval echo "~${SUDO_USER}" 2>/dev/null || true)"
+    if [[ -n "$sudo_home" && "$sudo_home" != "~${SUDO_USER}" ]]; then
+      candidates+=("$sudo_home/dns-panel")
+    fi
+  fi
+
+  local dir
+  for dir in "${candidates[@]}"; do
+    if is_dns_panel_repo_dir "$dir"; then
+      echo "$dir"
+      return 0
+    fi
+  done
+
+  echo "$DEFAULT_INSTALL_DIR"
+}
 
 # ── 检查 root / sudo ────────────────────────────────────────────────────────
 ensure_root() {
@@ -60,6 +110,7 @@ ensure_git() {
 
 # ── 克隆或拉取仓库 ──────────────────────────────────────────────────────────
 sync_repo() {
+  info "使用安装目录: $INSTALL_DIR"
   if [[ -d "$INSTALL_DIR/.git" ]]; then
     step "更新代码仓库"
     cd "$INSTALL_DIR"
@@ -78,6 +129,8 @@ sync_repo() {
 # ── 主逻辑 ───────────────────────────────────────────────────────────────────
 main() {
   local action="${1:-}"
+  INSTALL_DIR="$(discover_install_dir)"
+
   # 没有参数时：如果目录已存在则 update，否则 deploy
   if [[ -z "$action" ]]; then
     if [[ -d "$INSTALL_DIR/.git" ]]; then

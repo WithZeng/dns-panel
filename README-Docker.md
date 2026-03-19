@@ -8,7 +8,7 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
 ```
 
-脚本自动完成：安装 git/Docker → 克隆代码到 `/opt/dns-panel` → 生成 `.env` → 端口检查 → IPv4/IPv6 防火墙放行 → 构建容器 → 健康检查。
+脚本自动完成：安装 git/Docker → 自动识别已有安装目录并原地升级，若不存在则默认克隆到 `/opt/dns-panel` → 生成 `.env` → 端口检查 → IPv4/IPv6 防火墙放行 → 构建容器 → 健康检查。
 
 自定义安装目录：
 
@@ -43,9 +43,15 @@ bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/inst
 或在项目目录内：
 
 ```bash
-cd /opt/dns-panel
+cd /你的实际安装目录
 bash panel.sh update
 ```
+
+说明：
+
+- 远程更新脚本现在会优先复用已有安装目录，例如 `/root/dns-panel`、`/opt/dns-panel` 或当前所在项目目录。
+- 只有在系统中完全找不到已有安装时，才会默认使用 `/opt/dns-panel` 做首次部署。
+- 如需强制指定目录，仍可使用 `INSTALL_DIR=/your/path`。
 
 更新流程：**备份数据库 → git pull → 重建镜像 → 重启容器 → 健康检查**。
 
