@@ -1,4 +1,4 @@
-﻿import io
+import io
 import os
 import csv
 import json
@@ -515,7 +515,7 @@ def _parse_account_text(raw_text):
 
 def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', scan_all_regions=True):
     """Discover ECS instances.
-    scan_all_regions=True 时仅扫描国内常用区域（北京/广州/上海/杭州/深圳），避免全区域慢请求。"""
+    scan_all_regions=True 时扫描账号下全部可用区域（含香港/海外区域）。"""
     from aliyunsdkcore.client import AcsClient
     from aliyunsdkecs.request.v20140526.DescribeRegionsRequest import DescribeRegionsRequest
     from aliyunsdkecs.request.v20140526.DescribeInstancesRequest import DescribeInstancesRequest
@@ -525,12 +525,18 @@ def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', sc
 
     region_ids = [default_region]
     if scan_all_regions:
-        preferred_regions = ['cn-beijing', 'cn-guangzhou', 'cn-shanghai', 'cn-hangzhou', 'cn-shenzhen']
-        # Keep deterministic preferred order and include default region if user entered another cn-* region.
+        req = DescribeRegionsRequest()
+        req.set_accept_format('json')
+        response = client.do_action_with_exception(req)
+        payload = response.decode('utf-8') if isinstance(response, (bytes, bytearray)) else response
+        result = json.loads(payload)
         region_ids = []
-        for rid in preferred_regions + [default_region]:
+        for region in result.get('Regions', {}).get('Region', []) or []:
+            rid = (region.get('RegionId') or '').strip()
             if rid and rid not in region_ids:
                 region_ids.append(rid)
+        if default_region and default_region not in region_ids:
+            region_ids.insert(0, default_region)
 
     discovered = []
     seen_ids = set()
@@ -539,33 +545,41 @@ def _discover_ecs_instances_all_regions(ak, sk, default_region='cn-hangzhou', sc
         try:
             rc = AcsClient(ak, sk, region_id)
             rc.add_endpoint(region_id, 'Ecs', f'ecs.{region_id}.aliyuncs.com')
-            req = DescribeInstancesRequest()
-            req.set_PageSize(100)
-            req.set_accept_format('json')
-            response = rc.do_action_with_exception(req)
-            result = json.loads(response)
-            for inst in result.get('Instances', {}).get('Instance', []):
-                iid = inst.get('InstanceId')
-                if not iid or iid in seen_ids:
-                    continue
-                seen_ids.add(iid)
+            page_number = 1
+            while True:
+                req = DescribeInstancesRequest()
+                req.set_PageSize(100)
+                req.set_PageNumber(page_number)
+                req.set_accept_format('json')
+                response = rc.do_action_with_exception(req)
+                payload = response.decode('utf-8') if isinstance(response, (bytes, bytearray)) else response
+                result = json.loads(payload)
+                instances = result.get('Instances', {}).get('Instance', []) or []
+                for inst in instances:
+                    iid = inst.get('InstanceId')
+                    if not iid or iid in seen_ids:
+                        continue
+                    seen_ids.add(iid)
 
-                public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', []) or []
-                eip = inst.get('EipAddress', {}).get('IpAddress', '')
-                if eip:
-                    public_ips.append(eip)
-                private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', []) or []
-                ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', []) or []
+                    public_ips = inst.get('PublicIpAddress', {}).get('IpAddress', []) or []
+                    eip = inst.get('EipAddress', {}).get('IpAddress', '')
+                    if eip:
+                        public_ips.append(eip)
+                    private_ips = inst.get('VpcAttributes', {}).get('PrivateIpAddress', {}).get('IpAddress', []) or []
+                    ipv6_ips = inst.get('VpcAttributes', {}).get('Ipv6Addresses', {}).get('Ipv6Address', []) or []
 
-                discovered.append({
-                    'instance_id': iid,
-                    'name': inst.get('InstanceName', iid),
-                    'region_id': inst.get('RegionId', region_id),
-                    'status': inst.get('Status', 'Unknown'),
-                    'public_ip': public_ips[0] if public_ips else '',
-                    'private_ip': private_ips[0] if private_ips else '',
-                    'ipv6_addr': ipv6_ips[0] if ipv6_ips else '',
-                })
+                    discovered.append({
+                        'instance_id': iid,
+                        'name': inst.get('InstanceName', iid),
+                        'region_id': inst.get('RegionId', region_id),
+                        'status': inst.get('Status', 'Unknown'),
+                        'public_ip': public_ips[0] if public_ips else '',
+                        'private_ip': private_ips[0] if private_ips else '',
+                        'ipv6_addr': ipv6_ips[0] if ipv6_ips else '',
+                    })
+                if len(instances) < 100:
+                    break
+                page_number += 1
         except Exception:
             continue
 
@@ -798,7 +812,8 @@ def _run_account_import_job(app_obj, job_id, raw_text, scan_all_regions):
             note_parts = [part for part in [parsed.get('remark', '').strip(), f'account:{account_slug}'] if part]
             merged_note = ' | '.join(note_parts)
 
-            _update_import_job(job_id, step='扫描中', message='正在扫描实例（国内常用区域）', progress=35)
+            scan_scope_text = '全部可用区域（含香港/海外）' if scan_all_regions else f'默认区域 {default_region}'
+            _update_import_job(job_id, step='扫描中', message=f'正在扫描实例（{scan_scope_text}）', progress=35)
             discovered = _discover_ecs_instances_all_regions(ak, sk, default_region, scan_all_regions=scan_all_regions)
 
             _update_import_job(job_id, step='写入中', message='正在写入数据库并更新实例', progress=65)

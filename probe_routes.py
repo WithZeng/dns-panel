@@ -1,4 +1,4 @@
-﻿import ipaddress
+import ipaddress
 import json
 import secrets
 import threading

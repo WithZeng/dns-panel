@@ -1,4 +1,4 @@
-﻿"""
+"""
 AK/SK encryption utility using Fernet symmetric encryption.
 Key is loaded from ENCRYPT_KEY environment variable or auto-generated into .env.
 """

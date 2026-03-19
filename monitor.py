@@ -1,8 +1,8 @@
 import json
 import os
-import fcntl
 import logging
 import datetime
+import tempfile
 from sqlalchemy import text
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkcore.request import CommonRequest
@@ -16,6 +16,13 @@ from notifier import send_alert
 # ================== 1. Configure Logging ==================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+AUTO_START_ELIGIBLE_STATUSES = {'Stopped', 'Stopping'}
+
+try:
+    import fcntl  # type: ignore
+except ImportError:
+    fcntl = None
 
 # Anomaly detection: alert if traffic increases by more than this % in a single check
 ANOMALY_INCREASE_PCT = 20.0
@@ -64,19 +71,32 @@ def _is_probe_online(server):
 
 
 def _scheduler_lock_file_path():
-    return os.environ.get('DNS_PANEL_SCHEDULER_LOCK_FILE', '/tmp/dns-panel-scheduler.lock')
+    return os.environ.get('DNS_PANEL_SCHEDULER_LOCK_FILE', os.path.join(tempfile.gettempdir(), 'dns-panel-scheduler.lock'))
 
 
 def _instance_lock_file_path(instance_id):
-    base_dir = os.environ.get('DNS_PANEL_INSTANCE_LOCK_DIR', '/tmp')
+    base_dir = os.environ.get('DNS_PANEL_INSTANCE_LOCK_DIR', tempfile.gettempdir())
     return os.path.join(base_dir, f'dns-panel-instance-{instance_id}.lock')
+
+
+def _flock_exclusive_nonblocking(lock_handle):
+    if not fcntl:
+        return True
+    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    return True
+
+
+def _flock_unlock(lock_handle):
+    if not fcntl:
+        return
+    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
 
 
 def _try_acquire_instance_lock(instance_id):
     lock_handle = None
     try:
         lock_handle = open(_instance_lock_file_path(instance_id), 'a+')
-        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _flock_exclusive_nonblocking(lock_handle)
         return lock_handle
     except Exception:
         if lock_handle:
@@ -91,7 +111,7 @@ def _release_instance_lock(lock_handle):
     if not lock_handle:
         return
     try:
-        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+        _flock_unlock(lock_handle)
     except Exception:
         pass
     try:
@@ -107,7 +127,7 @@ def _try_acquire_run_lock():
     file_locked = False
     try:
         lock_handle = open(_scheduler_lock_file_path(), 'a+')
-        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _flock_exclusive_nonblocking(lock_handle)
         file_locked = True
 
         # Optional DB advisory lock (effective on PostgreSQL; ignored on SQLite)
@@ -115,7 +135,7 @@ def _try_acquire_run_lock():
             lock_result = db.session.execute(text(_TRAFFIC_LOCK_ACQUIRED_SQL)).scalar()
             db_locked = bool(lock_result)
             if not db_locked:
-                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+                _flock_unlock(lock_handle)
                 lock_handle.close()
                 return None, 'db_lock_busy'
         except Exception:
@@ -144,7 +164,7 @@ def _release_run_lock(lock_ctx):
         fh = lock_ctx.get('fh')
         if fh:
             try:
-                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+                _flock_unlock(fh)
             except Exception:
                 pass
             try:
@@ -1013,9 +1033,9 @@ def check_and_manage_instance(instance_id):
             monthly_quota = instance.monthly_limit or 0
             logger.info(f"Status: {current_status} | API: {log_api_gb:.2f} GB | Month: {log_month_traffic:.2f} GB / Monthly limit: {monthly_quota} GB")
 
-        # Auto start logic (probe-first): if probe offline and ECS appears stopped/pending, auto start when enabled.
+        # Auto start logic (probe-first): if probe offline and ECS is offline, auto start when enabled.
         if instance.auto_start_enabled:
-            if (not probe_online) and current_status in ('Stopped', 'Pending'):
+            if (not probe_online) and current_status in AUTO_START_ELIGIBLE_STATUSES:
                 logger.info(f"Probe offline + ECS={current_status}, try auto-start: {instance.name}")
                 success, _ = ecs_start(client, instance.instance_id)
                 if success:
@@ -1025,7 +1045,7 @@ def check_and_manage_instance(instance_id):
         if instance.auto_stop_enabled:
             if instance.traffic_strategy == 'cycle' and monthly_quota > 0:
                 if (instance.current_month_traffic or 0) < monthly_quota:
-                    if current_status == 'Stopped' and not probe_online:
+                    if current_status in AUTO_START_ELIGIBLE_STATUSES and not probe_online:
                         logger.info("Traffic below threshold, try start instance.")
                         success, _ = ecs_start(client, instance.instance_id)
                         if success:
