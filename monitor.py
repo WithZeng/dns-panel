@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import logging
 import datetime
@@ -1033,13 +1033,12 @@ def check_and_manage_instance(instance_id):
             monthly_quota = instance.monthly_limit or 0
             logger.info(f"Status: {current_status} | API: {log_api_gb:.2f} GB | Month: {log_month_traffic:.2f} GB / Monthly limit: {monthly_quota} GB")
 
-        # Auto start logic (probe-first): if probe offline and ECS is offline, auto start when enabled.
-        if instance.auto_start_enabled:
-            if (not probe_online) and current_status in AUTO_START_ELIGIBLE_STATUSES:
-                logger.info(f"Probe offline + ECS={current_status}, try auto-start: {instance.name}")
-                success, _ = ecs_start(client, instance.instance_id)
-                if success:
-                    instance.status = 'Starting'
+        # Check means enforcing recovery: if ECS is in a stopped/stopping state, always try to start it.
+        if current_status in AUTO_START_ELIGIBLE_STATUSES:
+            logger.info(f"Check detected ECS={current_status}, force start: {instance.name}")
+            success, _ = ecs_start(client, instance.instance_id)
+            if success:
+                instance.status = 'Starting'
 
         # Auto start/stop logic
         if instance.auto_stop_enabled:

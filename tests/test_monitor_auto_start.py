@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import tempfile
 import types
@@ -70,6 +70,49 @@ class MonitorAutoStartTests(unittest.TestCase):
     def test_auto_start_when_instance_stopping(self, mock_get_info, mock_start, _mock_client, _mock_traffic):
         mock_get_info.return_value = {
             'status': 'Stopping',
+            'public_ip': '',
+            'private_ip': '10.0.0.10',
+            'ipv6_addr': '',
+        }
+
+        with app.app_context():
+            check_and_manage_instance(self.instance_db_id)
+
+        mock_start.assert_called_once()
+
+
+    @patch('monitor.get_total_traffic_gb', return_value=0)
+    @patch('monitor.get_client', return_value=object())
+    @patch('monitor.ecs_start', return_value=(True, 'ok'))
+    @patch('monitor.get_ecs_info')
+    def test_check_forces_start_even_when_auto_start_disabled(self, mock_get_info, mock_start, _mock_client, _mock_traffic):
+        mock_get_info.return_value = {
+            'status': 'Stopped',
+            'public_ip': '',
+            'private_ip': '10.0.0.10',
+            'ipv6_addr': '',
+        }
+
+        with app.app_context():
+            instance = db.session.get(EcsInstance, self.instance_db_id)
+            instance.auto_start_enabled = False
+            db.session.commit()
+
+            check_and_manage_instance(self.instance_db_id)
+            db.session.expire_all()
+            instance = db.session.get(EcsInstance, self.instance_db_id)
+            self.assertEqual(instance.status, 'Starting')
+
+        mock_start.assert_called_once()
+
+    @patch('monitor.get_total_traffic_gb', return_value=0)
+    @patch('monitor.get_client', return_value=object())
+    @patch('monitor.ecs_start', return_value=(True, 'ok'))
+    @patch('monitor.get_ecs_info')
+    @patch('monitor._is_probe_online', return_value=True)
+    def test_check_forces_start_even_when_probe_online(self, _mock_probe, mock_get_info, mock_start, _mock_client, _mock_traffic):
+        mock_get_info.return_value = {
+            'status': 'Stopped',
             'public_ip': '',
             'private_ip': '10.0.0.10',
             'ipv6_addr': '',
