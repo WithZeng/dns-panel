@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import sys
 import tempfile
@@ -133,6 +133,56 @@ class RoutesHardeningTests(unittest.TestCase):
         res = self.client.get('/dashboard')
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.headers.get('X-Request-ID'))
+
+
+    def test_batch_action_requires_selection(self):
+        res = self.client.post(
+            '/batch_action',
+            data={'action': 'start', 'csrf_token': self.csrf_token},
+            follow_redirects=True,
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('请先勾选至少一个实例，再执行批量操作', res.get_data(as_text=True))
+
+    @patch('routes.ecs_start', return_value=(True, 'ok'))
+    @patch('routes.get_client', return_value=object())
+    def test_batch_action_selected_instances_only(self, _mock_client, mock_start):
+        with app.app_context():
+            selected = db.session.get(EcsInstance, self.instance_id)
+            selected.status = 'Stopped'
+            selected.tag = 'group-a'
+            inst2 = EcsInstance(
+                name='inst2',
+                access_key_id='ak2',
+                access_key_secret='sk2',
+                region_id='cn-hangzhou',
+                instance_id='i-456',
+                is_encrypted=False,
+                status='Stopped',
+                tag='group-a',
+            )
+            db.session.add(inst2)
+            db.session.commit()
+            selected_id = selected.id
+            other_id = inst2.id
+
+        res = self.client.post(
+            '/batch_action',
+            data={
+                'action': 'start',
+                'tag': 'group-a',
+                'instance_ids': [str(selected_id)],
+                'csrf_token': self.csrf_token,
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(mock_start.call_count, 1)
+        with app.app_context():
+            selected = db.session.get(EcsInstance, selected_id)
+            other = db.session.get(EcsInstance, other_id)
+            self.assertEqual(selected.status, 'Starting')
+            self.assertEqual(other.status, 'Stopped')
 
     def test_api_404_returns_json_error(self):
         res = self.client.get('/api/not-found')

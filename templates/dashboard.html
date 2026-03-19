@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block content %}
 <section class="mb-5 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
@@ -729,9 +729,14 @@
     });
 
     if (batchForm) {
-      batchForm.addEventListener('submit', () => {
+      batchForm.addEventListener('submit', (e) => {
         idsContainer.innerHTML = '';
         const checked = document.querySelectorAll('.instance-checkbox:checked');
+        if (checked.length === 0) {
+          e.preventDefault();
+          alert('请先勾选至少一个实例，再执行批量操作');
+          return false;
+        }
         checked.forEach(cb => {
           const input = document.createElement('input');
           input.type = 'hidden';

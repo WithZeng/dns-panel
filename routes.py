@@ -1,4 +1,4 @@
-import io
+﻿import io
 import os
 import csv
 import json
@@ -1739,26 +1739,25 @@ def notification_logs():
 @main.route('/batch_action', methods=['POST'])
 @login_required
 def batch_action():
-    """Batch start/stop/check instances 鈥?selected by checkbox or tag."""
+    """Batch start/stop/check instances selected by checkbox only."""
     action = request.form.get('action')  # start, stop, check
     instance_ids = request.form.getlist('instance_ids')  # from checkboxes
     tag_filter = request.form.get('tag', '')
 
     if not action:
         flash('请选择操作', 'warning')
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('main.dashboard', tag=tag_filter))
 
-    # If specific instances were selected via checkbox, use those
-    if instance_ids:
-        instances = EcsInstance.query.filter(EcsInstance.id.in_(instance_ids)).all()
-        tag_label = f'选中的 {len(instances)} 个'
-    else:
-        # Fall back to tag filter
-        query = EcsInstance.query
-        if tag_filter:
-            query = query.filter_by(tag=tag_filter)
-        instances = query.all()
-        tag_label = f'标签 [{tag_filter}] 下的' if tag_filter else '所有'
+    if not instance_ids:
+        flash('请先勾选至少一个实例，再执行批量操作', 'warning')
+        return redirect(url_for('main.dashboard', tag=tag_filter))
+
+    instances = EcsInstance.query.filter(EcsInstance.id.in_(instance_ids)).all()
+    if not instances:
+        flash('未找到已勾选的实例，请刷新页面后重试', 'warning')
+        return redirect(url_for('main.dashboard', tag=tag_filter))
+
+    tag_label = f'选中的 {len(instances)} 个'
 
     count = 0
     for inst in instances:
