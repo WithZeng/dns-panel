@@ -1,0 +1,39 @@
+{{ define "title" }}恢复数据库 - ECS Monitor{{ end }}
+{{ define "content" }}
+<div class="mx-auto w-full max-w-2xl">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">恢复数据库</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">上传 SQLite 数据库备份文件（.db），恢复后面板将自动重启。</p>
+
+    <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-700 dark:text-amber-300 mb-6">
+      <div class="font-semibold mb-1">注意事项</div>
+      <ul class="list-disc list-inside space-y-1 text-xs leading-5">
+        <li>恢复操作将<strong>覆盖</strong>当前所有数据</li>
+        <li>恢复前会自动备份当前数据库到 <code>panel.db.before_restore</code></li>
+        <li>支持 Python 版（ecs_monitor.db）和 Go 版（panel.db）的备份文件</li>
+        <li>恢复完成后请用原数据库中的账号密码登录</li>
+      </ul>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="restoreForm">
+      <div class="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
+        <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3" required id="dbFileInput"
+          class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-900 file:text-white dark:file:bg-blue-600 hover:file:bg-slate-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">选择 .db / .sqlite / .sqlite3 文件</p>
+      </div>
+
+      <button type="submit" id="restoreBtn"
+        class="mt-6 w-full bg-red-600 text-white font-medium py-3 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-900/10"
+        onclick="return confirm('确定要恢复数据库吗？当前数据将被覆盖！')">
+        上传并恢复
+      </button>
+    </form>
+
+    <div class="mt-6 flex items-center justify-between">
+      <a href="/dashboard" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm">&larr; 返回仪表盘</a>
+      <a href="/download_backup" class="text-blue-600 dark:text-blue-400 hover:underline text-sm">先下载当前备份</a>
+    </div>
+  </div>
+</div>
+{{ end }}
+{{ template "base" . }}

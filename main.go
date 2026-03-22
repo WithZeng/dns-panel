@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/handler"
 	"github.com/WithZeng/dns-panel/internal/middleware"
+	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/WithZeng/dns-panel/internal/service"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -65,6 +67,11 @@ func loadTemplates(funcMap template.FuncMap) *multiRenderer {
 }
 
 func main() {
+	if len(os.Args) >= 2 && os.Args[1] == "reset-password" {
+		runResetPassword()
+		return
+	}
+
 	cfg := config.Load()
 
 	if err := cryptoUtil.Init(cfg.EncryptKey); err != nil {
@@ -237,6 +244,10 @@ func main() {
 		auth.GET("/api/version", handler.VersionInfo)
 		auth.GET("/api/check_update", handler.CheckUpdate)
 
+		// DB Restore
+		auth.GET("/restore_db", handler.RestoreDBPage)
+		auth.POST("/restore_db", handler.RestoreDBPost)
+
 		// API
 		auth.GET("/api/instances", handler.APIInstances)
 		auth.POST("/api/instance/:id/notes", handler.UpdateNotes)
@@ -254,4 +265,34 @@ func main() {
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+func runResetPassword() {
+	cfg := config.Load()
+	if err := database.Init(cfg); err != nil {
+		log.Fatalf("Database init failed: %v", err)
+	}
+
+	newPass := "admin123"
+	if len(os.Args) >= 3 {
+		newPass = os.Args[2]
+	}
+
+	hash, err := database.HashPassword(newPass)
+	if err != nil {
+		log.Fatalf("Hash failed: %v", err)
+	}
+
+	result := database.DB.Model(&models.User{}).Where("username = ?", "admin").Updates(map[string]interface{}{
+		"password_hash":     hash,
+		"failed_login_count": 0,
+		"locked_until":       nil,
+	})
+	if result.RowsAffected == 0 {
+		hash2, _ := database.HashPassword(newPass)
+		database.DB.Create(&models.User{Username: "admin", PasswordHash: hash2})
+		fmt.Println("Admin user created.")
+	}
+
+	fmt.Printf("Password reset OK. Login: admin / %s\n", newPass)
 }
