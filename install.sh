@@ -13,9 +13,14 @@ error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
 detect_install_dir() {
     for d in "$DEFAULT_DIR" "/root/dns-panel" "$(pwd)"; do
-        [ -f "$d/docker-compose.yml" ] && [ -f "$d/go.mod" ] && echo "$d" && return
+        [ -d "$d/.git" ] && echo "$d" && return
     done
     echo ""
+}
+
+is_python_version() {
+    local dir="$1"
+    { [ -f "$dir/app.py" ] || [ -f "$dir/requirements.txt" ]; } && [ ! -f "$dir/go.mod" ]
 }
 
 ensure_deps() {
@@ -71,13 +76,18 @@ EOF
 
 backup_db() {
     local dir="$1"
-    local db="$dir/data/panel.db"
-    if [ -f "$db" ]; then
+    local db=""
+    for p in "$dir/data/panel.db" "$dir/instance/panel.db" "$dir/panel.db"; do
+        [ -f "$p" ] && db="$p" && break
+    done
+    if [ -n "$db" ]; then
         local bak_dir="$dir/data/backups"
         mkdir -p "$bak_dir"
         local ts=$(date +%Y%m%d_%H%M%S)
         cp "$db" "$bak_dir/panel_${ts}.db"
-        info "数据库已备份到 backups/panel_${ts}.db"
+        info "数据库已备份: $(basename $db) → backups/panel_${ts}.db"
+    else
+        warn "未找到数据库文件，跳过备份"
     fi
 }
 
@@ -96,6 +106,45 @@ health_check() {
     return 1
 }
 
+migrate_from_python() {
+    local dir="$1"
+    info "检测到旧版 Python 安装，开始迁移到 Go 版本..."
+
+    info "停止旧版容器..."
+    cd "$dir"
+    compose down 2>/dev/null || true
+    docker stop dns-panel 2>/dev/null || true
+    docker rm dns-panel 2>/dev/null || true
+
+    backup_db "$dir"
+
+    if [ -f "$dir/.env" ]; then
+        cp "$dir/.env" "$dir/.env.bak_python"
+        info "旧版 .env 已备份为 .env.bak_python"
+    fi
+
+    local old_db=""
+    for db_path in "$dir/data/panel.db" "$dir/instance/panel.db" "$dir/panel.db"; do
+        if [ -f "$db_path" ]; then
+            old_db="$db_path"
+            break
+        fi
+    done
+
+    info "切换到 Go 分支..."
+    git fetch origin "$BRANCH"
+    git checkout -f "$BRANCH" 2>/dev/null || git checkout -B "$BRANCH" "origin/$BRANCH"
+    git reset --hard "origin/$BRANCH"
+
+    mkdir -p "$dir/data"
+    if [ -n "$old_db" ] && [ -f "$old_db" ] && [ "$old_db" != "$dir/data/panel.db" ]; then
+        cp "$old_db" "$dir/data/panel.db"
+        info "数据库已迁移到 data/panel.db"
+    fi
+
+    info "Python → Go 迁移完成"
+}
+
 do_deploy() {
     local dir="${INSTALL_DIR:-}"
     if [ -z "$dir" ]; then
@@ -106,7 +155,20 @@ do_deploy() {
     info "部署目录: $dir"
     ensure_deps
 
-    if [ ! -d "$dir/.git" ]; then
+    if [ -d "$dir/.git" ]; then
+        cd "$dir"
+        if is_python_version "$dir"; then
+            migrate_from_python "$dir"
+        else
+            local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+            if [ "$current_branch" != "$BRANCH" ]; then
+                info "切换到 $BRANCH 分支..."
+                git fetch origin "$BRANCH"
+                git checkout -f "$BRANCH" 2>/dev/null || git checkout -B "$BRANCH" "origin/$BRANCH"
+                git reset --hard "origin/$BRANCH"
+            fi
+        fi
+    else
         info "克隆仓库..."
         git clone -b "$BRANCH" "$REPO" "$dir"
     fi
@@ -137,24 +199,53 @@ do_update() {
         dir=$(detect_install_dir)
     fi
     if [ -z "$dir" ]; then
-        error "未找到已有安装，请先执行部署"
+        error "未找到已有安装，请先执行部署: install.sh deploy"
         exit 1
     fi
 
     cd "$dir"
     info "更新目录: $dir"
 
+    if is_python_version "$dir"; then
+        migrate_from_python "$dir"
+
+        generate_env "$dir"
+
+        local port=$(grep -oP 'PANEL_PORT=\K\d+' .env 2>/dev/null || echo "5000")
+        open_firewall "$port"
+
+        info "构建 Go 版本容器..."
+        compose build --no-cache
+        compose up -d
+
+        health_check "$port"
+
+        echo ""
+        echo -e "${CYAN}═══════════════════════════════════════════${NC}"
+        echo -e "${CYAN} Python → Go 迁移完成${NC}"
+        echo -e "${CYAN} 访问: http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo '<IP>'):${port}${NC}"
+        echo -e "${CYAN}═══════════════════════════════════════════${NC}"
+        return
+    fi
+
     if [[ "${1:-}" != "--skip-backup" ]]; then
         backup_db "$dir"
     fi
 
-    if [[ "${1:-}" != "--skip-pull" ]]; then
+    local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [ "$current_branch" != "$BRANCH" ]; then
+        info "切换到 $BRANCH 分支..."
+        git fetch origin "$BRANCH"
+        git checkout -f "$BRANCH" 2>/dev/null || git checkout -B "$BRANCH" "origin/$BRANCH"
+        git reset --hard "origin/$BRANCH"
+    elif [[ "${1:-}" != "--skip-pull" ]]; then
         info "拉取最新代码..."
         git fetch origin "$BRANCH"
         git reset --hard "origin/$BRANCH"
     fi
 
     info "重新构建容器..."
+    compose down 2>/dev/null || true
     compose build --no-cache
     compose up -d
 
@@ -163,45 +254,46 @@ do_update() {
     info "更新完成"
 }
 
+resolve_dir() {
+    local dir="${INSTALL_DIR:-}"
+    [ -z "$dir" ] && dir=$(detect_install_dir)
+    [ -z "$dir" ] && { error "未找到安装目录，请先执行部署"; exit 1; }
+    echo "$dir"
+}
+
 do_restart() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
     cd "$dir"
     compose restart
     info "已重启"
 }
 
 do_stop() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
     cd "$dir"
     compose down
     info "已停止"
 }
 
 do_status() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
     cd "$dir"
     compose ps
 }
 
 do_logs() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
     cd "$dir"
     compose logs -f --tail=100
 }
 
 do_backup() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
     backup_db "$dir"
 }
 
 do_restore() {
-    local dir=$(detect_install_dir)
-    [ -z "$dir" ] && { error "未找到安装目录"; exit 1; }
+    local dir=$(resolve_dir)
 
     local target="$1"
     if [ -z "$target" ]; then
