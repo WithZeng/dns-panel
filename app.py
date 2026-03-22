@@ -8,7 +8,7 @@ from flask import Flask, jsonify, request, current_app, g, flash, redirect, url_
 from flask_login import LoginManager, current_user
 from flask_apscheduler import APScheduler
 from werkzeug.exceptions import HTTPException
-from extensions import csrf, CSRFError
+from extensions import csrf, CSRFError, limiter
 from werkzeug.security import generate_password_hash
 from models import (
     db,
@@ -88,14 +88,15 @@ app.config['IPV6_SCRIPT_TOKEN_EXPIRES'] = int(os.environ.get('IPV6_SCRIPT_TOKEN_
 # Session timeout: 30 minutes
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
-# Data retention: keep logs for N days
-DATA_RETENTION_DAYS = 90
+# Data retention: keep logs for N days (configurable via env)
+DATA_RETENTION_DAYS = int(os.environ.get('DATA_RETENTION_DAYS', '90'))
 PORT_CHECKER_TESTER_IP = os.environ.get('PORT_CHECKER_TESTER_IP', '').strip()
 
 print(f"Database Path: {DB_PATH}")
 
 db.init_app(app)
 csrf.init_app(app)
+limiter.init_app(app)
 
 login_manager = LoginManager()
 login_manager.login_view = 'main.login'
@@ -208,53 +209,73 @@ def handle_unexpected_exception(e):
     return _handle_business_error(500, '服务器内部错误，请稍后重试')
 
 
+_bootstrap_lock_path = os.path.join(INSTANCE_PATH, '.bootstrap.lock')
+_bootstrap_done = False
+
+
 def bootstrap_database():
-    """Auto-repair database on startup."""
+    """Auto-repair database on startup.
+
+    Uses a file lock to prevent multiple processes (gunicorn workers,
+    scheduler) from running migrations concurrently — SQLite cannot
+    handle parallel DDL writes and silently corrupts the database.
+    """
+    global _bootstrap_done
+    if _bootstrap_done:
+        return
+    _bootstrap_done = True
+
+    os.makedirs(INSTANCE_PATH, exist_ok=True)
+
+    try:
+        import fcntl
+        lock_fd = open(_bootstrap_lock_path, 'w')
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            _bootstrap_database_locked()
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            lock_fd.close()
+    except ImportError:
+        # fcntl unavailable on Windows — run without lock (single-process dev only)
+        _bootstrap_database_locked()
+
+
+def _bootstrap_database_locked():
+    """Actual bootstrap logic — must be called while holding the file lock."""
+    import sqlite3
+
     with app.app_context():
         db.create_all()
 
-        # Migrate: add missing columns to existing tables
-        import sqlite3
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=30)
         cursor = conn.cursor()
         try:
-            # Check ecs_instance columns
+            cursor.execute("PRAGMA journal_mode=WAL")
+
+            # --- ecs_instance columns ---
             cursor.execute("PRAGMA table_info(ecs_instance)")
             existing_cols = {row[1] for row in cursor.fetchall()}
 
+            _add_col = []
             if 'notes' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN notes TEXT DEFAULT ''")
-                print("Migration: added 'notes' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "notes", "TEXT DEFAULT ''"))
             if 'auto_start_enabled' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN auto_start_enabled BOOLEAN DEFAULT 0")
-                print("Migration: added 'auto_start_enabled' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "auto_start_enabled", "BOOLEAN DEFAULT 0"))
             if 'public_ip' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN public_ip TEXT DEFAULT ''")
-                print("Migration: added 'public_ip' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "public_ip", "TEXT DEFAULT ''"))
             if 'private_ip' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN private_ip TEXT DEFAULT ''")
-                print("Migration: added 'private_ip' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "private_ip", "TEXT DEFAULT ''"))
             if 'ipv6_addr' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN ipv6_addr TEXT DEFAULT ''")
-                print("Migration: added 'ipv6_addr' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "ipv6_addr", "TEXT DEFAULT ''"))
             if 'credential_status' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_status TEXT DEFAULT 'ok'")
-                print("Migration: added 'credential_status' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "credential_status", "TEXT DEFAULT 'ok'"))
             if 'credential_error' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_error TEXT DEFAULT ''")
-                print("Migration: added 'credential_error' column to ecs_instance.")
-
+                _add_col.append(("ecs_instance", "credential_error", "TEXT DEFAULT ''"))
             if 'credential_last_failed_at' not in existing_cols:
-                cursor.execute("ALTER TABLE ecs_instance ADD COLUMN credential_last_failed_at DATETIME")
-                print("Migration: added 'credential_last_failed_at' column to ecs_instance.")
+                _add_col.append(("ecs_instance", "credential_last_failed_at", "DATETIME"))
 
-            # Check user columns
+            # --- user columns ---
             cursor.execute("PRAGMA table_info(user)")
             user_cols = {row[1] for row in cursor.fetchall()}
             if 'dashboard_layout' in user_cols:
@@ -264,27 +285,27 @@ def bootstrap_database():
                 except Exception as drop_err:
                     print(f"Migration note: could not drop 'dashboard_layout' column: {drop_err}")
             if 'force_password_change' not in user_cols:
-                cursor.execute("ALTER TABLE user ADD COLUMN force_password_change BOOLEAN DEFAULT 0")
-                print("Migration: added 'force_password_change' column to user.")
+                _add_col.append(("user", "force_password_change", "BOOLEAN DEFAULT 0"))
 
-            # Check cloudflare_config columns
+            # --- cloudflare_config columns ---
             cursor.execute("PRAGMA table_info(cloudflare_config)")
             cf_cols = {row[1] for row in cursor.fetchall()}
             if 'tester_ip' not in cf_cols:
-                cursor.execute("ALTER TABLE cloudflare_config ADD COLUMN tester_ip TEXT DEFAULT ''")
-                print("Migration: added 'tester_ip' column to cloudflare_config.")
+                _add_col.append(("cloudflare_config", "tester_ip", "TEXT DEFAULT ''"))
 
-            # Check probe_server columns
+            # --- probe_server columns ---
             cursor.execute("PRAGMA table_info(probe_server)")
             probe_cols = {row[1] for row in cursor.fetchall()}
             if 'latest_report_json' not in probe_cols:
-                cursor.execute("ALTER TABLE probe_server ADD COLUMN latest_report_json TEXT DEFAULT ''")
-                print("Migration: added 'latest_report_json' column to probe_server.")
+                _add_col.append(("probe_server", "latest_report_json", "TEXT DEFAULT ''"))
             if 'report_updated_at' not in probe_cols:
-                cursor.execute("ALTER TABLE probe_server ADD COLUMN report_updated_at DATETIME")
-                print("Migration: added 'report_updated_at' column to probe_server.")
+                _add_col.append(("probe_server", "report_updated_at", "DATETIME"))
 
-            # Check import_job table
+            for table, col, typedef in _add_col:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}")
+                print(f"Migration: added '{col}' column to {table}.")
+
+            # --- import_job table ---
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='import_job'")
             if not cursor.fetchone():
                 cursor.execute('''
@@ -309,24 +330,35 @@ def bootstrap_database():
         finally:
             conn.close()
 
-        # Default admin
-        user_count = User.query.count()
-        if user_count == 0:
+        # Default admin — only when database is genuinely new (no users at all)
+        try:
+            user_count = User.query.count()
+        except Exception:
+            user_count = -1
+
+        db_is_fresh = user_count == 0
+        if db_is_fresh:
             initial_password = secrets.token_urlsafe(12)
             admin = User(
                 username='admin',
                 password_hash=generate_password_hash(initial_password),
                 force_password_change=True,
             )
-            db.session.add(admin)
-            db.session.commit()
-            cred_path = os.path.join(INSTANCE_PATH, 'initial_admin_credentials.txt')
-            with open(cred_path, 'w', encoding='utf-8') as f:
-                f.write("DNS Panel 初始管理员账号\n")
-                f.write("username=admin\n")
-                f.write(f"password={initial_password}\n")
-                f.write("请登录后立即修改密码。\n")
-            print("Default admin created. Please check instance/initial_admin_credentials.txt")
+            try:
+                db.session.add(admin)
+                db.session.commit()
+                cred_path = os.path.join(INSTANCE_PATH, 'initial_admin_credentials.txt')
+                with open(cred_path, 'w', encoding='utf-8') as f:
+                    f.write("DNS Panel 初始管理员账号\n")
+                    f.write("username=admin\n")
+                    f.write(f"password={initial_password}\n")
+                    f.write("请登录后立即修改密码。\n")
+                print("Default admin created. Please check instance/initial_admin_credentials.txt")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Admin creation skipped (likely already created by another worker): {e}")
+        elif user_count > 0:
+            print(f"Database OK: {user_count} user(s) found, skipping admin creation.")
 
         # Migrate: encrypt plaintext AK/SK
         try:
@@ -344,8 +376,24 @@ def bootstrap_database():
             db.session.rollback()
 
 
-# 3. Run DB bootstrap
+# 3. Run DB bootstrap & startup integrity check
 bootstrap_database()
+
+with app.app_context():
+    _inst_count = EcsInstance.query.count()
+    _marker = os.path.join(INSTANCE_PATH, '.db_initialized')
+    if os.path.isfile(_marker) and _inst_count == 0:
+        print("\n" + "!" * 60)
+        print("WARNING: 数据库看起来已被重置！之前有数据，现在 instance 数量为 0。")
+        print("可能原因：instance/ 目录丢失或数据库文件被替换。")
+        print("如需恢复，请检查 instance/backups/ 目录中的备份。")
+        print("!" * 60 + "\n")
+    elif _inst_count > 0 and not os.path.isfile(_marker):
+        try:
+            with open(_marker, 'w') as _f:
+                _f.write(datetime.now().isoformat())
+        except OSError:
+            pass
 
 # 4. Initialize Scheduler
 scheduler = APScheduler()
@@ -569,5 +617,8 @@ init_probe(app)
 
 
 if __name__ == '__main__':
-    print("开发模式运行中，生产环境请使用: gunicorn -c gunicorn.conf.py app:app")
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    is_debug = os.environ.get('FLASK_DEBUG', '0').strip().lower() in ('1', 'true', 'yes')
+    port = int(os.environ.get('PANEL_PORT', '5000'))
+    if is_debug:
+        print("开发模式运行中，生产环境请使用: gunicorn -c gunicorn.conf.py app:app")
+    app.run(host='0.0.0.0', port=port, debug=is_debug, use_reloader=False)

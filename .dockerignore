@@ -6,8 +6,13 @@ __pycache__/
 *.pyo
 *.pyd
 *.log
-instance/backups/
+instance/
 komari-1.1.7/
 komari-1.1.7.zip
 agent/__pycache__/
 .env
+.env.*
+*.db
+service_account.json
+.pytest_cache/
+.github/

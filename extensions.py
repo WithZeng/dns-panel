@@ -2,6 +2,24 @@ import secrets
 from flask import current_app, request, session
 
 try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["200 per minute"],
+        storage_uri="memory://",
+    )
+except Exception:
+    class _NoopLimiter:
+        """Fallback when flask-limiter is not installed."""
+        def init_app(self, app): pass
+        def limit(self, *a, **kw):
+            def decorator(f): return f
+            return decorator
+        def exempt(self, f): return f
+    limiter = _NoopLimiter()
+
+try:
     from flask_wtf.csrf import CSRFProtect as _CSRFProtect  # type: ignore
     from flask_wtf.csrf import CSRFError, generate_csrf  # type: ignore
 

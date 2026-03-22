@@ -159,6 +159,7 @@
     {% block content %}{% endblock %}
   </main>
 
+  <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
   <script>
     (function () {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';

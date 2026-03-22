@@ -4,6 +4,7 @@ Flask-Login==0.6.3
 Flask-APScheduler==1.12.4
 Flask-Sock==0.7.0
 Flask-WTF==1.2.1
+Flask-Limiter>=3.5.0
 aliyun-python-sdk-core>=2.16.0
 aliyun-python-sdk-ecs==4.24.11
 requests>=2.31.0

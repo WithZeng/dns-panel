@@ -1,22 +1,23 @@
 
 import os
+import secrets
 from app import app, db, bootstrap_database
 from models import User, EcsInstance
 from werkzeug.security import generate_password_hash
 
 with app.app_context():
-    # 确保数据库表已创建并迁移
     bootstrap_database()
     
-    # 创建默认管理员 (如果不存在)
     if not User.query.filter_by(username='admin').first():
+        initial_password = os.environ.get('ADMIN_PASSWORD', '').strip() or secrets.token_urlsafe(16)
         admin = User(
             username='admin', 
-            password_hash=generate_password_hash('phg3can6hvw8BYW!dea'),
-            force_password_change=False
+            password_hash=generate_password_hash(initial_password),
+            force_password_change=True,
         )
         db.session.add(admin)
-        print("Admin user 'admin' created.")
+        print(f"Admin user 'admin' created with password: {initial_password}")
+        print("Please change this password immediately after first login.")
     
     # 录入你提供的深圳实例
     AK = os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID', '')

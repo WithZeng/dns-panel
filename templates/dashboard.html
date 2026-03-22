@@ -449,18 +449,21 @@
         }
 
         if (tbody) {
+          tbody.textContent = '';
           if (!months.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+            const emptyRow = tbody.insertRow();
+            const emptyCell = emptyRow.insertCell();
+            emptyCell.colSpan = 3;
+            emptyCell.className = 'py-3 text-slate-400';
+            emptyCell.textContent = '暂无数据';
           } else {
-            tbody.innerHTML = months.map((m) => {
-              const traffic = Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB');
-              const amount = Number(m.amount || 0).toFixed(2) + ' ' + currency;
-              return `<tr>
-                <td class="py-2 text-slate-700 dark:text-slate-200">${m.month || '-'}</td>
-                <td class="py-2 text-slate-700 dark:text-slate-200">${traffic}</td>
-                <td class="py-2 text-slate-700 dark:text-slate-200">${amount}</td>
-              </tr>`;
-            }).join('');
+            months.forEach((m) => {
+              const row = tbody.insertRow();
+              const cellCls = 'py-2 text-slate-700 dark:text-slate-200';
+              const c1 = row.insertCell(); c1.className = cellCls; c1.textContent = m.month || '-';
+              const c2 = row.insertCell(); c2.className = cellCls; c2.textContent = Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB');
+              const c3 = row.insertCell(); c3.className = cellCls; c3.textContent = Number(m.amount || 0).toFixed(2) + ' ' + currency;
+            });
           }
         }
 
@@ -528,127 +531,124 @@
     const releaseForm = document.getElementById('releaseForm');
     const releaseTargetName = document.getElementById('releaseTargetName');
     const cancelBtn = document.getElementById('cancelRelease');
-    const openBtns = document.querySelectorAll('.js-open-release');
 
-    function openModal(id, name) {
-      releaseTargetName.textContent = name;
-      releaseForm.action = `/release_instance/${id}`;
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
+    setupModal(modal, cancelBtn);
 
-    function closeModal() {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    openBtns.forEach((btn) => {
-      btn.addEventListener('click', () => openModal(btn.dataset.id, btn.dataset.name));
-    });
-
-    cancelBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
+    document.querySelectorAll('.js-open-release').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        releaseTargetName.textContent = btn.dataset.name;
+        releaseForm.action = `/release_instance/${btn.dataset.id}`;
+        openModal(modal);
+      });
     });
   })();
 
-  // ---- Auto-refresh via AJAX every 30s ----
+  // ---- Auto-refresh via visibility-aware polling (30s) ----
   (function () {
     const countdownEl = document.getElementById('countdown');
     let seconds = 30;
 
-    function updateCountdown() {
-      seconds--;
-      if (seconds <= 0) {
-        fetchData();
-        seconds = 30;
-      }
-      if (countdownEl) countdownEl.textContent = seconds;
-    }
-
-    function fetchData() {
+    function updateInstances() {
       const qs = new URLSearchParams(window.location.search || '');
       const tag = qs.get('tag');
       const apiUrl = tag ? `/api/instances?tag=${encodeURIComponent(tag)}` : '/api/instances';
-      fetch(apiUrl)
+      return fetch(apiUrl)
         .then(r => r.json())
         .then(data => {
-          try {
-            const s = data.summary;
-            document.getElementById('s_total').textContent = s.total;
-            document.getElementById('s_online').textContent = s.online;
-            document.getElementById('s_stopped').textContent = s.stopped;
-            document.getElementById('s_traffic').innerHTML = s.total_traffic.toFixed(1) + ' <span class="text-sm font-normal">GB</span>';
-            document.getElementById('s_cost').textContent = '¥' + s.total_cost.toFixed(2);
+          const s = data.summary;
+          document.getElementById('s_total').textContent = s.total;
+          document.getElementById('s_online').textContent = s.online;
+          document.getElementById('s_stopped').textContent = s.stopped;
+          const trafficEl = document.getElementById('s_traffic');
+          trafficEl.textContent = '';
+          trafficEl.appendChild(document.createTextNode(s.total_traffic.toFixed(1) + ' '));
+          const unit = document.createElement('span');
+          unit.className = 'text-sm font-normal';
+          unit.textContent = 'GB';
+          trafficEl.appendChild(unit);
+          document.getElementById('s_cost').textContent = '¥' + s.total_cost.toFixed(2);
 
-            data.instances.forEach(inst => {
-              const card = document.querySelector(`section[data-id="${inst.id}"]`);
-              if (!card) return;
+          data.instances.forEach(inst => {
+            const card = document.querySelector(`section[data-id="${inst.id}"]`);
+            if (!card) return;
 
-              const metaLine = card.querySelector('[data-field="meta_line"]');
-              if (metaLine) {
-                metaLine.innerHTML = '';
-                metaLine.appendChild(document.createTextNode(`${inst.instance_id} · ${inst.region_id}`));
+            const metaLine = card.querySelector('[data-field="meta_line"]');
+            if (metaLine) {
+              metaLine.textContent = '';
+              metaLine.appendChild(document.createTextNode(`${inst.instance_id} · ${inst.region_id}`));
 
-                if (inst.public_ip && inst.public_ip !== '-') {
-                  const chip = document.createElement('span');
-                  chip.className = 'ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]';
-                  chip.textContent = inst.public_ip;
-                  metaLine.appendChild(chip);
-                }
-
-                if (inst.ipv6_addr && inst.ipv6_addr !== '-') {
-                  const chip6 = document.createElement('span');
-                  chip6.className = 'ml-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono text-[10px]';
-                  chip6.textContent = inst.ipv6_addr;
-                  metaLine.appendChild(chip6);
-                }
-
-                if (inst.tag) {
-                  const tagChip = document.createElement('span');
-                  tagChip.className = 'inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300';
-                  tagChip.textContent = inst.tag;
-                  metaLine.appendChild(tagChip);
-                }
+              if (inst.public_ip && inst.public_ip !== '-') {
+                const chip = document.createElement('span');
+                chip.className = 'ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]';
+                chip.textContent = inst.public_ip;
+                metaLine.appendChild(chip);
               }
 
-              let credBox = card.querySelector('[data-field="credential_alert"]');
-              if (inst.credential_status && inst.credential_status !== 'ok') {
-                const isInvalid = inst.credential_status === 'invalid_access_key';
-                const boxCls = isInvalid
-                  ? 'mt-3 rounded-xl border px-3 py-2 text-xs border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
-                  : 'mt-3 rounded-xl border px-3 py-2 text-xs border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300';
-                const title = isInvalid
-                  ? '🚨 凭据失效（InvalidAccessKeyId / 签名错误）'
-                  : '⚠️ Unauthorized / 权限不足';
-                const errText = inst.credential_error ? `<div class="mt-1 break-all opacity-80">${inst.credential_error}</div>` : '';
-                const failAt = inst.credential_last_failed_at ? `<div class="mt-1 opacity-70">最近失败：${inst.credential_last_failed_at}</div>` : '';
-                if (!credBox) {
-                  credBox = document.createElement('div');
-                  credBox.setAttribute('data-field', 'credential_alert');
-                  const anchor = card.querySelector('[data-field="last_checked"]');
-                  if (anchor && anchor.parentNode) {
-                    anchor.parentNode.insertBefore(credBox, anchor);
-                  } else {
-                    card.appendChild(credBox);
-                  }
-                }
-                credBox.className = boxCls;
-                credBox.innerHTML = `<div class="font-semibold">${title}</div>${errText}${failAt}`;
-              } else if (credBox) {
-                credBox.remove();
+              if (inst.ipv6_addr && inst.ipv6_addr !== '-') {
+                const chip6 = document.createElement('span');
+                chip6.className = 'ml-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono text-[10px]';
+                chip6.textContent = inst.ipv6_addr;
+                metaLine.appendChild(chip6);
               }
 
-              const lc = card.querySelector('[data-field="last_checked"]');
-              if (lc) lc.textContent = '最后检查：' + inst.last_checked;
-            });
-          } catch (e) {
-            console.warn('Auto-refresh render error:', e);
-          }
+              if (inst.tag) {
+                const tagChip = document.createElement('span');
+                tagChip.className = 'inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300';
+                tagChip.textContent = inst.tag;
+                metaLine.appendChild(tagChip);
+              }
+            }
+
+            let credBox = card.querySelector('[data-field="credential_alert"]');
+            if (inst.credential_status && inst.credential_status !== 'ok') {
+              const isInvalid = inst.credential_status === 'invalid_access_key';
+              const boxCls = isInvalid
+                ? 'mt-3 rounded-xl border px-3 py-2 text-xs border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                : 'mt-3 rounded-xl border px-3 py-2 text-xs border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300';
+              const title = isInvalid
+                ? '🚨 凭据失效（InvalidAccessKeyId / 签名错误）'
+                : '⚠️ Unauthorized / 权限不足';
+              if (!credBox) {
+                credBox = document.createElement('div');
+                credBox.setAttribute('data-field', 'credential_alert');
+                const anchor = card.querySelector('[data-field="last_checked"]');
+                if (anchor && anchor.parentNode) {
+                  anchor.parentNode.insertBefore(credBox, anchor);
+                } else {
+                  card.appendChild(credBox);
+                }
+              }
+              credBox.className = boxCls;
+              credBox.textContent = '';
+              const titleEl = document.createElement('div');
+              titleEl.className = 'font-semibold';
+              titleEl.textContent = title;
+              credBox.appendChild(titleEl);
+              if (inst.credential_error) {
+                const errEl = document.createElement('div');
+                errEl.className = 'mt-1 break-all opacity-80';
+                errEl.textContent = inst.credential_error;
+                credBox.appendChild(errEl);
+              }
+              if (inst.credential_last_failed_at) {
+                const failEl = document.createElement('div');
+                failEl.className = 'mt-1 opacity-70';
+                failEl.textContent = '最近失败：' + inst.credential_last_failed_at;
+                credBox.appendChild(failEl);
+              }
+            } else if (credBox) {
+              credBox.remove();
+            }
+
+            const lc = card.querySelector('[data-field="last_checked"]');
+            if (lc) lc.textContent = '最后检查：' + inst.last_checked;
+          });
         })
-        .catch(() => { });
+        .catch(() => { showToast('error', '实例数据刷新失败'); });
+    }
 
-      fetch('/api/dashboard_probe_overview')
+    function updateProbeOverview() {
+      return fetch('/api/dashboard_probe_overview')
         .then(r => r.json())
         .then(data => {
           const probe = data.probe || {};
@@ -666,14 +666,18 @@
 
           const list = document.getElementById('probeMiniList');
           if (list) {
-            list.innerHTML = '';
+            list.textContent = '';
             (probe.servers || []).slice(0, 5).forEach(s => {
               const row = document.createElement('div');
               row.className = 'flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 px-2.5 py-1.5';
-              row.innerHTML = `
-                <span class="truncate">${s.name}</span>
-                <span class="${s.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${s.is_online ? '在线' : '离线'}</span>
-              `;
+              const nameSpan = document.createElement('span');
+              nameSpan.className = 'truncate';
+              nameSpan.textContent = s.name;
+              const statusSpan = document.createElement('span');
+              statusSpan.className = s.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+              statusSpan.textContent = s.is_online ? '在线' : '离线';
+              row.appendChild(nameSpan);
+              row.appendChild(statusSpan);
               list.appendChild(row);
             });
           }
@@ -681,8 +685,22 @@
         .catch(() => { });
     }
 
-    setInterval(updateCountdown, 1000);
-    fetchData();
+    async function fetchAll() {
+      await Promise.all([updateInstances(), updateProbeOverview()]);
+      seconds = 30;
+    }
+
+    const poller = createPoller(fetchAll, 30000);
+
+    setInterval(() => {
+      if (document.hidden) return;
+      seconds--;
+      if (seconds <= 0) seconds = 30;
+      if (countdownEl) countdownEl.textContent = seconds;
+    }, 1000);
+
+    fetchAll();
+    poller.start();
   })();
 
   // ---- Export CSV with selected instances ----

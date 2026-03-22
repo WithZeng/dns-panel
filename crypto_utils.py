@@ -35,7 +35,17 @@ def _get_fernet():
                         break
 
     if not key:
-        # Auto-generate key and persist to dedicated key file + .env fallback
+        # Check if a key SHOULD exist (i.e. database already has encrypted data).
+        # If so, generating a new key would silently make all encrypted data
+        # unreadable — raise a loud error instead.
+        _marker = os.path.join(base_dir, 'instance', '.encrypt_key_initialized')
+        if os.path.isfile(_marker):
+            print("\n" + "!" * 60)
+            print("CRITICAL: ENCRYPT_KEY 丢失！无法解密已有数据。")
+            print("请从备份恢复 instance/encrypt.key 文件或在 .env 中设置 ENCRYPT_KEY。")
+            print("如果不恢复密钥，所有已加密的 AK/SK 数据将不可读。")
+            print("!" * 60 + "\n")
+
         key = Fernet.generate_key().decode()
 
         try:
@@ -45,10 +55,26 @@ def _get_fernet():
         except Exception:
             pass
 
+        try:
+            with open(_marker, 'w', encoding='utf-8') as f:
+                f.write('1')
+        except Exception:
+            pass
+
         env_path = os.path.join(base_dir, '.env')
         mode = 'a' if os.path.exists(env_path) else 'w'
         with open(env_path, mode, encoding='utf-8') as f:
             f.write(f"\nENCRYPT_KEY={key}\n")
+    else:
+        # Key found — make sure the marker exists for future detection
+        _marker = os.path.join(base_dir, 'instance', '.encrypt_key_initialized')
+        if not os.path.isfile(_marker):
+            try:
+                os.makedirs(os.path.dirname(_marker), exist_ok=True)
+                with open(_marker, 'w', encoding='utf-8') as f:
+                    f.write('1')
+            except Exception:
+                pass
 
     # Ensure key is valid base64
     if isinstance(key, str):

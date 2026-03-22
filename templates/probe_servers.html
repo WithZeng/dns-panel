@@ -122,19 +122,19 @@
     <h3 class="text-xl font-bold text-slate-900 dark:text-white">添加探针服务器</h3>
     <form id="addProbeForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
       <div class="sm:col-span-2">
-        <label class="text-xs text-slate-500 dark:text-slate-400">名称</label>
-        <input name="name" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+        <label for="probe_name" class="text-xs text-slate-500 dark:text-slate-400">名称</label>
+        <input id="probe_name" name="name" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-slate-500 dark:text-slate-400">类型</label>
-        <select name="server_type" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+        <label for="probe_type" class="text-xs text-slate-500 dark:text-slate-400">类型</label>
+        <select id="probe_type" name="server_type" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
           <option value="generic">generic</option>
           <option value="aliyun">aliyun</option>
         </select>
       </div>
       <div id="ecsSelectRow">
-        <label class="text-xs text-slate-500 dark:text-slate-400">关联 ECS（可选）</label>
-        <select name="ecs_instance_id" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+        <label for="probe_ecs" class="text-xs text-slate-500 dark:text-slate-400">关联 ECS（可选）</label>
+        <select id="probe_ecs" name="ecs_instance_id" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
           <option value="">不关联</option>
           {% for e in ecs_instances %}
           <option value="{{ e.id }}">{{ e.name }} ({{ e.instance_id }})</option>
@@ -145,12 +145,12 @@
         {% endif %}
       </div>
       <div>
-        <label class="text-xs text-slate-500 dark:text-slate-400">标签</label>
-        <input name="tag" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+        <label for="probe_tag" class="text-xs text-slate-500 dark:text-slate-400">标签</label>
+        <input id="probe_tag" name="tag" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-slate-500 dark:text-slate-400">备注</label>
-        <input name="notes" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
+        <label for="probe_notes" class="text-xs text-slate-500 dark:text-slate-400">备注</label>
+        <input id="probe_notes" name="notes" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm" />
       </div>
       <div class="sm:col-span-2 flex justify-end gap-2 mt-2">
         <button type="button" id="closeAddModal" class="rounded-lg border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm">取消</button>
@@ -232,8 +232,7 @@
     document.querySelectorAll('.deployTokenInline').forEach(el => el.textContent = token);
 
     deployModal.dataset.refreshOnClose = refreshOnClose ? '1' : '0';
-    deployModal.classList.remove('hidden');
-    deployModal.classList.add('flex');
+    openModal(deployModal);
   }
 
   function filterCards() {
@@ -320,12 +319,13 @@
     }
   }
 
-  setInterval(() => { refreshProbeCards().catch(() => {}); }, 3000);
+  const probePoller = createPoller(refreshProbeCards, 3000);
   refreshProbeCards().catch(() => {});
+  probePoller.start();
 
   const addModal = document.getElementById('addModal');
   const addProbeForm = document.getElementById('addProbeForm');
-  const typeSelect = addProbeForm.querySelector('[name="server_type"]');
+  const typeSelect = document.getElementById('probe_type');
   const ecsRow = document.getElementById('ecsSelectRow');
 
   function syncEcsRow() {
@@ -334,20 +334,8 @@
   typeSelect.addEventListener('change', syncEcsRow);
   syncEcsRow();
 
-  document.getElementById('openAddModal').addEventListener('click', () => {
-    addModal.classList.remove('hidden');
-    addModal.classList.add('flex');
-  });
-  document.getElementById('closeAddModal').addEventListener('click', () => {
-    addModal.classList.add('hidden');
-    addModal.classList.remove('flex');
-  });
-  addModal.addEventListener('click', (e) => {
-    if (e.target === addModal) {
-      addModal.classList.add('hidden');
-      addModal.classList.remove('flex');
-    }
-  });
+  setupModal(addModal, document.getElementById('closeAddModal'));
+  document.getElementById('openAddModal').addEventListener('click', () => openModal(addModal));
 
   addProbeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -371,8 +359,7 @@
         return;
       }
 
-      addModal.classList.add('hidden');
-      addModal.classList.remove('flex');
+      closeModal(addModal);
       openDeployModal(data.server.token, true);
       showAlert('success', '创建成功，请复制部署命令。');
     } finally {
@@ -417,66 +404,20 @@
     });
   });
 
+  setupModal(deployModal);
   document.getElementById('closeDeployModal').addEventListener('click', () => {
-    const refresh = deployModal.dataset.refreshOnClose === '1';
-    if (refresh) {
+    if (deployModal.dataset.refreshOnClose === '1') {
       window.location.reload();
       return;
     }
-    deployModal.classList.add('hidden');
-    deployModal.classList.remove('flex');
+    closeModal(deployModal);
   });
-  deployModal.addEventListener('click', (e) => {
-    if (e.target === deployModal) {
-      deployModal.classList.add('hidden');
-      deployModal.classList.remove('flex');
-    }
-  });
-
-  function copyText(text, btn) {
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(() => {
-        showCopied(btn);
-      }).catch(() => {
-        fallbackCopy(text, btn);
-      });
-    } else {
-      fallbackCopy(text, btn);
-    }
-  }
-
-  function fallbackCopy(text, btn) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      showCopied(btn);
-    } catch (e) {
-      showAlert('error', '复制失败，请手动选择文本复制');
-    }
-    document.body.removeChild(textarea);
-  }
-
-  function showCopied(btn) {
-    const orig = btn.textContent;
-    btn.textContent = '已复制 ✓';
-    btn.classList.add('bg-emerald-600', 'text-white');
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.classList.remove('bg-emerald-600', 'text-white');
-    }, 1500);
-  }
 
   document.getElementById('copyDeployToken').addEventListener('click', function() {
-    copyText(deployTokenEl.textContent || '', this);
+    copyToClipboard(deployTokenEl.textContent || '', this);
   });
   document.getElementById('copyDeployCmd').addEventListener('click', function() {
-    copyText(deployCmdEl.textContent || '', this);
+    copyToClipboard(deployCmdEl.textContent || '', this);
   });
 
   document.getElementById('searchInput').addEventListener('input', filterCards);

@@ -10,13 +10,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
-SERVICE_ACCOUNT_FILE = 'service_account.json'
-FOLDER_ID = '10sNijWM0SvN376TaHYUCH5qOZ4gX5GMJ' # Hardcoded Folder ID
+SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', 'service_account.json')
+FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID', '')
 
 def upload_to_drive():
     """
     Uploads the database file to Google Drive.
     """
+    if not FOLDER_ID:
+        logger.warning("GOOGLE_DRIVE_FOLDER_ID not configured. Backup skipped.")
+        return
+
     if not os.path.exists(SERVICE_ACCOUNT_FILE):
         logger.warning(f"Service account file '{SERVICE_ACCOUNT_FILE}' not found. Backup skipped.")
         return
