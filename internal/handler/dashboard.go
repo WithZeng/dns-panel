@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"sync"
+	"sync/atomic"
 
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
@@ -177,29 +179,61 @@ func BatchAction(c *gin.Context) {
 	var instances []models.EcsInstance
 	database.DB.Where("id IN ?", body.IDs).Find(&instances)
 
-	count := 0
-	for _, inst := range instances {
-		switch body.Action {
-		case "check":
-			go service.CheckAndManageInstance(inst.ID)
-			count++
-		case "start":
-			if inst.Status == "Stopped" {
-				service.ECSAction(inst.ID, "start")
-				count++
-			}
-		case "stop":
-			if inst.Status == "Running" {
-				service.ECSAction(inst.ID, "stop")
-				count++
+	var countVal, errorsVal int64
+
+	if body.Action == "check" {
+		var wg sync.WaitGroup
+		for _, inst := range instances {
+			wg.Add(1)
+			go func(id uint) {
+				defer wg.Done()
+				if err := service.CheckAndManageInstance(id); err != nil {
+					atomic.AddInt64(&errorsVal, 1)
+				} else {
+					atomic.AddInt64(&countVal, 1)
+				}
+			}(inst.ID)
+		}
+		wg.Wait()
+	} else {
+		for _, inst := range instances {
+			switch body.Action {
+			case "start":
+				if inst.Status == "Stopped" {
+					ok, _ := service.ECSAction(inst.ID, "start")
+					if ok {
+						atomic.AddInt64(&countVal, 1)
+					} else {
+						atomic.AddInt64(&errorsVal, 1)
+					}
+				}
+			case "stop":
+				if inst.Status == "Running" {
+					ok, _ := service.ECSAction(inst.ID, "stop")
+					if ok {
+						atomic.AddInt64(&countVal, 1)
+					} else {
+						atomic.AddInt64(&errorsVal, 1)
+					}
+				}
+			case "delete":
+				database.DB.Delete(&inst)
+				logOperation("batch_delete", fmt.Sprintf("批量移除实例 %s", inst.Name), nil, c)
+				atomic.AddInt64(&countVal, 1)
 			}
 		}
 	}
+	count := int(countVal)
+	errors := int(errorsVal)
 
-	actionNames := map[string]string{"start": "启动", "stop": "停止", "check": "检查"}
+	actionNames := map[string]string{"start": "启动", "stop": "停止", "check": "检查", "delete": "移除"}
+	msg := fmt.Sprintf("已对 %d 个实例执行 %s 操作", count, actionNames[body.Action])
+	if errors > 0 {
+		msg += fmt.Sprintf("，%d 个失败", errors)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("已对 %d 个实例执行 %s 操作", count, actionNames[body.Action]),
+		"message": msg,
 	})
 }
 
