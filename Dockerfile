@@ -11,7 +11,7 @@ RUN CGO_ENABLED=1 go build -o dns-panel -ldflags="-s -w" .
 
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata curl
 
 WORKDIR /app
 COPY --from=builder /build/dns-panel .

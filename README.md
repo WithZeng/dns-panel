@@ -13,20 +13,61 @@
 - **定时任务** — 自定义 ECS 启停时间表
 - **数据导出** — CSV 导出实例数据
 
-## 快速部署
+## 一键部署
 
-### Docker (推荐)
+在 VPS 上执行以下命令即可完成部署：
 
 ```bash
-# 克隆仓库
+bash <(curl -sL https://raw.githubusercontent.com/WithZeng/dns-panel/go-rewrite/install.sh)
+```
+
+首次启动后查看 `data/initial_admin_credentials.txt` 获取默认管理员密码。
+
+## 一键更新
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/WithZeng/dns-panel/go-rewrite/install.sh) update
+```
+
+更新前会自动备份数据库，数据不会丢失。
+
+## 管理命令
+
+如果已经部署过，进入项目目录后可以使用 `panel.sh` 管理：
+
+```bash
+cd /opt/dns-panel
+
+bash panel.sh deploy      # 首次部署
+bash panel.sh update      # 更新到最新版本
+bash panel.sh start       # 启动
+bash panel.sh stop        # 停止
+bash panel.sh restart     # 重启
+bash panel.sh status      # 查看状态
+bash panel.sh logs        # 查看实时日志
+bash panel.sh build       # 重新构建
+bash panel.sh backup      # 手动备份数据库
+bash panel.sh restore     # 恢复数据库
+bash panel.sh shell       # 进入容器 Shell
+```
+
+也可以用远程脚本直接执行任意命令：
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/WithZeng/dns-panel/go-rewrite/install.sh) <命令>
+```
+
+支持的命令: `deploy` `update` `restart` `stop` `status` `logs` `backup` `restore`
+
+## 手动部署
+
+### Docker
+
+```bash
 git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
 git checkout go-rewrite
-
-# 创建环境变量文件
 cp .env.example .env
-
-# 启动
 docker-compose up -d
 ```
 
@@ -37,8 +78,6 @@ docker-compose up -d
 go build -o dns-panel .
 ./dns-panel
 ```
-
-首次启动后查看 `data/initial_admin_credentials.txt` 获取默认管理员密码。
 
 ## 配置
 
@@ -62,6 +101,8 @@ go build -o dns-panel .
 
 ```
 ├── main.go                    # 入口 + 路由
+├── install.sh                 # 一键部署/更新脚本
+├── panel.sh                   # 本地管理脚本
 ├── internal/
 │   ├── config/                # 配置加载
 │   ├── crypto/                # AES-256-GCM 加密
