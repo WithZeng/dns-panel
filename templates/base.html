@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ block "title" . }}ECS Monitor{{ end }}</title>
+  <title>{{ block "title" . }}CloudPanel{{ end }}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📳</text></svg>" type="image/svg+xml">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -71,8 +71,11 @@
     max-lg:-translate-x-full lg:translate-x-0 transition-transform duration-300">
 
     <div class="h-14 flex items-center gap-3 px-5 border-b border-gray-200 dark:border-white/[.08] shrink-0">
-      <span class="inline-grid place-items-center w-8 h-8 rounded-lg bg-indigo-600 text-white text-xs font-bold shrink-0">E</span>
-      <span class="sidebar-logo-text font-semibold text-gray-900 dark:text-white tracking-tight text-sm">ECS Monitor</span>
+      <span class="inline-grid place-items-center w-8 h-8 rounded-lg bg-emerald-600 text-white text-xs font-bold shrink-0">C</span>
+      <div class="sidebar-logo-text">
+        <span class="font-semibold text-gray-900 dark:text-white tracking-tight text-sm">CloudPanel</span>
+        <span class="block text-[10px] text-gray-400 dark:text-gray-500 -mt-0.5">aliyun · instance manager</span>
+      </div>
     </div>
 
     <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">

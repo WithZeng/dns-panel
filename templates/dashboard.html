@@ -1,141 +1,189 @@
 {{ define "title" }}实例管理 - CloudPanel{{ end }}
 {{ define "content" }}
-<div class="mb-4 flex items-center justify-between flex-wrap gap-3">
-  <div>
-    <h1 class="text-xl font-bold text-gray-900 dark:text-white">实例管理</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">共 <span id="totalCount">{{ .total }}</span> 台 · 运行 <span class="text-emerald-600 dark:text-emerald-400" id="onlineCount">{{ .online }}</span> · 已停止 <span class="text-gray-400" id="stoppedCount">{{ .stopped }}</span> · 本月流量 <span class="text-indigo-600 dark:text-indigo-400" id="trafficSum">{{ printf "%.1f" .totalTraffic }}</span> GB</p>
-  </div>
+<!-- Top action bar -->
+<div class="flex items-center justify-between mb-3">
+  <div></div>
   <div class="flex items-center gap-2">
-    <button onclick="refreshAll()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">刷新列表</button>
-    <a href="/instance/add" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition">添加实例</a>
+    <button onclick="refreshAll()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+      刷新列表
+    </button>
+    <a href="/alert_config" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      设置
+    </a>
   </div>
 </div>
-
-<!-- Search / Filter Bar -->
-<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-3 mb-4">
-  <div class="flex flex-wrap items-center gap-2">
-    <div class="flex-1 min-w-[200px]">
-      <input id="searchInput" type="text" placeholder="搜索实例 ID / IP / 名称" class="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" oninput="filterTable()">
+<!-- Search / Filter Area -->
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 mb-3">
+  <div class="flex flex-wrap items-end gap-3">
+    <!-- Search box -->
+    <div class="shrink-0">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">实例搜索（支持多行/空格分隔）</label>
+      <div class="flex">
+        <textarea id="searchInput" rows="2" placeholder="实例ID / IP，支持多行/空格分隔" class="w-44 px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" oninput="filterTable()"></textarea>
+        <button onclick="filterTable()" class="px-2.5 bg-indigo-600 text-white rounded-r-md hover:bg-indigo-700 transition">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+        </button>
+      </div>
     </div>
-    <select id="regionFilter" class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-      <option value="">全部地域</option>
-    </select>
-    <select id="tagFilter" class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-      <option value="">全部标签</option>
-      {{ range .tags }}<option value="{{ . }}" {{ if eq . $.currentTag }}selected{{ end }}>{{ . }}</option>{{ end }}
-    </select>
-    <select id="statusFilter" class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-      <option value="">全部状态</option>
-      <option value="Running">运行中</option>
-      <option value="Stopped">已停止</option>
-    </select>
+    <!-- Region filter -->
+    <div class="shrink-0">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">地域筛选</label>
+      <select id="regionFilter" class="h-[34px] px-2.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
+        <option value="">全部地域</option>
+      </select>
+    </div>
+    <!-- Tag filter -->
+    <div class="shrink-0">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">备注筛选</label>
+      <div class="flex">
+        <input id="tagFilter" type="text" placeholder="输入备注关键词" class="w-32 h-[34px] px-2.5 text-xs border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-indigo-500" oninput="filterTable()">
+        <button onclick="filterTable()" class="px-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Date range -->
+    <div class="shrink-0">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">按创建时间筛选</label>
+      <div class="flex items-center gap-1">
+        <input id="dateStart" type="date" class="h-[34px] px-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
+        <span class="text-gray-400 text-xs">—</span>
+        <input id="dateEnd" type="date" class="h-[34px] px-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
+      </div>
+    </div>
+    <!-- Reset -->
+    <button onclick="resetFilters()" class="h-[34px] px-3 text-xs border border-gray-300 dark:border-gray-600 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">x 重置</button>
+  </div>
+  <!-- Status row -->
+  <div class="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
+    <span class="text-xs text-gray-500 dark:text-gray-400">状态</span>
+    <button onclick="setStatusFilter('')" class="status-chip px-2 py-0.5 text-xs rounded border transition" data-status="">全部</button>
+    <button onclick="setStatusFilter('Running')" class="status-chip px-2 py-0.5 text-xs rounded border transition" data-status="Running">运行中</button>
+    <button onclick="setStatusFilter('Stopped')" class="status-chip px-2 py-0.5 text-xs rounded border transition" data-status="Stopped">已停止</button>
+    <button onclick="setStatusFilter('Starting')" class="status-chip px-2 py-0.5 text-xs rounded border transition" data-status="Starting">启动中</button>
+    <button onclick="setStatusFilter('Stopping')" class="status-chip px-2 py-0.5 text-xs rounded border transition" data-status="Stopping">停止中</button>
   </div>
 </div>
 
 <!-- Instance Table -->
-<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden mb-14">
   <div class="overflow-x-auto">
-    <table class="w-full text-sm" id="instanceTable">
+    <table class="w-full text-xs" id="instanceTable">
       <thead>
-        <tr class="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
-          <th class="w-8 px-3 py-2.5"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
-          <th class="px-3 py-2.5 text-left">#</th>
-          <th class="px-3 py-2.5 text-left">地域</th>
-          <th class="px-3 py-2.5 text-left">状态</th>
-          <th class="px-3 py-2.5 text-left">实例 ID / 备注</th>
-          <th class="px-3 py-2.5 text-left">公网 / 内网 IP</th>
-          <th class="px-3 py-2.5 text-left">配置</th>
-          <th class="px-3 py-2.5 text-left">流量</th>
-          <th class="px-3 py-2.5 text-right">操作</th>
+        <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 text-[11px]">
+          <th class="w-8 px-2 py-2"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
+          <th class="px-2 py-2 text-left font-medium">#</th>
+          <th class="px-2 py-2 text-left font-medium">地域</th>
+          <th class="px-2 py-2 text-left font-medium">状态</th>
+          <th class="px-2 py-2 text-left font-medium">实例 ID / 备注</th>
+          <th class="px-2 py-2 text-left font-medium">公网 / 内网 IP</th>
+          <th class="px-2 py-2 text-center font-medium" title="带宽">
+            <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+            <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12M12 16.5V3"/></svg>
+          </th>
+          <th class="px-2 py-2 text-left font-medium">创建时间</th>
+          <th class="px-2 py-2 text-left font-medium">到期时间</th>
+          <th class="px-2 py-2 text-left font-medium">配置</th>
+          <th class="px-2 py-2 text-left font-medium">总流量</th>
+          <th class="px-2 py-2 text-left font-medium">已用流量%</th>
+          <th class="px-2 py-2 text-left font-medium">价格</th>
+          <th class="px-2 py-2 text-right font-medium">操作</th>
         </tr>
       </thead>
       <tbody id="instanceBody">
         {{ range $i, $inst := .instances }}
-        <tr class="instance-row border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
+        <tr class="instance-row border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/80 dark:hover:bg-gray-800/20 transition"
             data-id="{{ $inst.ID }}"
             data-instance-id="{{ $inst.InstanceID }}"
             data-region="{{ $inst.RegionID }}"
             data-status="{{ $inst.Status }}"
             data-tag="{{ $inst.Tag }}"
             data-name="{{ $inst.Name }}"
-            data-ip="{{ $inst.PublicIP }} {{ $inst.PrivateIP }}">
-          <td class="px-3 py-2.5"><input type="checkbox" class="row-check rounded" value="{{ $inst.ID }}" onchange="updateBatchBar()"></td>
-          <td class="px-3 py-2.5 text-gray-400 dark:text-gray-500">{{ add $i 1 }}</td>
-          <td class="px-3 py-2.5 text-xs text-gray-600 dark:text-gray-400">{{ $inst.RegionID }}</td>
-          <td class="px-3 py-2.5">
+            data-ip="{{ $inst.PublicIP }} {{ $inst.PrivateIP }}"
+            data-creation="{{ $inst.CreationTime }}">
+          <td class="px-2 py-2"><input type="checkbox" class="row-check rounded" value="{{ $inst.ID }}" onchange="updateBatchBar()"></td>
+          <td class="px-2 py-2 text-gray-400">{{ add $i 1 }}</td>
+          <td class="px-2 py-2 text-gray-600 dark:text-gray-400">{{ $inst.RegionID }}</td>
+          <td class="px-2 py-2">
             {{ if eq $inst.Status "Running" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>运行中
               </span>
             {{ else if eq $inst.Status "Stopped" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>已停止
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>已停止
               </span>
             {{ else if eq $inst.Status "Starting" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>启动中
               </span>
             {{ else if eq $inst.Status "Stopping" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>停止中
               </span>
             {{ else }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">{{ $inst.Status }}</span>
-            {{ end }}
-            {{ if ne $inst.CredentialStatus "ok" }}
-              <span class="ml-1 text-red-500 text-xs" title="{{ $inst.CredentialError }}">⚠</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">{{ $inst.Status }}</span>
             {{ end }}
           </td>
-          <td class="px-3 py-2.5">
-            <div class="text-xs font-mono text-gray-500 dark:text-gray-500">{{ $inst.InstanceID }}</div>
-            <div class="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
-              {{ if $inst.Tag }}<span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">{{ $inst.Tag }}</span>{{ end }}
+          <td class="px-2 py-2">
+            <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500 flex items-center gap-1">
+              {{ $inst.InstanceID }}
+              {{ if ne $inst.CredentialStatus "ok" }}<span class="text-red-500" title="{{ $inst.CredentialError }}">⚠</span>{{ end }}
+            </div>
+            <div class="text-xs text-gray-800 dark:text-gray-200 flex items-center gap-1">
+              <svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5"/></svg>
               {{ $inst.Name }}
             </div>
           </td>
-          <td class="px-3 py-2.5">
-            <div class="text-sm font-mono text-gray-800 dark:text-gray-200">{{ if $inst.PublicIP }}{{ $inst.PublicIP }}{{ else }}<span class="text-gray-400">-</span>{{ end }}</div>
-            <div class="text-xs font-mono text-gray-400">{{ if $inst.PrivateIP }}{{ $inst.PrivateIP }}{{ else }}-{{ end }}</div>
+          <td class="px-2 py-2 font-mono">
+            <div class="text-xs text-gray-800 dark:text-gray-200">{{ if $inst.PublicIP }}{{ $inst.PublicIP }}{{ else }}<span class="text-gray-300 dark:text-gray-600">-</span>{{ end }}</div>
+            <div class="text-[11px] text-gray-400">{{ if $inst.PrivateIP }}{{ $inst.PrivateIP }}{{ else }}-{{ end }}</div>
           </td>
-          <td class="px-3 py-2.5 text-xs text-gray-600 dark:text-gray-400">
+          <td class="px-2 py-2 text-center text-gray-600 dark:text-gray-400">
+            {{ if $inst.Bandwidth }}{{ $inst.Bandwidth }}M{{ else }}-{{ end }}
+          </td>
+          <td class="px-2 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.CreationTime }}{{ $inst.CreationTime }}{{ else }}-{{ end }}</td>
+          <td class="px-2 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.ExpiredTime }}{{ $inst.ExpiredTime }}{{ else }}-{{ end }}</td>
+          <td class="px-2 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
             {{ if $inst.CPU }}{{ $inst.CPU }}C/{{ $inst.Memory }}G{{ else }}-{{ end }}
-            {{ if $inst.Bandwidth }}<br>{{ $inst.Bandwidth }}M{{ end }}
           </td>
-          <td class="px-3 py-2.5">
+          <td class="px-2 py-2 text-gray-600 dark:text-gray-400">
             {{ if eq $inst.TrafficStrategy "life" }}
-              <div class="text-xs text-gray-600 dark:text-gray-400">{{ printf "%.1f" $inst.TotalTrafficSum }} / {{ printf "%.0f" $inst.LifeTotalLimit }} GB</div>
-              {{ if gt $inst.LifeTotalLimit 0.0 }}
-              <div class="w-20 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
-                <div class="h-full rounded-full {{ if gt (div (mul $inst.TotalTrafficSum 100.0) $inst.LifeTotalLimit) 80.0 }}bg-red-500{{ else }}bg-emerald-500{{ end }}" style="width:{{ printf "%.0f" (min (div (mul $inst.TotalTrafficSum 100.0) $inst.LifeTotalLimit) 100.0) }}%"></div>
-              </div>
-              {{ end }}
+              {{ printf "%.1f" $inst.TotalTrafficSum }}/{{ printf "%.0f" $inst.LifeTotalLimit }}G
             {{ else }}
-              <div class="text-xs text-gray-600 dark:text-gray-400">{{ printf "%.1f" $inst.CurrentMonthTraffic }} / {{ printf "%.0f" $inst.MonthlyLimit }} GB</div>
-              {{ if gt $inst.MonthlyLimit 0.0 }}
-              <div class="w-20 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
-                <div class="h-full rounded-full {{ if gt (div (mul $inst.CurrentMonthTraffic 100.0) $inst.MonthlyLimit) 80.0 }}bg-red-500{{ else }}bg-indigo-500{{ end }}" style="width:{{ printf "%.0f" (min (div (mul $inst.CurrentMonthTraffic 100.0) $inst.MonthlyLimit) 100.0) }}%"></div>
-              </div>
-              {{ end }}
+              {{ printf "%.1f" $inst.CurrentMonthTraffic }}/{{ printf "%.0f" $inst.MonthlyLimit }}G
             {{ end }}
           </td>
-          <td class="px-3 py-2.5 text-right">
-            <div class="flex items-center justify-end gap-1 flex-wrap">
-              <button onclick="openVnc({{ $inst.ID }})" class="px-2 py-1 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 transition" title="远程链接">VNC</button>
-              {{ if eq $inst.Status "Stopped" }}
-                <button onclick="ecsAction({{ $inst.ID }},'start')" class="px-2 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">开机</button>
-              {{ else if eq $inst.Status "Running" }}
-                <button onclick="ecsAction({{ $inst.ID }},'stop')" class="px-2 py-1 text-xs rounded bg-gray-600 text-white hover:bg-gray-700 transition">关机</button>
-                <button onclick="ecsAction({{ $inst.ID }},'reboot')" class="px-2 py-1 text-xs rounded bg-amber-600 text-white hover:bg-amber-700 transition">重启</button>
-              {{ end }}
-              <div class="relative inline-block" id="moreMenu{{ $inst.ID }}">
-                <button onclick="toggleMore({{ $inst.ID }})" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">更多▾</button>
-                <div id="moreDropdown{{ $inst.ID }}" class="hidden absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-30 py-1">
-                  <button onclick="showPasswordModal({{ $inst.ID }})" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">改密</button>
-                  <button onclick="ecsAction({{ $inst.ID }},'refresh')" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">刷新状态</button>
-                  <a href="/instance/:id/security_groups" onclick="this.href='/instance/{{ $inst.ID }}/security_groups'" class="block px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">端口/安全组</a>
-                  <a href="/instance/edit/:id" onclick="this.href='/instance/edit/{{ $inst.ID }}'" class="block px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">编辑</a>
-                  <button onclick="showResetModal({{ $inst.ID }})" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400">重置系统</button>
-                </div>
+          <td class="px-2 py-2">
+            {{ if eq $inst.TrafficStrategy "life" }}
+              {{ if gt $inst.LifeTotalLimit 0.0 }}
+                <span class="{{ if gt (div (mul $inst.TotalTrafficSum 100.0) $inst.LifeTotalLimit) 80.0 }}text-red-600{{ else }}text-gray-600 dark:text-gray-400{{ end }}">{{ printf "%.0f" (min (div (mul $inst.TotalTrafficSum 100.0) $inst.LifeTotalLimit) 100.0) }}%</span>
+              {{ else }}N/A{{ end }}
+            {{ else }}
+              {{ if gt $inst.MonthlyLimit 0.0 }}
+                <span class="{{ if gt (div (mul $inst.CurrentMonthTraffic 100.0) $inst.MonthlyLimit) 80.0 }}text-red-600{{ else }}text-gray-600 dark:text-gray-400{{ end }}">{{ printf "%.0f" (min (div (mul $inst.CurrentMonthTraffic 100.0) $inst.MonthlyLimit) 100.0) }}%</span>
+              {{ else }}N/A{{ end }}
+            {{ end }}
+          </td>
+          <td class="px-2 py-2 text-gray-600 dark:text-gray-400">{{ if $inst.HourlyPrice }}{{ printf "%.2f" $inst.HourlyPrice }}{{ else }}-{{ end }}</td>
+          <td class="px-2 py-2">
+            <div class="flex flex-col gap-1">
+              <!-- Row 1: Remote + power controls -->
+              <div class="flex items-center gap-1 justify-end">
+                <button onclick="openVnc({{ $inst.ID }})" class="px-2 py-0.5 text-[11px] rounded bg-emerald-600 text-white hover:bg-emerald-700 transition whitespace-nowrap">远程链接</button>
+                <button onclick="ecsAction({{ $inst.ID }},'start')" class="px-1.5 py-0.5 text-[11px] rounded bg-indigo-600 text-white hover:bg-indigo-700 transition whitespace-nowrap">▶ 开机</button>
+                <button onclick="ecsAction({{ $inst.ID }},'stop')" class="px-1.5 py-0.5 text-[11px] rounded bg-gray-700 text-white hover:bg-gray-800 transition whitespace-nowrap">■ 关机</button>
+                <button onclick="ecsAction({{ $inst.ID }},'reboot')" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap">↻ 重启</button>
+              </div>
+              <!-- Row 2: Management actions -->
+              <div class="flex items-center gap-1 justify-end">
+                <button onclick="openVnc({{ $inst.ID }})" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap">◇ VNC</button>
+                <button onclick="showPasswordModal({{ $inst.ID }})" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap">✏ 改密</button>
+                <button onclick="showRenameModal({{ $inst.ID }}, this.dataset.name)" data-name="{{ $inst.Name }}" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap">✏ 改备注</button>
+                <a href="/instance/{{ $inst.ID }}/security_groups" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap inline-block">♥ 端口</a>
+                <button onclick="showResetModal({{ $inst.ID }})" class="px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition whitespace-nowrap">⟳ 重置系统</button>
               </div>
             </div>
           </td>
@@ -152,20 +200,26 @@
   {{ end }}
 </div>
 
-<!-- Batch Action Bar -->
-<div id="batchBar" class="hidden fixed bottom-0 left-0 right-0 lg:left-64 z-20 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg px-4 py-3">
-  <div class="flex items-center justify-between flex-wrap gap-2 max-w-screen-xl mx-auto">
-    <div class="text-sm text-gray-600 dark:text-gray-400">
-      已选 <span id="selectedCount" class="font-bold text-indigo-600 dark:text-indigo-400">0</span> 台
+<!-- Bottom Action Bar (always visible) -->
+<div id="bottomBar" class="fixed bottom-0 left-0 right-0 lg:left-64 z-20 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_8px_rgba(0,0,0,.06)]">
+  <div class="flex items-center justify-between px-4 py-2">
+    <!-- Left: info + refresh -->
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-400 dark:text-gray-500">信息提示</span>
+      <button onclick="refreshAll()" class="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded bg-emerald-600 text-white hover:bg-emerald-700 transition">
+        ↻ 刷新
+      </button>
     </div>
+    <!-- Right: batch actions -->
     <div class="flex items-center gap-2 flex-wrap">
-      <button onclick="batchAction('start')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition">▶ 批量开机</button>
-      <button onclick="batchAction('stop')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-600 text-white hover:bg-gray-700 transition">■ 批量关机</button>
-      <button onclick="batchAction('reboot')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition">↻ 批量重启</button>
-      <button onclick="showBatchPasswordModal()" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量改密</button>
-      <button onclick="showBatchPortModal()" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量开放端口</button>
-      <button onclick="batchAction('check')" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量检查</button>
-      <button onclick="batchAction('delete')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition">批量移除</button>
+      <span class="text-xs text-gray-400 dark:text-gray-500 mr-1">批量操作</span>
+      <button onclick="batchAction('start')" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">▶ 批量开机</button>
+      <button onclick="batchAction('stop')" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">■ 批量关机</button>
+      <button onclick="batchAction('reboot')" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">↻ 批量重启</button>
+      <button onclick="batchAction('reset_system_batch')" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">↻ 批量重置系统</button>
+      <button onclick="showBatchPasswordModal()" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量改密</button>
+      <button onclick="showBatchRenameModal()" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量备注</button>
+      <button onclick="showBatchPortModal()" class="px-2 py-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">♥ 批量开放端口</button>
     </div>
   </div>
 </div>
@@ -173,12 +227,12 @@
 <!-- Password Modal -->
 <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
   <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
-    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">修改实例密码</h3>
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">修改实例密码</h3>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">8-30字符，需包含大写、小写、数字、特殊字符中至少3种。修改后需重启生效。</p>
-    <input id="pwdInput" type="password" placeholder="输入新密码" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <input id="pwdInput" type="password" placeholder="输入新密码" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
     <div class="flex justify-end gap-2">
-      <button onclick="closeModal('passwordModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">取消</button>
-      <button id="pwdSubmit" onclick="submitPassword()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">确认修改</button>
+      <button onclick="closeModal('passwordModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">取消</button>
+      <button onclick="submitPassword()" class="px-3 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">确认修改</button>
     </div>
   </div>
 </div>
@@ -186,14 +240,26 @@
 <!-- Reset System Modal -->
 <div id="resetModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
   <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
-    <h3 class="text-lg font-bold text-red-600 dark:text-red-400 mb-3">重置系统</h3>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">⚠ 此操作将替换系统盘，原数据不可恢复。实例必须处于已停止状态。</p>
-    <select id="imageSelect" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <h3 class="text-base font-bold text-red-600 dark:text-red-400 mb-2">重置系统</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">此操作将替换系统盘，原数据不可恢复。实例必须处于已停止状态。</p>
+    <select id="imageSelect" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
       <option value="">加载镜像列表中...</option>
     </select>
     <div class="flex justify-end gap-2">
-      <button onclick="closeModal('resetModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">取消</button>
-      <button onclick="submitReset()" class="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700">确认重置</button>
+      <button onclick="closeModal('resetModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitReset()" class="px-3 py-1.5 text-xs rounded-md bg-red-600 text-white hover:bg-red-700">确认重置</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div id="renameModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">修改备注</h3>
+    <input id="renameInput" type="text" placeholder="输入新备注名称" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal('renameModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitRename()" class="px-3 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
     </div>
   </div>
 </div>
@@ -201,11 +267,24 @@
 <!-- Batch Password Modal -->
 <div id="batchPwdModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
   <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
-    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">批量修改密码</h3>
-    <input id="batchPwdInput" type="password" placeholder="输入新密码" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">批量修改密码</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">将为所有选中实例设置相同密码，修改后需重启生效。</p>
+    <input id="batchPwdInput" type="password" placeholder="输入新密码" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
     <div class="flex justify-end gap-2">
-      <button onclick="closeModal('batchPwdModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
-      <button onclick="submitBatchPassword()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
+      <button onclick="closeModal('batchPwdModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitBatchPassword()" class="px-3 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Rename Modal -->
+<div id="batchRenameModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">批量修改备注</h3>
+    <input id="batchRenameInput" type="text" placeholder="输入新备注名称" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal('batchRenameModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitBatchRename()" class="px-3 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
     </div>
   </div>
 </div>
@@ -213,11 +292,11 @@
 <!-- Batch Port Modal -->
 <div id="batchPortModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
   <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
-    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-3">批量开放端口</h3>
-    <input id="batchPortInput" type="text" placeholder="输入端口号 (如 8080)" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">批量开放端口</h3>
+    <input id="batchPortInput" type="text" placeholder="输入端口号 (如 8080)" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
     <div class="flex justify-end gap-2">
-      <button onclick="closeModal('batchPortModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
-      <button onclick="submitBatchPort()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
+      <button onclick="closeModal('batchPortModal')" class="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitBatchPort()" class="px-3 py-1.5 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
     </div>
   </div>
 </div>
@@ -225,8 +304,8 @@
 {{ end }}
 {{ define "scripts" }}
 <script>
-var currentPwdId = 0;
-var currentResetId = 0;
+var currentPwdId = 0, currentResetId = 0, currentRenameId = 0;
+var currentStatusFilter = '';
 
 function getSelectedIds() {
   var ids = [];
@@ -245,32 +324,63 @@ function toggleSelectAll() {
 
 function updateBatchBar() {
   var count = getSelectedIds().length;
-  document.getElementById('selectedCount').textContent = count;
-  document.getElementById('batchBar').classList.toggle('hidden', count === 0);
+  var info = document.querySelector('.bottom-info-count');
+  if (info) info.textContent = count;
+}
+
+function setStatusFilter(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('.status-chip').forEach(function(btn) {
+    var s = btn.dataset.status;
+    if (s === status) {
+      btn.className = 'status-chip px-2 py-0.5 text-xs rounded border border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition';
+    } else {
+      btn.className = 'status-chip px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition';
+    }
+  });
+  filterTable();
 }
 
 function filterTable() {
-  var search = document.getElementById('searchInput').value.toLowerCase();
+  var searchRaw = document.getElementById('searchInput').value.trim();
+  var searchTerms = searchRaw.toLowerCase().split(/[\s\n,]+/).filter(function(s) { return s.length > 0; });
   var region = document.getElementById('regionFilter').value;
-  var tag = document.getElementById('tagFilter').value;
-  var status = document.getElementById('statusFilter').value;
+  var tag = document.getElementById('tagFilter').value.toLowerCase();
+  var dateStart = document.getElementById('dateStart').value;
+  var dateEnd = document.getElementById('dateEnd').value;
+  var status = currentStatusFilter;
+
   document.querySelectorAll('.instance-row').forEach(function(row) {
     var show = true;
-    if (search && row.dataset.instanceId.toLowerCase().indexOf(search) === -1 &&
-        row.dataset.name.toLowerCase().indexOf(search) === -1 &&
-        row.dataset.ip.toLowerCase().indexOf(search) === -1) show = false;
+    if (searchTerms.length > 0) {
+      var haystack = (row.dataset.instanceId + ' ' + row.dataset.name + ' ' + row.dataset.ip).toLowerCase();
+      var found = false;
+      for (var i = 0; i < searchTerms.length; i++) {
+        if (haystack.indexOf(searchTerms[i]) !== -1) { found = true; break; }
+      }
+      if (!found) show = false;
+    }
     if (region && row.dataset.region !== region) show = false;
-    if (tag && row.dataset.tag !== tag) show = false;
+    if (tag && row.dataset.name.toLowerCase().indexOf(tag) === -1 && (row.dataset.tag || '').toLowerCase().indexOf(tag) === -1) show = false;
     if (status && row.dataset.status !== status) show = false;
+    if (dateStart && row.dataset.creation && row.dataset.creation < dateStart) show = false;
+    if (dateEnd && row.dataset.creation && row.dataset.creation > dateEnd + 'T23:59:59Z') show = false;
     row.classList.toggle('hidden', !show);
   });
 }
 
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('regionFilter').value = '';
+  document.getElementById('tagFilter').value = '';
+  document.getElementById('dateStart').value = '';
+  document.getElementById('dateEnd').value = '';
+  setStatusFilter('');
+}
+
 function populateRegionFilter() {
   var regions = {};
-  document.querySelectorAll('.instance-row').forEach(function(row) {
-    regions[row.dataset.region] = true;
-  });
+  document.querySelectorAll('.instance-row').forEach(function(row) { regions[row.dataset.region] = true; });
   var sel = document.getElementById('regionFilter');
   Object.keys(regions).sort().forEach(function(r) {
     var opt = document.createElement('option');
@@ -279,11 +389,10 @@ function populateRegionFilter() {
   });
 }
 populateRegionFilter();
+setStatusFilter('');
 
 function ecsAction(id, action) {
-  var url = '/api/instance/' + id + '/' + action;
-  var method = action === 'refresh' ? 'POST' : 'POST';
-  fetch(url, {method: method}).then(function(r){return r.json()}).then(function(d) {
+  fetch('/api/instance/' + id + '/' + action, {method: 'POST'}).then(function(r){return r.json()}).then(function(d) {
     showToast(d.message || (d.success ? '操作成功' : '操作失败'), d.success ? 'success' : 'error');
     if (d.success) setTimeout(function(){ location.reload(); }, 1500);
   }).catch(function(){ showToast('请求失败', 'error'); });
@@ -291,11 +400,8 @@ function ecsAction(id, action) {
 
 function openVnc(id) {
   fetch('/api/instance/' + id + '/vnc').then(function(r){return r.json()}).then(function(d) {
-    if (d.success && d.url) {
-      window.open(d.url, '_blank');
-    } else {
-      showToast(d.message || 'VNC 连接失败', 'error');
-    }
+    if (d.success && d.url) { window.open(d.url, '_blank'); }
+    else { showToast(d.message || 'VNC 连接失败', 'error'); }
   }).catch(function(){ showToast('请求失败', 'error'); });
 }
 
@@ -303,13 +409,11 @@ function showPasswordModal(id) {
   currentPwdId = id;
   document.getElementById('pwdInput').value = '';
   document.getElementById('passwordModal').classList.remove('hidden');
-  closeAllMore();
 }
 
 function showResetModal(id) {
   currentResetId = id;
   document.getElementById('resetModal').classList.remove('hidden');
-  closeAllMore();
   var sel = document.getElementById('imageSelect');
   sel.innerHTML = '<option value="">加载中...</option>';
   fetch('/api/instance/' + id + '/images').then(function(r){return r.json()}).then(function(d) {
@@ -323,6 +427,12 @@ function showResetModal(id) {
       });
     }
   });
+}
+
+function showRenameModal(id, currentName) {
+  currentRenameId = id;
+  document.getElementById('renameInput').value = currentName || '';
+  document.getElementById('renameModal').classList.remove('hidden');
 }
 
 function submitPassword() {
@@ -350,12 +460,28 @@ function submitReset() {
   });
 }
 
+function submitRename() {
+  var name = document.getElementById('renameInput').value;
+  if (!name) return;
+  fetch('/api/instance/' + currentRenameId + '/rename', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name: name})
+  }).then(function(r){return r.json()}).then(function(d) {
+    showToast(d.message, d.success ? 'success' : 'error');
+    if (d.success) { closeModal('renameModal'); setTimeout(function(){ location.reload(); }, 800); }
+  });
+}
+
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 function batchAction(action) {
   var ids = getSelectedIds();
-  if (!ids.length) return;
+  if (!ids.length) { showToast('请先勾选实例', 'error'); return; }
   if (action === 'delete' && !confirm('确认批量移除选中的 ' + ids.length + ' 个实例？')) return;
+  if (action === 'reset_system_batch') {
+    showToast('批量重置系统需要实例处于停止状态', 'error');
+    return;
+  }
   fetch('/api/batch', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({action: action, ids: ids})
@@ -366,6 +492,8 @@ function batchAction(action) {
 }
 
 function showBatchPasswordModal() {
+  var ids = getSelectedIds();
+  if (!ids.length) { showToast('请先勾选实例', 'error'); return; }
   document.getElementById('batchPwdInput').value = '';
   document.getElementById('batchPwdModal').classList.remove('hidden');
 }
@@ -373,17 +501,38 @@ function showBatchPasswordModal() {
 function submitBatchPassword() {
   var pwd = document.getElementById('batchPwdInput').value;
   if (!pwd) return;
-  var ids = getSelectedIds();
   fetch('/api/batch', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({action: 'password', ids: ids, password: pwd})
+    body: JSON.stringify({action: 'password', ids: getSelectedIds(), password: pwd})
   }).then(function(r){return r.json()}).then(function(d) {
     showToast(d.message, d.success ? 'success' : 'error');
     closeModal('batchPwdModal');
   });
 }
 
+function showBatchRenameModal() {
+  var ids = getSelectedIds();
+  if (!ids.length) { showToast('请先勾选实例', 'error'); return; }
+  document.getElementById('batchRenameInput').value = '';
+  document.getElementById('batchRenameModal').classList.remove('hidden');
+}
+
+function submitBatchRename() {
+  var name = document.getElementById('batchRenameInput').value;
+  if (!name) return;
+  fetch('/api/batch', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action: 'rename', ids: getSelectedIds(), name: name})
+  }).then(function(r){return r.json()}).then(function(d) {
+    showToast(d.message, d.success ? 'success' : 'error');
+    closeModal('batchRenameModal');
+    if (d.success) setTimeout(function(){ location.reload(); }, 800);
+  });
+}
+
 function showBatchPortModal() {
+  var ids = getSelectedIds();
+  if (!ids.length) { showToast('请先勾选实例', 'error'); return; }
   document.getElementById('batchPortInput').value = '';
   document.getElementById('batchPortModal').classList.remove('hidden');
 }
@@ -391,10 +540,9 @@ function showBatchPortModal() {
 function submitBatchPort() {
   var port = document.getElementById('batchPortInput').value;
   if (!port) return;
-  var ids = getSelectedIds();
   fetch('/api/batch', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({action: 'open_port', ids: ids, port: port})
+    body: JSON.stringify({action: 'open_port', ids: getSelectedIds(), port: port})
   }).then(function(r){return r.json()}).then(function(d) {
     showToast(d.message, d.success ? 'success' : 'error');
     closeModal('batchPortModal');
@@ -402,30 +550,32 @@ function submitBatchPort() {
 }
 
 function refreshAll() {
-  showToast('正在刷新...', 'success');
+  showToast('正在刷新所有实例...', 'success');
   var rows = document.querySelectorAll('.instance-row');
-  var done = 0;
+  var done = 0, total = rows.length;
+  if (total === 0) { location.reload(); return; }
   rows.forEach(function(row) {
     fetch('/api/instance/' + row.dataset.id + '/refresh', {method:'POST'})
       .then(function(r){return r.json()})
-      .finally(function() { done++; if (done >= rows.length) location.reload(); });
+      .finally(function() { done++; if (done >= total) location.reload(); });
   });
 }
 
-function toggleMore(id) {
-  var dd = document.getElementById('moreDropdown' + id);
-  var isHidden = dd.classList.contains('hidden');
-  closeAllMore();
-  if (isHidden) dd.classList.remove('hidden');
-}
-
-function closeAllMore() {
-  document.querySelectorAll('[id^="moreDropdown"]').forEach(function(el) { el.classList.add('hidden'); });
-}
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('[id^="moreMenu"]')) closeAllMore();
-});
+(function syncBottomBar() {
+  var bar = document.getElementById('bottomBar');
+  if (!bar) return;
+  var sidebar = document.getElementById('sidebar');
+  function update() {
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+      bar.style.left = '4.5rem';
+    } else {
+      bar.style.left = '';
+    }
+  }
+  update();
+  var obs = new MutationObserver(update);
+  if (sidebar) obs.observe(sidebar, {attributes: true, attributeFilter: ['class']});
+})();
 
 function showToast(msg, type) {
   var container = document.getElementById('toast-container');
