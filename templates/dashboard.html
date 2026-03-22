@@ -11,7 +11,7 @@
 </section>
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
   <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
     <div class="text-xs text-slate-500 dark:text-slate-400">实例总数</div>
     <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1" id="s_total">{{ .total }}</div>
@@ -28,6 +28,43 @@
     <div class="text-xs text-slate-500 dark:text-slate-400">本月总流量</div>
     <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1" id="s_traffic">{{ printf "%.1f" .totalTraffic }} <span class="text-sm font-normal">GB</span></div>
   </div>
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="text-xs text-slate-500 dark:text-slate-400">预估费用</div>
+    <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1" id="s_cost">&yen;{{ printf "%.2f" .totalCost }}</div>
+  </div>
+</div>
+
+<!-- Probe + DNS Overview -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-sm font-semibold text-slate-900 dark:text-white">探针服务器概览</h3>
+      <a href="/probe/servers" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">查看全部</a>
+    </div>
+    <div class="flex items-center gap-4 text-xs mb-3">
+      <span class="text-slate-500 dark:text-slate-400">总计 <strong id="p_total">{{ .probeTotal }}</strong></span>
+      <span class="text-emerald-600 dark:text-emerald-400">在线 <strong id="p_online">{{ .probeOnline }}</strong></span>
+      <span class="text-rose-600 dark:text-rose-400">离线 <strong id="p_offline">{{ .probeOffline }}</strong></span>
+    </div>
+    <div id="probeMiniList" class="space-y-1 text-xs text-slate-600 dark:text-slate-300"></div>
+  </div>
+
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-sm font-semibold text-slate-900 dark:text-white">DNS 解析状态</h3>
+      <a href="/dns_failover" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">管理</a>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-sm">
+      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400">规则总数</div>
+        <div id="dns_total_rules" class="font-semibold text-slate-900 dark:text-white mt-1">{{ .dnsTotal }}</div>
+      </div>
+      <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400">启用规则</div>
+        <div id="dns_enabled_rules" class="font-semibold text-slate-900 dark:text-white mt-1">{{ .dnsEnabled }}</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Action Bar -->
@@ -37,15 +74,24 @@
     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自动刷新 <span id="countdown" class="font-mono text-blue-600 dark:text-blue-400">30</span>s</p>
   </div>
   <div class="flex flex-wrap gap-2 items-center">
+    {{ if .tags }}
+    <select id="tagFilter" onchange="window.location='?tag='+this.value"
+      class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none min-h-[44px]">
+      <option value="">全部标签</option>
+      {{ range .tags }}
+      <option value="{{ . }}">{{ . }}</option>
+      {{ end }}
+    </select>
+    {{ end }}
     <a href="/api/check_all" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">全部检查</a>
-    <a href="/export_csv" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">导出 CSV</a>
+    <button type="button" id="exportCsvBtn" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">导出 CSV</button>
     <a href="/download_backup" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">下载备份</a>
     <a href="/instance/add" class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px]">添加实例</a>
   </div>
 </div>
 
 <!-- Batch Operations -->
-<div class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 shadow-sm mb-6">
+<form id="batchForm" class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 shadow-sm mb-6">
   <span class="text-sm text-slate-600 dark:text-slate-400 font-medium">批量操作:</span>
   <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
     <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
@@ -55,7 +101,7 @@
   <button type="button" onclick="batchAction('check')" class="inline-flex items-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition min-h-[44px]">🔍 检查</button>
   <button type="button" onclick="batchAction('start')" class="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition min-h-[44px]">▶ 启动</button>
   <button type="button" onclick="if(confirm('确定要批量停止吗？'))batchAction('stop')" class="inline-flex items-center rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition min-h-[44px]">⏸ 停止</button>
-</div>
+</form>
 
 <!-- Instance Cards -->
 {{ if .instances }}
@@ -71,6 +117,7 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate" data-field="meta_line">
               {{ .InstanceID }} · {{ .RegionID }}
               {{ if .PublicIP }}<span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]">{{ .PublicIP }}</span>{{ end }}
+              {{ if .IPv6Addr }}<span class="ml-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-mono text-[10px]">{{ .IPv6Addr }}</span>{{ end }}
               {{ if .Tag }}<span class="inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">{{ .Tag }}</span>{{ end }}
             </p>
           </div>
@@ -85,6 +132,14 @@
         </span>
         {{ end }}
       </div>
+
+      <!-- Credential Alert -->
+      {{ if and .CredentialStatus (ne .CredentialStatus "ok") }}
+      <div data-field="credential_alert" class="mt-3 rounded-xl border px-3 py-2 text-xs {{ if eq .CredentialStatus "invalid_access_key" }}border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300{{ else }}border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300{{ end }}">
+        <div class="font-semibold">{{ if eq .CredentialStatus "invalid_access_key" }}凭据失效{{ else }}权限不足{{ end }}</div>
+        {{ if .CredentialError }}<div class="mt-1 break-all opacity-80">{{ .CredentialError }}</div>{{ end }}
+      </div>
+      {{ end }}
 
       <!-- Traffic -->
       <div class="mt-4 space-y-3">
@@ -123,8 +178,11 @@
         {{ end }}
       </div>
 
+      <!-- Last checked -->
+      <div class="mt-3 text-xs text-slate-400 dark:text-slate-500" data-field="last_checked">最后检查：{{ .LastChecked.Format "01-02 15:04" }}</div>
+
       <!-- Actions -->
-      <div class="mt-4 flex items-center gap-2 flex-wrap">
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
         <a href="/instance/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">详情</a>
         <a href="/instance/edit/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">编辑</a>
         <a href="/instance/{{ .ID }}/schedules" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">⏰ 定时</a>
@@ -145,37 +203,112 @@
 
 {{ define "scripts" }}
 <script>
-(function () {
-  const countdownEl = document.getElementById('countdown');
-  let seconds = 30;
-  setInterval(() => {
+(function() {
+  var countdownEl = document.getElementById('countdown');
+  var seconds = 30;
+
+  function updateInstances() {
+    return fetch('/api/instances')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.instances) return;
+        data.instances.forEach(function(inst) {
+          var card = document.querySelector('section[data-id="' + inst.id + '"]');
+          if (!card) return;
+          var lc = card.querySelector('[data-field="last_checked"]');
+          if (lc) lc.textContent = '最后检查：' + (inst.last_checked || '-');
+        });
+      })
+      .catch(function() { });
+  }
+
+  function updateProbeOverview() {
+    return fetch('/api/dashboard_probe_overview')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var probe = data.probe || {};
+        var dns = data.dns || {};
+        var pTotal = document.getElementById('p_total');
+        var pOnline = document.getElementById('p_online');
+        var pOffline = document.getElementById('p_offline');
+        var dnsTotal = document.getElementById('dns_total_rules');
+        var dnsEnabled = document.getElementById('dns_enabled_rules');
+        if (pTotal) pTotal.textContent = probe.total || 0;
+        if (pOnline) pOnline.textContent = probe.online || 0;
+        if (pOffline) pOffline.textContent = probe.offline || 0;
+        if (dnsTotal) dnsTotal.textContent = dns.total_rules || 0;
+        if (dnsEnabled) dnsEnabled.textContent = dns.enabled_rules || 0;
+
+        var list = document.getElementById('probeMiniList');
+        if (list) {
+          list.textContent = '';
+          (probe.servers || []).slice(0, 5).forEach(function(s) {
+            var row = document.createElement('div');
+            row.className = 'flex items-center justify-between rounded-lg border border-slate-100 dark:border-slate-700 px-2.5 py-1.5';
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'truncate';
+            nameSpan.textContent = s.name;
+            var statusSpan = document.createElement('span');
+            statusSpan.className = s.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            statusSpan.textContent = s.is_online ? '在线' : '离线';
+            row.appendChild(nameSpan);
+            row.appendChild(statusSpan);
+            list.appendChild(row);
+          });
+        }
+      })
+      .catch(function() { });
+  }
+
+  function fetchAll() {
+    Promise.all([updateInstances(), updateProbeOverview()]);
+    seconds = 30;
+  }
+
+  setInterval(function() {
     if (document.hidden) return;
     seconds--;
-    if (seconds <= 0) { seconds = 30; location.reload(); }
+    if (seconds <= 0) { fetchAll(); }
     if (countdownEl) countdownEl.textContent = seconds;
   }, 1000);
 
-  const selectAll = document.getElementById('selectAll');
-  const countBadge = document.getElementById('selectedCount');
-  const checkboxes = () => document.querySelectorAll('.instance-checkbox');
+  fetchAll();
+
+  // Select all / batch
+  var selectAll = document.getElementById('selectAll');
+  var countBadge = document.getElementById('selectedCount');
+  var checkboxes = function() { return document.querySelectorAll('.instance-checkbox'); };
   function updateCount() {
-    const checked = document.querySelectorAll('.instance-checkbox:checked');
-    const n = checked.length, total = checkboxes().length;
+    var checked = document.querySelectorAll('.instance-checkbox:checked');
+    var n = checked.length, total = checkboxes().length;
     if (n > 0) { countBadge.textContent = '已选 ' + n + '/' + total; countBadge.classList.remove('hidden'); }
     else { countBadge.classList.add('hidden'); }
     if (selectAll) { selectAll.checked = n === total && total > 0; selectAll.indeterminate = n > 0 && n < total; }
   }
-  if (selectAll) selectAll.addEventListener('change', () => { checkboxes().forEach(cb => { cb.checked = selectAll.checked; }); updateCount(); });
-  document.addEventListener('change', e => { if (e.target.classList.contains('instance-checkbox')) updateCount(); });
+  if (selectAll) selectAll.addEventListener('change', function() { checkboxes().forEach(function(cb) { cb.checked = selectAll.checked; }); updateCount(); });
+  document.addEventListener('change', function(e) { if (e.target.classList.contains('instance-checkbox')) updateCount(); });
+
+  // Export CSV
+  var exportBtn = document.getElementById('exportCsvBtn');
+  if (exportBtn) exportBtn.addEventListener('click', function() {
+    var checked = document.querySelectorAll('.instance-checkbox:checked');
+    var url = '/export_csv';
+    if (checked.length > 0) {
+      var ids = Array.from(checked).map(function(cb) { return cb.dataset.instanceId; }).join(',');
+      url += '?ids=' + ids;
+    }
+    window.location.href = url;
+  });
 })();
 
 function batchAction(action) {
-  const checked = document.querySelectorAll('.instance-checkbox:checked');
+  var checked = document.querySelectorAll('.instance-checkbox:checked');
   if (checked.length === 0) { alert('请先勾选至少一个实例'); return; }
-  const ids = [...checked].map(cb => cb.dataset.instanceId);
+  var ids = Array.from(checked).map(function(cb) { return parseInt(cb.dataset.instanceId); });
   fetch('/api/batch', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action: action, ids: ids}) })
-    .then(r => r.json()).then(d => { showToast(d.message || '操作完成', d.success ? 'success' : 'error'); setTimeout(() => location.reload(), 1500); })
-    .catch(() => showToast('操作失败', 'error'));
+    .then(function(r) { return r.json(); })
+    .then(function(d) { showToast(d.message || '操作完成', d.success ? 'success' : 'error'); setTimeout(function() { location.reload(); }, 1500); })
+    .catch(function() { showToast('操作失败', 'error'); });
 }
 </script>
 {{ end }}

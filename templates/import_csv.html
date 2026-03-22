@@ -1,27 +1,32 @@
-{{ define "title" }}导入 CSV - ECS Monitor{{ end }}
+{{ define "title" }}CSV 导入 - ECS Monitor{{ end }}
 {{ define "content" }}
-<div class="max-w-2xl mx-auto">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">CSV 批量导入</h1>
+<div class="mx-auto w-full max-w-2xl">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">CSV 批量导入</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">上传 CSV 文件批量导入实例，已存在的 Instance ID 会跳过。</p>
 
-  {{ if .error }}
-  <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-6">{{ .error }}</div>
-  {{ end }}
-  {{ if .flash }}
-  <div class="rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 mb-6">{{ .flash }}</div>
-  {{ end }}
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">选择 CSV 文件</label>
+        <input type="file" name="file" accept=".csv" required
+          class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-100 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 dark:hover:file:bg-slate-600">
+      </div>
+      <button type="submit"
+        class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+        📂 导入
+      </button>
+    </form>
 
-  <form method="POST" enctype="multipart/form-data" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 space-y-4">
-    <div>
-      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">选择 CSV 文件</label>
-      <input type="file" name="file" accept=".csv" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-100 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 dark:hover:file:bg-slate-600">
+    <div class="mt-6 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 p-4">
+      <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">CSV 格式说明</h2>
+      <div class="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+        <p><strong class="text-slate-600 dark:text-slate-300">必需列:</strong> instance_id</p>
+        <p><strong class="text-slate-600 dark:text-slate-300">可选列:</strong> name, region_id, access_key_id, access_key_secret, tag, notes, traffic_strategy, monthly_limit, life_total_limit, alert_threshold_pct</p>
+        <p class="mt-2">默认值：region_id=cn-hangzhou, traffic_strategy=cycle, alert_threshold_pct=80</p>
+      </div>
     </div>
-    <button type="submit" class="bg-slate-900 dark:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors text-sm">📂 导入</button>
-  </form>
 
-  <div class="mt-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
-    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">CSV 格式说明</h2>
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">必需列: instance_id</p>
-    <p class="text-xs text-slate-500 dark:text-slate-400">可选列: name, region_id, access_key_id, access_key_secret, tag, notes, traffic_strategy, monthly_limit, life_total_limit, alert_threshold_pct</p>
+    <a href="/dashboard" class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-6">&larr; 返回</a>
   </div>
 </div>
 {{ end }}

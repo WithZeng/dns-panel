@@ -11,11 +11,12 @@
       <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ .instance.Name }}</h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
         {{ .instance.InstanceID }} · {{ .instance.RegionID }}
-        {{ if .instance.PublicIP }}<span class="ml-2 font-mono text-blue-600">{{ .instance.PublicIP }}</span>{{ end }}
-        {{ if .instance.PrivateIP }}<span class="ml-2 font-mono text-slate-400">{{ .instance.PrivateIP }}</span>{{ end }}
+        {{ if .instance.PublicIP }}<span class="ml-2 font-mono text-blue-600 dark:text-blue-400">Public: {{ .instance.PublicIP }}</span>{{ end }}
+        {{ if .instance.PrivateIP }}<span class="ml-2 font-mono text-slate-400">Private: {{ .instance.PrivateIP }}</span>{{ end }}
+        {{ if .instance.IPv6Addr }}<span class="ml-2 font-mono text-indigo-600 dark:text-indigo-400">IPv6: {{ .instance.IPv6Addr }}</span>{{ end }}
       </p>
     </div>
-    <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex items-center gap-2 flex-wrap">
       {{ if or (eq .instance.Status "Running") (eq .instance.Status "Starting") }}
       <span class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
         <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>在线
@@ -31,6 +32,19 @@
     </div>
   </div>
 
+  <!-- Action Buttons -->
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button onclick="instanceAction('refresh')" class="inline-flex items-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">🔄 刷新状态</button>
+    <button onclick="instanceAction('check')" class="inline-flex items-center rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">📡 强制检查</button>
+    {{ if or (eq .instance.Status "Stopped") (eq .instance.Status "Unknown") }}
+    <button onclick="instanceAction('start')" class="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition">▶ 启动</button>
+    {{ end }}
+    {{ if eq .instance.Status "Running" }}
+    <button onclick="if(confirm('确定要停止实例吗？'))instanceAction('stop')" class="inline-flex items-center rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">⏸ 停止</button>
+    {{ end }}
+    <button onclick="if(confirm('⚠️ 确定释放实例吗？此操作不可恢复！'))instanceAction('release')" class="inline-flex items-center rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition">🗑️ 释放</button>
+  </div>
+
   <!-- Traffic Bars -->
   <div class="mt-6 space-y-4">
     {{ if eq .instance.TrafficStrategy "life" }}
@@ -38,17 +52,17 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-slate-700 dark:text-slate-300">♾️ 生命周期流量</span>
         {{ if gt .instance.LifeTotalLimit 0.0 }}
-        <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{{ printf "%.1f" .instance.TotalTrafficSum }} / {{ printf "%.0f" .instance.LifeTotalLimit }} GB</span>
+        <span class="text-sm font-semibold {{ if gt (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 90.0 }}text-red-600 dark:text-red-400{{ else }}text-emerald-600 dark:text-emerald-400{{ end }}">{{ printf "%.1f" (min (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 100.0) }}%</span>
         {{ end }}
       </div>
       {{ if gt .instance.LifeTotalLimit 0.0 }}
       <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-        <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+        <div class="h-full rounded-full transition-all duration-500 {{ if gt (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-emerald-500 to-teal-600{{ end }}" style="width: {{ printf "%.1f" (min (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 100.0) }}%;"></div>
       </div>
       <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
         <div><div class="text-xs text-slate-500 dark:text-slate-400">已用</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.TotalTrafficSum }} GB</div></div>
         <div><div class="text-xs text-slate-500 dark:text-slate-400">配额</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.LifeTotalLimit }} GB</div></div>
-        <div><div class="text-xs text-slate-500 dark:text-slate-400">剩余</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" (sub .instance.LifeTotalLimit .instance.TotalTrafficSum) }} GB</div></div>
+        <div><div class="text-xs text-slate-500 dark:text-slate-400">剩余</div><div class="font-semibold {{ if le (sub .instance.LifeTotalLimit .instance.TotalTrafficSum) 0.0 }}text-red-600 dark:text-red-400{{ else }}text-slate-900 dark:text-white{{ end }}">{{ printf "%.2f" (sub .instance.LifeTotalLimit .instance.TotalTrafficSum) }} GB</div></div>
       </div>
       {{ end }}
     </div>
@@ -57,22 +71,76 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-slate-700 dark:text-slate-300">📅 月度流量</span>
         {{ if gt .instance.MonthlyLimit 0.0 }}
-        <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ printf "%.1f" .instance.CurrentMonthTraffic }} / {{ printf "%.0f" .instance.MonthlyLimit }} GB</span>
+        <span class="text-sm font-semibold {{ if gt (mul (div .instance.CurrentMonthTraffic .instance.MonthlyLimit) 100.0) 90.0 }}text-red-600 dark:text-red-400{{ else }}text-blue-600 dark:text-blue-400{{ end }}">{{ printf "%.1f" (min (mul (div .instance.CurrentMonthTraffic .instance.MonthlyLimit) 100.0) 100.0) }}%</span>
         {{ end }}
       </div>
       {{ if gt .instance.MonthlyLimit 0.0 }}
       <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-        <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .instance.CurrentMonthTraffic .instance.MonthlyLimit) 100.0) 100.0) }}%;"></div>
+        <div class="h-full rounded-full transition-all duration-500 {{ if gt (mul (div .instance.CurrentMonthTraffic .instance.MonthlyLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-blue-500 to-indigo-600{{ end }}" style="width: {{ printf "%.1f" (min (mul (div .instance.CurrentMonthTraffic .instance.MonthlyLimit) 100.0) 100.0) }}%;"></div>
       </div>
       <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
         <div><div class="text-xs text-slate-500 dark:text-slate-400">已用</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.CurrentMonthTraffic }} GB</div></div>
         <div><div class="text-xs text-slate-500 dark:text-slate-400">配额</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.MonthlyLimit }} GB</div></div>
-        <div><div class="text-xs text-slate-500 dark:text-slate-400">剩余</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" (sub .instance.MonthlyLimit .instance.CurrentMonthTraffic) }} GB</div></div>
+        <div><div class="text-xs text-slate-500 dark:text-slate-400">剩余</div><div class="font-semibold {{ if le (sub .instance.MonthlyLimit .instance.CurrentMonthTraffic) 0.0 }}text-red-600 dark:text-red-400{{ else }}text-slate-900 dark:text-white{{ end }}">{{ printf "%.2f" (sub .instance.MonthlyLimit .instance.CurrentMonthTraffic) }} GB</div></div>
       </div>
       {{ end }}
     </div>
     {{ end }}
   </div>
+</div>
+
+<!-- Forecast Card -->
+<div id="forecastCard" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2">📈 流量预测</h2>
+  <p id="forecastText" class="text-sm text-slate-600 dark:text-slate-300"></p>
+  <p id="forecastDetail" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
+</div>
+
+<!-- CDT Billing -->
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white">💰 CDT 近三月计费</h2>
+    <span id="instanceCdtScope" class="text-xs rounded-full px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">加载中</span>
+  </div>
+  <div id="instanceCdtError" class="hidden rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-700 dark:text-red-200 mb-3"></div>
+  <table class="w-full text-sm mb-3">
+    <thead>
+      <tr class="border-b border-slate-100 dark:border-slate-700 text-left text-xs text-slate-500 dark:text-slate-400">
+        <th class="py-2">月份</th>
+        <th class="py-2">流量</th>
+        <th class="py-2">费用</th>
+      </tr>
+    </thead>
+    <tbody id="instanceCdtTbody">
+      <tr><td colspan="3" class="py-3 text-slate-400">加载中...</td></tr>
+    </tbody>
+  </table>
+  <div class="flex gap-4 text-sm text-slate-600 dark:text-slate-300">
+    <span>合计流量：<strong id="instanceCdtTotalTraffic">-</strong></span>
+    <span>合计费用：<strong id="instanceCdtTotalAmount">-</strong></span>
+  </div>
+</div>
+
+<!-- Traffic Chart -->
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">📊 流量趋势</h2>
+  <div class="h-64">
+    <canvas id="trafficChart"></canvas>
+  </div>
+  <p id="noChartData" class="hidden text-center text-slate-400 dark:text-slate-500 py-10">暂无流量数据，检查实例后将开始记录。</p>
+</div>
+
+<!-- Notes -->
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white">📝 备注</h2>
+    <button id="saveNotesBtn" onclick="saveNotes()"
+      class="text-sm px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">保存</button>
+  </div>
+  <textarea id="notesArea" rows="3"
+    class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-y text-sm"
+    placeholder="在此添加备注信息...">{{ .instance.Notes }}</textarea>
+  <p id="notesSaveStatus" class="text-xs text-emerald-500 mt-1 hidden">已保存</p>
 </div>
 
 <!-- Detail Info -->
@@ -86,23 +154,12 @@
     <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">IPv6</span><span class="font-mono text-xs">{{ if .instance.IPv6Addr }}{{ .instance.IPv6Addr }}{{ else }}-{{ end }}</span></div>
     <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">标签</span><span>{{ if .instance.Tag }}{{ .instance.Tag }}{{ else }}-{{ end }}</span></div>
     <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">监控</span><span>{{ if .instance.MonitorEnabled }}启用{{ else }}关闭{{ end }}</span></div>
-    <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">自动启停</span><span>{{ if .instance.AutoStartStop }}启用{{ else }}关闭{{ end }}</span></div>
+    <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">自动停机</span><span>{{ if .instance.AutoStopEnabled }}启用{{ else }}关闭{{ end }}</span></div>
+    <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">自动启动</span><span>{{ if .instance.AutoStartEnabled }}启用{{ else }}关闭{{ end }}</span></div>
+    <div class="flex justify-between border-b border-slate-50 dark:border-slate-700/50 pb-2"><span class="text-slate-500 dark:text-slate-400">凭据状态</span>
+      <span class="{{ if ne .instance.CredentialStatus "ok" }}text-red-600{{ end }}">{{ if eq .instance.CredentialStatus "ok" }}正常{{ else }}{{ .instance.CredentialStatus }}{{ end }}</span>
+    </div>
   </div>
-  {{ if .instance.Notes }}
-  <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-    <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">备注</div>
-    <div class="text-sm whitespace-pre-wrap text-slate-700 dark:text-slate-300">{{ .instance.Notes }}</div>
-  </div>
-  {{ end }}
-</div>
-
-<!-- Traffic Chart -->
-<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
-  <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">📊 流量趋势</h2>
-  <div class="h-64">
-    <canvas id="trafficChart"></canvas>
-  </div>
-  <p id="noChartData" class="hidden text-center text-slate-400 dark:text-slate-500 py-10">暂无流量数据，检查实例后将开始记录。</p>
 </div>
 
 <!-- Operation History -->
@@ -147,15 +204,21 @@
 {{ define "scripts" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-fetch('/api/traffic_history/{{ .instance.ID }}')
-  .then(r => r.json())
-  .then(data => {
+var instanceId = {{ .instance.ID }};
+var instanceInstanceId = '{{ .instance.InstanceID }}';
+
+// Traffic chart
+fetch('/api/traffic_history/' + instanceId)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
     if (!data.labels || data.labels.length === 0) {
       document.getElementById('noChartData').classList.remove('hidden');
       document.getElementById('trafficChart').style.display = 'none';
       return;
     }
-    const isDark = document.documentElement.classList.contains('dark');
+    var isDark = document.documentElement.classList.contains('dark');
+    var gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
+    var textColor = isDark ? '#94a3b8' : '#64748b';
     new Chart(document.getElementById('trafficChart'), {
       type: 'line',
       data: {
@@ -166,13 +229,110 @@ fetch('/api/traffic_history/{{ .instance.ID }}')
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { color: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)' }, ticks: { color: isDark ? '#94a3b8' : '#64748b', maxRotation: 45, maxTicksLimit: 12 } },
-          y: { grid: { color: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)' }, ticks: { color: isDark ? '#94a3b8' : '#64748b', callback: v => v.toFixed(1)+' GB' }, beginAtZero: true }
+          x: { grid: { color: gridColor }, ticks: { color: textColor, maxRotation: 45, maxTicksLimit: 12 } },
+          y: { grid: { color: gridColor }, ticks: { color: textColor, callback: function(v) { return v.toFixed(1)+' GB'; } }, beginAtZero: true }
         }
       }
     });
   })
-  .catch(() => { document.getElementById('noChartData').classList.remove('hidden'); document.getElementById('trafficChart').style.display = 'none'; });
+  .catch(function() { document.getElementById('noChartData').classList.remove('hidden'); document.getElementById('trafficChart').style.display = 'none'; });
+
+// CDT Billing
+(function() {
+  var tbody = document.getElementById('instanceCdtTbody');
+  var totalTraffic = document.getElementById('instanceCdtTotalTraffic');
+  var totalAmount = document.getElementById('instanceCdtTotalAmount');
+  var scope = document.getElementById('instanceCdtScope');
+  var errBox = document.getElementById('instanceCdtError');
+
+  fetch('/api/instance/' + instanceId + '/billing')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) throw new Error(data.message || 'CDT 加载失败');
+      var months = Array.isArray(data.months) ? data.months : [];
+      tbody.innerHTML = '';
+      months.forEach(function(row) {
+        var tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/30 transition';
+        tr.innerHTML = '<td class="py-2 text-slate-700 dark:text-slate-200">' + (row.month || '-') + '</td>' +
+          '<td class="py-2 text-slate-700 dark:text-slate-200">' + Number(row.traffic || 0).toFixed(4) + ' GB</td>' +
+          '<td class="py-2 text-slate-700 dark:text-slate-200">' + Number(row.amount || 0).toFixed(4) + ' ' + (data.currency || 'CNY') + '</td>';
+        tbody.appendChild(tr);
+      });
+      if (!months.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无 CDT 计费数据</td></tr>';
+      }
+      totalTraffic.textContent = Number(data.total_traffic || 0).toFixed(4) + ' GB';
+      totalAmount.textContent = Number(data.total_amount || 0).toFixed(4) + ' ' + (data.currency || 'CNY');
+      scope.textContent = data.scope === 'instance' ? '实例级' : '账号级';
+    })
+    .catch(function(err) {
+      if (errBox) { errBox.textContent = (err && err.message) || 'CDT 加载失败'; errBox.classList.remove('hidden'); }
+      totalTraffic.textContent = '-';
+      totalAmount.textContent = '-';
+      scope.textContent = '加载失败';
+    });
+})();
+
+// Forecast
+fetch('/api/traffic_forecast/' + instanceId)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.has_forecast) {
+      document.getElementById('forecastCard').classList.remove('hidden');
+      document.getElementById('forecastText').textContent = data.message;
+      if (data.daily_rate) {
+        document.getElementById('forecastDetail').textContent =
+          '日均消耗: ' + data.daily_rate + ' GB/天' +
+          (data.days_remaining ? ' · 剩余: ' + data.days_remaining + ' 天' : '');
+      }
+    }
+  }).catch(function() { });
+
+// Notes save
+function saveNotes() {
+  var notes = document.getElementById('notesArea').value;
+  fetch('/api/instance/' + instanceId + '/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes: notes })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      var status = document.getElementById('notesSaveStatus');
+      status.classList.remove('hidden');
+      setTimeout(function() { status.classList.add('hidden'); }, 2000);
+    }
+  });
+}
+
+// Instance actions
+function instanceAction(action) {
+  var url, method;
+  if (action === 'check') {
+    url = '/api/instance/' + instanceId + '/check';
+    method = 'POST';
+  } else if (action === 'refresh') {
+    url = '/api/instance/' + instanceId + '/refresh';
+    method = 'POST';
+  } else if (action === 'start') {
+    url = '/api/instance/' + instanceId + '/start';
+    method = 'POST';
+  } else if (action === 'stop') {
+    url = '/api/instance/' + instanceId + '/stop';
+    method = 'POST';
+  } else if (action === 'release') {
+    url = '/api/instance/' + instanceId + '/release';
+    method = 'POST';
+  } else return;
+
+  fetch(url, { method: method })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      showToast(d.message || '操作完成', d.success ? 'success' : 'error');
+      if (d.success) setTimeout(function() { location.reload(); }, 1500);
+    })
+    .catch(function() { showToast('操作失败', 'error'); });
+}
 </script>
 {{ end }}
 

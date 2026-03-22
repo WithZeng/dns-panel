@@ -1,0 +1,116 @@
+{{ define "title" }}账号文本导入 - ECS Monitor{{ end }}
+{{ define "content" }}
+<div class="mx-auto w-full max-w-4xl">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">账号文本一键导入</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">粘贴阿里云账号信息文本，自动解析 AK/SK、发现实例并入库。</p>
+
+    <form method="POST" class="space-y-4" id="import-form">
+      <div>
+        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">账号信息文本</label>
+        <textarea name="account_text" rows="12" required placeholder="示例：&#10;登录名称：demo@example.com&#10;AccessKey ID：LTAIxxxxxxxxxxxx&#10;AccessKey Secret：xxxxxxxxxxxxxxxxxxx&#10;备注：香港生产账号"
+          class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-mono">{{ .raw_text }}</textarea>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">支持中英文标签，自动忽略无关行；同一账号重复导入会覆盖更新。</p>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <input type="checkbox" name="scan_all_regions" value="1" checked
+          class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+        扫描账号下全部可用区域（含香港与海外区域）
+      </label>
+
+      <button type="submit" id="import-submit-btn"
+        class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+        一键导入并同步
+      </button>
+    </form>
+
+    <div id="import-progress-wrap" class="mt-6 {{ if not .job_id }}hidden{{ end }}">
+      <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50/70 dark:bg-blue-900/20 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold text-blue-700 dark:text-blue-300">导入进度</div>
+            <div id="import-progress-step" class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">初始化中...</div>
+          </div>
+          <div id="import-progress-percent" class="text-sm font-bold text-blue-700 dark:text-blue-300">0%</div>
+        </div>
+        <div class="mt-3 h-2 w-full bg-blue-100 dark:bg-blue-900/50 rounded-full overflow-hidden">
+          <div id="import-progress-bar" class="h-2 bg-blue-600 rounded-full transition-all" style="width: 0%"></div>
+        </div>
+        <div id="import-progress-message" class="text-xs text-slate-600 dark:text-slate-300 mt-2">任务已创建，等待执行...</div>
+        <div id="import-progress-error" class="mt-3 hidden rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-700 dark:text-red-200 leading-5"></div>
+      </div>
+    </div>
+
+    {{ if .result }}
+    <div class="mt-8 border-t border-slate-100 dark:border-slate-700 pt-5 space-y-3">
+      <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">导入结果</h2>
+      {{ $r := .result }}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+        <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">账号标识：<span class="font-semibold">{{ index $r "account_slug" }}</span></div>
+        <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">发现实例：<span class="font-semibold">{{ index $r "discovered_count" }}</span></div>
+        <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">新增：<span class="font-semibold">{{ index $r "imported_count" }}</span></div>
+        <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">更新：<span class="font-semibold">{{ index $r "updated_count" }}</span></div>
+      </div>
+    </div>
+    {{ end }}
+
+    <a href="/dashboard" class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-6">&larr; 返回</a>
+  </div>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+{{ if .job_id }}
+<script>
+(function() {
+  var jobId = '{{ .job_id }}';
+  if (!jobId) return;
+
+  var wrap = document.getElementById('import-progress-wrap');
+  var stepEl = document.getElementById('import-progress-step');
+  var percentEl = document.getElementById('import-progress-percent');
+  var barEl = document.getElementById('import-progress-bar');
+  var msgEl = document.getElementById('import-progress-message');
+  var errEl = document.getElementById('import-progress-error');
+  var submitBtn = document.getElementById('import-submit-btn');
+
+  if (wrap) wrap.classList.remove('hidden');
+  if (submitBtn) submitBtn.disabled = true;
+
+  function poll() {
+    fetch('/api/account/import_text/status/' + encodeURIComponent(jobId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok || !data.job) throw new Error('无法获取任务状态');
+        var job = data.job;
+        var progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
+        if (stepEl) stepEl.textContent = job.step || '处理中';
+        if (percentEl) percentEl.textContent = progress + '%';
+        if (barEl) barEl.style.width = progress + '%';
+        if (msgEl) msgEl.textContent = job.message || '';
+
+        if (job.status === 'error') {
+          if (errEl) { errEl.classList.remove('hidden'); errEl.textContent = job.message || '导入失败'; }
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+        if (job.status === 'done') {
+          if (submitBtn) submitBtn.disabled = false;
+          window.location.href = '/import_account_text?job_done=' + encodeURIComponent(jobId);
+          return;
+        }
+        setTimeout(poll, 1500);
+      })
+      .catch(function(err) {
+        if (errEl) { errEl.classList.remove('hidden'); errEl.textContent = '查询任务状态失败：' + err.message; }
+        if (submitBtn) submitBtn.disabled = false;
+      });
+  }
+  poll();
+})();
+</script>
+{{ end }}
+{{ end }}
+
+{{ template "base" . }}

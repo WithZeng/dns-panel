@@ -12,16 +12,27 @@ import (
 
 func Dashboard(c *gin.Context) {
 	var instances []models.EcsInstance
-	database.DB.Order("tag, name").Find(&instances)
+	tag := c.Query("tag")
+	q := database.DB.Order("tag, name")
+	if tag != "" {
+		q = q.Where("tag = ?", tag)
+	}
+	q.Find(&instances)
 
 	tags := map[string]bool{}
-	var totalTraffic float64
+	var totalTraffic, totalCost float64
 	var online, stopped int
-	for _, inst := range instances {
+
+	var allInstances []models.EcsInstance
+	database.DB.Find(&allInstances)
+	for _, inst := range allInstances {
 		if inst.Tag != "" {
 			tags[inst.Tag] = true
 		}
+	}
+	for _, inst := range instances {
 		totalTraffic += inst.CurrentMonthTraffic
+		totalCost += inst.HourlyPrice * 24 * 30
 		switch inst.Status {
 		case "Running", "Starting":
 			online++
@@ -35,13 +46,35 @@ func Dashboard(c *gin.Context) {
 		tagList = append(tagList, t)
 	}
 
+	var probeServers []models.ProbeServer
+	database.DB.Find(&probeServers)
+	probeOnline, probeOffline := 0, 0
+	for _, s := range probeServers {
+		if s.IsOnline {
+			probeOnline++
+		} else {
+			probeOffline++
+		}
+	}
+
+	var dnsTotal, dnsEnabled int64
+	database.DB.Model(&models.DnsFailover{}).Count(&dnsTotal)
+	database.DB.Model(&models.DnsFailover{}).Where("enabled = ?", true).Count(&dnsEnabled)
+
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"instances":    instances,
 		"total":        len(instances),
 		"online":       online,
 		"stopped":      stopped,
 		"totalTraffic": totalTraffic,
+		"totalCost":    totalCost,
 		"tags":         tagList,
+		"currentTag":   tag,
+		"probeTotal":   len(probeServers),
+		"probeOnline":  probeOnline,
+		"probeOffline": probeOffline,
+		"dnsTotal":     dnsTotal,
+		"dnsEnabled":   dnsEnabled,
 		"username":     c.GetString("username"),
 	})
 }

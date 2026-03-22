@@ -1,72 +1,177 @@
 {{ define "title" }}发现实例 - ECS Monitor{{ end }}
 {{ define "content" }}
-<div class="max-w-4xl mx-auto">
-  <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">发现 ECS 实例</h1>
+<div class="mx-auto w-full max-w-2xl">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">实例自动发现</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
 
-  {{ if .error }}
-  <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-6">{{ .error }}</div>
-  {{ end }}
+    <form method="POST" class="space-y-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey ID</label>
+          <input name="access_key_id" type="text" value="{{ .ak }}" required
+            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey Secret</label>
+          <input name="access_key_secret" type="password" value="{{ .sk }}" required
+            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+        </div>
+      </div>
 
-  <form method="POST" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 space-y-4 mb-6">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Access Key ID</label>
-        <input type="text" name="access_key_id" value="{{ .ak }}" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      <!-- Region Selector -->
+      <div class="relative">
+        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">区域 ID</label>
+        <select id="region_select"
+          class="w-full appearance-none bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 pr-10 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+          <optgroup label="华北">
+            <option value="cn-beijing">cn-beijing（北京）</option>
+            <option value="cn-zhangjiakou">cn-zhangjiakou（张家口）</option>
+            <option value="cn-huhehaote">cn-huhehaote（呼和浩特）</option>
+            <option value="cn-wulanchabu">cn-wulanchabu（乌兰察布）</option>
+          </optgroup>
+          <optgroup label="华东">
+            <option value="cn-hangzhou">cn-hangzhou（杭州）</option>
+            <option value="cn-shanghai">cn-shanghai（上海）</option>
+            <option value="cn-nanjing">cn-nanjing（南京）</option>
+            <option value="cn-fuzhou">cn-fuzhou（福州）</option>
+          </optgroup>
+          <optgroup label="华南">
+            <option value="cn-shenzhen">cn-shenzhen（深圳）</option>
+            <option value="cn-heyuan">cn-heyuan（河源）</option>
+            <option value="cn-guangzhou">cn-guangzhou（广州）</option>
+          </optgroup>
+          <optgroup label="西南">
+            <option value="cn-chengdu">cn-chengdu（成都）</option>
+          </optgroup>
+          <optgroup label="港澳台">
+            <option value="cn-hongkong">cn-hongkong（香港）</option>
+          </optgroup>
+          <optgroup label="亚太">
+            <option value="ap-southeast-1">ap-southeast-1（新加坡）</option>
+            <option value="ap-southeast-2">ap-southeast-2（悉尼）</option>
+            <option value="ap-southeast-3">ap-southeast-3（吉隆坡）</option>
+            <option value="ap-southeast-5">ap-southeast-5（雅加达）</option>
+            <option value="ap-southeast-6">ap-southeast-6（马尼拉）</option>
+            <option value="ap-southeast-7">ap-southeast-7（曼谷）</option>
+            <option value="ap-northeast-1">ap-northeast-1（东京）</option>
+            <option value="ap-northeast-2">ap-northeast-2（首尔）</option>
+            <option value="ap-south-1">ap-south-1（孟买）</option>
+          </optgroup>
+          <optgroup label="欧洲与美洲">
+            <option value="us-east-1">us-east-1（弗吉尼亚）</option>
+            <option value="us-west-1">us-west-1（硅谷）</option>
+            <option value="eu-west-1">eu-west-1（伦敦）</option>
+            <option value="eu-central-1">eu-central-1（法兰克福）</option>
+          </optgroup>
+          <optgroup label="中东">
+            <option value="me-east-1">me-east-1（迪拜）</option>
+            <option value="me-central-1">me-central-1（利雅得）</option>
+          </optgroup>
+          <option value="__custom__">自定义输入...</option>
+        </select>
+        <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+        </span>
+        <input id="region_custom" type="text"
+          class="hidden mt-2 w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          placeholder="输入自定义 Region ID">
+        <input id="region_id" name="region_id" type="hidden" required value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}">
       </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Access Key Secret</label>
-        <input type="password" name="access_key_secret" value="{{ .sk }}" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">默认区域</label>
-        <input type="text" name="region_id" value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+
+      <button type="submit"
+        class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+        🔍 扫描实例
+      </button>
+    </form>
+
+    {{ if .discovered }}
+    <div class="border-t border-slate-100 dark:border-slate-700 pt-5">
+      <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">发现 {{ len .discovered }} 个实例</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 dark:border-slate-700 text-left text-slate-500 dark:text-slate-400">
+              <th class="py-2 pr-4">Instance ID</th>
+              <th class="py-2 pr-4">名称</th>
+              <th class="py-2 pr-4">IP 地址</th>
+              <th class="py-2 pr-4">状态</th>
+              <th class="py-2">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{ range .discovered }}
+            <tr class="border-b border-slate-50 dark:border-slate-700/50">
+              <td class="py-2.5 pr-4 font-mono text-xs text-slate-600 dark:text-slate-300">{{ .InstanceID }}</td>
+              <td class="py-2.5 pr-4 text-slate-700 dark:text-slate-200">{{ if .Name }}{{ .Name }}{{ else }}-{{ end }}</td>
+              <td class="py-2.5 pr-4">
+                <div class="text-[10px] font-mono text-slate-500">
+                  {{ if .PublicIP }}<span class="text-blue-600 dark:text-blue-400">{{ .PublicIP }}</span>{{ end }}
+                </div>
+              </td>
+              <td class="py-2.5 pr-4">
+                {{ if eq .Status "Running" }}
+                <span class="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400">● Running</span>
+                {{ else if eq .Status "Stopped" }}
+                <span class="inline-flex items-center text-xs font-medium text-red-500 dark:text-red-400">● Stopped</span>
+                {{ else }}
+                <span class="text-xs text-slate-400">{{ .Status }}</span>
+                {{ end }}
+              </td>
+              <td class="py-2.5">
+                {{ if .Added }}
+                <span class="text-xs text-slate-400 dark:text-slate-500">已添加</span>
+                {{ else }}
+                <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">+ 添加</a>
+                {{ end }}
+              </td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
       </div>
     </div>
-    <button type="submit" class="bg-slate-900 dark:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors text-sm">🔍 扫描实例</button>
-  </form>
+    {{ end }}
 
-  {{ if .discovered }}
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-      <h2 class="text-lg font-bold text-slate-900 dark:text-white">发现 {{ len .discovered }} 个实例</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-700/50 text-left text-slate-500 dark:text-slate-400">
-          <tr>
-            <th class="px-4 py-3 font-medium">名称</th>
-            <th class="px-4 py-3 font-medium">Instance ID</th>
-            <th class="px-4 py-3 font-medium">区域</th>
-            <th class="px-4 py-3 font-medium">状态</th>
-            <th class="px-4 py-3 font-medium">IP</th>
-            <th class="px-4 py-3 font-medium text-right">操作</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-          {{ range .discovered }}
-          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-            <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ .Name }}</td>
-            <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ .InstanceID }}</td>
-            <td class="px-4 py-3 text-slate-500">{{ .RegionID }}</td>
-            <td class="px-4 py-3">
-              {{ if eq .Status "Running" }}<span class="text-emerald-600">Running</span>
-              {{ else }}<span class="text-slate-400">{{ .Status }}</span>{{ end }}
-            </td>
-            <td class="px-4 py-3 font-mono text-xs">{{ .PublicIP }}</td>
-            <td class="px-4 py-3 text-right">
-              {{ if .Added }}
-              <span class="text-xs text-slate-400">已添加</span>
-              {{ else }}
-              <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="text-xs text-blue-600 hover:text-blue-800">+ 添加</a>
-              {{ end }}
-            </td>
-          </tr>
-          {{ end }}
-        </tbody>
-      </table>
-    </div>
+    <a href="/dashboard" class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-4">&larr; 返回</a>
   </div>
-  {{ end }}
 </div>
 {{ end }}
+
+{{ define "scripts" }}
+<script>
+(function() {
+  var regionSelect = document.getElementById('region_select');
+  var regionCustom = document.getElementById('region_custom');
+  var regionHidden = document.getElementById('region_id');
+
+  var currentRegion = regionHidden.value;
+  var matchOption = regionSelect.querySelector('option[value="' + currentRegion + '"]');
+  if (matchOption) {
+    matchOption.selected = true;
+  } else if (currentRegion && currentRegion !== 'cn-hangzhou') {
+    regionSelect.value = '__custom__';
+    regionCustom.classList.remove('hidden');
+    regionCustom.value = currentRegion;
+  }
+
+  regionSelect.addEventListener('change', function() {
+    if (this.value === '__custom__') {
+      regionCustom.classList.remove('hidden');
+      regionCustom.focus();
+      regionHidden.value = regionCustom.value;
+    } else {
+      regionCustom.classList.add('hidden');
+      regionCustom.value = '';
+      regionHidden.value = this.value;
+    }
+  });
+
+  regionCustom.addEventListener('input', function() {
+    regionHidden.value = this.value;
+  });
+})();
+</script>
+{{ end }}
+
 {{ template "base" . }}

@@ -14,7 +14,12 @@ import (
 )
 
 func AddInstancePage(c *gin.Context) {
-	c.HTML(http.StatusOK, "add_instance.html", gin.H{})
+	c.HTML(http.StatusOK, "add_instance.html", gin.H{
+		"username":    c.GetString("username"),
+		"instance_id": c.Query("instance_id"),
+		"region_id":   c.Query("region_id"),
+		"name":        c.Query("name"),
+	})
 }
 
 func AddInstancePost(c *gin.Context) {
@@ -77,7 +82,7 @@ func EditInstancePage(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/dashboard")
 		return
 	}
-	c.HTML(http.StatusOK, "edit_instance.html", gin.H{"instance": inst})
+	c.HTML(http.StatusOK, "edit_instance.html", gin.H{"instance": inst, "username": c.GetString("username")})
 }
 
 func EditInstancePost(c *gin.Context) {
@@ -133,6 +138,7 @@ func InstanceDetail(c *gin.Context) {
 	c.HTML(http.StatusOK, "instance_detail.html", gin.H{
 		"instance": inst,
 		"logs":     logs,
+		"username": c.GetString("username"),
 	})
 }
 

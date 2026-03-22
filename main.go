@@ -184,6 +184,9 @@ func main() {
 		auth.POST("/discover", handler.DiscoverPost)
 		auth.GET("/import_csv", handler.ImportCSVPage)
 		auth.POST("/import_csv", handler.ImportCSVPost)
+		auth.GET("/import_account_text", handler.ImportAccountTextPage)
+		auth.POST("/import_account_text", handler.ImportAccountTextPost)
+		auth.GET("/api/account/import_text/status/:job_id", handler.ImportAccountTextStatus)
 
 		// Batch & check all
 		auth.POST("/api/batch", handler.BatchAction)
