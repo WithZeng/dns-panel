@@ -11,15 +11,45 @@
         <li>仅导入实例数据（AK/SK、流量、配置等），<strong>不会更改面板密码</strong></li>
         <li>已有的实例（相同 Instance ID）会被更新，新实例会被添加</li>
         <li>支持 Python 版和 Go 版的数据库备份文件</li>
-        <li>对文件名无要求，只要是有效的 SQLite 数据库即可</li>
+        <li>Python 版数据库的 AK/SK 会自动转换加密格式（需提供旧密钥）</li>
       </ul>
     </div>
 
+    {{ if .error }}
+    <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
+    {{ end }}
+    {{ if .flash }}
+    <div class="rounded-xl border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
+    {{ end }}
+
     <form method="POST" enctype="multipart/form-data">
-      <div class="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
-        <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,.bak" required
-          class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-900 file:text-white dark:file:bg-blue-600 hover:file:bg-slate-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">支持任意 SQLite 数据库文件（.db / .sqlite / .bak 等）</p>
+      <div class="space-y-4">
+        <div class="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
+          <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,.bak" required
+            class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-900 file:text-white dark:file:bg-blue-600 hover:file:bg-slate-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">支持任意 SQLite 数据库文件</p>
+        </div>
+
+        {{ if .need_fernet }}
+        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+          <div class="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">检测到 Python 版加密凭据（{{ .instance_count }} 个实例）</div>
+          <p class="text-xs text-amber-600 dark:text-amber-400 mb-3">请输入旧版 Python 面板的 ENCRYPT_KEY（Fernet 密钥），通常在旧面板的 <code>.env</code> 文件或 <code>instance/encrypt.key</code> 中。</p>
+          <input type="text" name="fernet_key" placeholder="例如：dGhpc0lzQVRlc3RLZXlGb3JUZXN0aW5n..."
+            class="w-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-amber-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-mono"
+            required>
+        </div>
+        {{ else }}
+        <details class="rounded-xl border border-slate-200 dark:border-slate-600">
+          <summary class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+            从 Python 版导入？点击展开填写旧版加密密钥
+          </summary>
+          <div class="px-4 pb-4">
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">如果数据库来自 Python 版面板，请输入旧版 ENCRYPT_KEY 以正确转换 AK/SK 凭据。密钥在旧面板的 <code>.env</code> 文件或 <code>instance/encrypt.key</code> 中。</p>
+            <input type="text" name="fernet_key" placeholder="Fernet 密钥（留空则自动检测）"
+              class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-mono">
+          </div>
+        </details>
+        {{ end }}
       </div>
 
       <button type="submit"

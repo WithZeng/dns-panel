@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/glebarez/sqlite"
@@ -23,6 +24,8 @@ func RestoreDBPage(c *gin.Context) {
 
 func RestoreDBPost(c *gin.Context) {
 	username := c.GetString("username")
+	fernetKey := c.PostForm("fernet_key")
+
 	file, _, err := c.Request.FormFile("db_file")
 	if err != nil {
 		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "请选择数据库文件"})
@@ -103,16 +106,65 @@ func RestoreDBPost(c *gin.Context) {
 		return
 	}
 
-	imported, updated := 0, 0
+	hasFernet := false
 	for _, s := range srcInstances {
+		if crypto.IsFernetToken(s.AccessKeyID) || crypto.IsFernetToken(s.AccessKeySK) {
+			hasFernet = true
+			break
+		}
+	}
+
+	if hasFernet && fernetKey == "" {
+		c.HTML(http.StatusOK, "restore_db.html", gin.H{
+			"username":      username,
+			"need_fernet":   true,
+			"instance_count": len(srcInstances),
+			"error":         "检测到 Python 版 Fernet 加密的凭据，请输入旧版加密密钥（ENCRYPT_KEY）后重新提交。",
+		})
+		return
+	}
+
+	reencrypt := func(ciphertext string) (string, error) {
+		if ciphertext == "" {
+			return "", nil
+		}
+		if crypto.IsFernetToken(ciphertext) {
+			if fernetKey == "" {
+				return "", fmt.Errorf("missing fernet key")
+			}
+			plain, err := crypto.DecryptFernet(ciphertext, fernetKey)
+			if err != nil {
+				return "", fmt.Errorf("fernet decrypt: %w", err)
+			}
+			return crypto.Encrypt(plain)
+		}
+		if _, err := crypto.Decrypt(ciphertext); err == nil {
+			return ciphertext, nil
+		}
+		return crypto.Encrypt(ciphertext)
+	}
+
+	imported, updated, credErrors := 0, 0, 0
+	for _, s := range srcInstances {
+		newAK, errAK := reencrypt(s.AccessKeyID)
+		newSK, errSK := reencrypt(s.AccessKeySK)
+		if errAK != nil || errSK != nil {
+			credErrors++
+			log.Printf("[restore] credential re-encrypt failed for %s: AK=%v SK=%v", s.InstanceID, errAK, errSK)
+			newAK = ""
+			newSK = ""
+		}
+
 		var existing models.EcsInstance
 		if database.DB.Where("instance_id = ?", s.InstanceID).First(&existing).Error == nil {
 			existing.Name = s.Name
 			existing.RegionID = s.RegionID
-			if s.AccessKeyID != "" {
-				existing.AccessKeyID = s.AccessKeyID
-				existing.AccessKeySK = s.AccessKeySK
-				existing.IsEncrypted = s.IsEncrypted
+			if newAK != "" {
+				existing.AccessKeyID = newAK
+				existing.AccessKeySK = newSK
+				existing.IsEncrypted = true
+				existing.CredentialStatus = "ok"
+				existing.CredentialError = ""
 			}
 			existing.TrafficStrategy = s.TrafficStrategy
 			existing.MonthlyLimit = s.MonthlyLimit
@@ -138,9 +190,9 @@ func RestoreDBPost(c *gin.Context) {
 				Name:                s.Name,
 				InstanceID:          s.InstanceID,
 				RegionID:            s.RegionID,
-				AccessKeyID:         s.AccessKeyID,
-				AccessKeySK:         s.AccessKeySK,
-				IsEncrypted:         s.IsEncrypted,
+				AccessKeyID:         newAK,
+				AccessKeySK:         newSK,
+				IsEncrypted:         true,
 				TrafficStrategy:     s.TrafficStrategy,
 				MonthlyLimit:        s.MonthlyLimit,
 				LifeTotalLimit:      s.LifeTotalLimit,
@@ -167,10 +219,15 @@ func RestoreDBPost(c *gin.Context) {
 		}
 	}
 
-	log.Printf("[restore] Imported %d instances, updated %d from uploaded DB", imported, updated)
+	log.Printf("[restore] Imported %d, updated %d, credential errors %d", imported, updated, credErrors)
+
+	msg := fmt.Sprintf("导入完成！新增 %d 个实例，更新 %d 个实例。", imported, updated)
+	if credErrors > 0 {
+		msg += fmt.Sprintf(" 其中 %d 个实例凭据转换失败（密钥可能不正确），需要手动重新填写 AK/SK。", credErrors)
+	}
 
 	c.HTML(http.StatusOK, "restore_db.html", gin.H{
 		"username": username,
-		"flash":    fmt.Sprintf("导入完成！新增 %d 个实例，更新 %d 个实例。面板密码未更改。", imported, updated),
+		"flash":    msg,
 	})
 }
