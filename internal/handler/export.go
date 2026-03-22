@@ -1,14 +1,17 @@
 package handler
 
 import (
+	"archive/zip"
 	"encoding/csv"
 	"fmt"
 	"math"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/WithZeng/dns-panel/internal/service/aliyun"
@@ -16,29 +19,111 @@ import (
 )
 
 func ExportCSV(c *gin.Context) {
+	idsParam := c.Query("ids")
+
 	var instances []models.EcsInstance
-	database.DB.Order("tag, name").Find(&instances)
+	if idsParam != "" {
+		var ids []int
+		for _, s := range strings.Split(idsParam, ",") {
+			if id, err := strconv.Atoi(strings.TrimSpace(s)); err == nil {
+				ids = append(ids, id)
+			}
+		}
+		database.DB.Where("id IN ?", ids).Order("tag, name").Find(&instances)
+	} else {
+		database.DB.Order("tag, name").Find(&instances)
+	}
 
 	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=instances_%s.csv", time.Now().Format("20060102")))
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=instances_%s.csv", time.Now().Format("20060102_1504")))
+	c.Writer.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
 
 	w := csv.NewWriter(c.Writer)
-	w.Write([]string{"名称", "Instance ID", "地域", "状态", "流量策略", "月流量(GB)", "终身流量(GB)", "公网IP", "标签"})
+	w.Write([]string{
+		"name", "instance_id", "region_id", "access_key_id", "access_key_secret",
+		"tag", "notes", "traffic_strategy", "monthly_limit", "life_total_limit",
+		"monthly_free_allowance", "alert_threshold_pct",
+		"auto_stop_enabled", "auto_start_enabled",
+		"total_traffic_sum", "current_month_traffic",
+		"status", "public_ip", "private_ip", "ipv6_addr",
+	})
 
 	for _, inst := range instances {
+		ak, sk := "", ""
+		if inst.AccessKeyID != "" {
+			decAK, errAK := crypto.Decrypt(inst.AccessKeyID)
+			decSK, errSK := crypto.Decrypt(inst.AccessKeySK)
+			if errAK == nil && errSK == nil {
+				ak, sk = decAK, decSK
+			}
+		}
+
 		w.Write([]string{
 			inst.Name,
 			inst.InstanceID,
 			inst.RegionID,
-			inst.Status,
-			inst.TrafficStrategy,
-			fmt.Sprintf("%.2f", inst.CurrentMonthTraffic),
-			fmt.Sprintf("%.2f", inst.TotalTrafficSum),
-			inst.PublicIP,
+			ak,
+			sk,
 			inst.Tag,
+			inst.Notes,
+			inst.TrafficStrategy,
+			fmt.Sprintf("%.2f", inst.MonthlyLimit),
+			fmt.Sprintf("%.2f", inst.LifeTotalLimit),
+			fmt.Sprintf("%.2f", inst.MonthlyFreeAllow),
+			strconv.Itoa(inst.AlertThresholdPct),
+			strconv.FormatBool(inst.AutoStopEnabled),
+			strconv.FormatBool(inst.AutoStartEnabled),
+			fmt.Sprintf("%.2f", inst.TotalTrafficSum),
+			fmt.Sprintf("%.2f", inst.CurrentMonthTraffic),
+			inst.Status,
+			inst.PublicIP,
+			inst.PrivateIP,
+			inst.IPv6Addr,
 		})
 	}
 	w.Flush()
+}
+
+func DownloadBackup(c *gin.Context) {
+	dbPath := os.Getenv("DNS_PANEL_DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/panel.db"
+	}
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "数据库文件不存在"})
+		return
+	}
+
+	keyPath := "data/encrypt.key"
+	hasKey := false
+	if _, err := os.Stat(keyPath); err == nil {
+		hasKey = true
+	}
+
+	timestamp := time.Now().Format("20060102_1504")
+	filename := fmt.Sprintf("backup_%s.zip", timestamp)
+
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	zw := zip.NewWriter(c.Writer)
+	defer zw.Close()
+
+	dbData, err := os.ReadFile(dbPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "读取数据库失败"})
+		return
+	}
+	dbEntry, _ := zw.Create("panel.db")
+	dbEntry.Write(dbData)
+
+	if hasKey {
+		keyData, err := os.ReadFile(keyPath)
+		if err == nil {
+			keyEntry, _ := zw.Create("encrypt.key")
+			keyEntry.Write(keyData)
+		}
+	}
 }
 
 func APITrafficHistory(c *gin.Context) {
@@ -53,18 +138,6 @@ func APITrafficHistory(c *gin.Context) {
 		data[i] = l.TrafficGB
 	}
 	c.JSON(http.StatusOK, gin.H{"labels": labels, "data": data})
-}
-
-func DownloadBackup(c *gin.Context) {
-	dbPath := os.Getenv("DNS_PANEL_DB_PATH")
-	if dbPath == "" {
-		dbPath = "data/panel.db"
-	}
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "数据库文件不存在"})
-		return
-	}
-	c.FileAttachment(dbPath, "panel_backup.db")
 }
 
 func APITrafficForecast(c *gin.Context) {
