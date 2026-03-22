@@ -119,6 +119,59 @@ func GetTotalTrafficGB(c *Client, regionID string) (float64, error) {
 	return totalBytes / (1024 * 1024 * 1024), nil
 }
 
+func GetCDTLifetimeTrafficGB(c *Client, instanceID, regionID string) (float64, error) {
+	now := time.Now().UTC()
+	cursor := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	var allRows []map[string]interface{}
+	for i := 0; i < 36; i++ {
+		month := cursor.Format("2006-01")
+		rows, err := queryInstanceBillRows(c, month)
+		if err != nil {
+			if i >= 3 {
+				break
+			}
+			return 0, classifyBillingError(err)
+		}
+		allRows = append(allRows, rows...)
+		cursor = cursor.AddDate(0, -1, 0)
+	}
+
+	instanceKey := strings.ToLower(strings.TrimSpace(instanceID))
+	sawInstanceDim := false
+	var cdtRows []map[string]interface{}
+	for _, row := range allRows {
+		if !isCDTBillRow(row) {
+			continue
+		}
+		cdtRows = append(cdtRows, row)
+		instNo := firstNonEmpty(mapStr(row, "InstanceID"), mapStr(row, "InstanceId"))
+		if instNo != "" {
+			sawInstanceDim = true
+		}
+	}
+
+	useAccountFallback := instanceKey != "" && !sawInstanceDim
+
+	var totalGB float64
+	for _, row := range cdtRows {
+		instNo := strings.ToLower(strings.TrimSpace(firstNonEmpty(mapStr(row, "InstanceID"), mapStr(row, "InstanceId"))))
+		if instanceKey != "" && !useAccountFallback && instNo != instanceKey {
+			continue
+		}
+		totalGB += usageToTrafficGB(toFloat(row["Usage"]), mapStr(row, "UsageUnit"))
+	}
+
+	if totalGB <= 0 {
+		cdtTraffic, err := GetTotalTrafficGB(c, regionID)
+		if err == nil && cdtTraffic > 0 {
+			totalGB = cdtTraffic
+		}
+	}
+
+	return math.Round(totalGB*10000) / 10000, nil
+}
+
 func GetCDTThreeMonthBilling(c *Client, instanceID, regionID string) (*CDTBillingSummary, error) {
 	monthKeys := monthKeysForRecentThree()
 	var allRows []map[string]interface{}

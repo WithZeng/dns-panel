@@ -89,7 +89,16 @@ func CheckAndManageInstance(instanceID uint) error {
 	inst.LastAPITraffic = currentAPIGB
 
 	if inst.TrafficStrategy == "life" {
-		inst.TotalTrafficSum += deltaGB
+		lifetimeGB, lifetimeErr := aliyun.GetCDTLifetimeTrafficGB(client, inst.InstanceID, inst.RegionID)
+		if lifetimeErr == nil && lifetimeGB > 0 {
+			inst.TotalTrafficSum = lifetimeGB
+			log.Printf("[monitor] %s life traffic from CDT billing: %.4f GB", inst.Name, lifetimeGB)
+		} else {
+			inst.TotalTrafficSum += deltaGB
+			if lifetimeErr != nil {
+				log.Printf("[monitor] %s CDT lifetime query failed, fallback to delta: %v", inst.Name, lifetimeErr)
+			}
+		}
 	} else {
 		inst.TotalTrafficSum = inst.CurrentMonthTraffic
 	}
