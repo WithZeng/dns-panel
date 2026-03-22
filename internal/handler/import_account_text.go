@@ -34,33 +34,48 @@ var allAliyunRegions = []string{
 }
 
 func ImportAccountTextPage(c *gin.Context) {
+	githubRepo := strings.TrimSpace(os.Getenv("GITHUB_SYNC_REPO"))
 	doneJobID := c.Query("job_done")
 	if doneJobID != "" {
 		var job models.ImportJob
 		if database.DB.First(&job, "id = ?", doneJobID).Error == nil && job.Status == "done" {
 			result := job.GetResult()
 			c.HTML(http.StatusOK, "import_account_text.html", gin.H{
-				"username": c.GetString("username"),
-				"result":   result,
+				"username":    c.GetString("username"),
+				"result":      result,
+				"github_repo": githubRepo,
 			})
 			return
 		}
 	}
-	c.HTML(http.StatusOK, "import_account_text.html", gin.H{"username": c.GetString("username")})
+	c.HTML(http.StatusOK, "import_account_text.html", gin.H{
+		"username":    c.GetString("username"),
+		"github_repo": githubRepo,
+	})
 }
 
 func ImportAccountTextPost(c *gin.Context) {
 	rawText := c.PostForm("account_text")
+	githubRepo := strings.TrimSpace(c.PostForm("github_repo"))
+	githubSync := c.PostForm("github_sync") == "1"
+
 	if strings.TrimSpace(rawText) == "" {
 		c.HTML(http.StatusOK, "import_account_text.html", gin.H{
-			"username": c.GetString("username"),
-			"error":    "请粘贴账号文本",
-			"raw_text": rawText,
+			"username":    c.GetString("username"),
+			"error":       "请粘贴账号文本",
+			"raw_text":    rawText,
+			"github_repo": githubRepo,
 		})
 		return
 	}
 	if len(rawText) > 10000 {
 		rawText = rawText[:10000]
+	}
+
+	syncRepo := ""
+	if githubSync && githubRepo != "" {
+		syncRepo = githubRepo
+		persistGitHubRepo(githubRepo)
 	}
 
 	scanAll := c.PostForm("scan_all_regions") == "1"
@@ -75,13 +90,48 @@ func ImportAccountTextPost(c *gin.Context) {
 	}
 	database.DB.Create(&job)
 
-	go runAccountImport(jobID, rawText, scanAll, stopOnFirst)
+	go runAccountImport(jobID, rawText, scanAll, stopOnFirst, syncRepo)
 
 	c.HTML(http.StatusOK, "import_account_text.html", gin.H{
-		"username": c.GetString("username"),
-		"raw_text": rawText,
-		"job_id":   jobID,
+		"username":    c.GetString("username"),
+		"raw_text":    rawText,
+		"job_id":      jobID,
+		"github_repo": githubRepo,
 	})
+}
+
+func persistGitHubRepo(repo string) {
+	current := strings.TrimSpace(os.Getenv("GITHUB_SYNC_REPO"))
+	if repo == current {
+		return
+	}
+	os.Setenv("GITHUB_SYNC_REPO", repo)
+
+	envPath := ".env"
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		f, _ := os.OpenFile(envPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if f != nil {
+			fmt.Fprintf(f, "\nGITHUB_SYNC_REPO=%s\n", repo)
+			f.Close()
+		}
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+	found := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "GITHUB_SYNC_REPO=") || strings.HasPrefix(trimmed, "GITHUB_SYNC_REPO =") {
+			lines[i] = "GITHUB_SYNC_REPO=" + repo
+			found = true
+			break
+		}
+	}
+	if !found {
+		lines = append(lines, "GITHUB_SYNC_REPO="+repo)
+	}
+	os.WriteFile(envPath, []byte(strings.Join(lines, "\n")), 0644)
 }
 
 func ImportAccountTextStatus(c *gin.Context) {
@@ -205,7 +255,7 @@ func slugifyAccount(s string) string {
 	return s
 }
 
-func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool) {
+func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRepo string) {
 	updateJob := func(step, message string, progress int) {
 		database.DB.Model(&models.ImportJob{}).Where("id = ?", jobID).Updates(map[string]interface{}{
 			"step": step, "message": message, "progress": progress, "updated_at": time.Now(),
@@ -403,7 +453,6 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool) {
 	}
 
 	syncTarget := ""
-	githubRepo := strings.TrimSpace(os.Getenv("GITHUB_SYNC_REPO"))
 	if githubRepo != "" {
 		updateJob("同步GitHub", "正在同步到 GitHub 私有仓库...", 90)
 
