@@ -118,7 +118,7 @@
   </nav>
   {{ end }}
 
-  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-10">
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-32 sm:pb-16">
     {{ if .flash }}
     <div class="space-y-2 mb-5" id="flashStack">
       <div class="rounded-xl border px-4 py-3 text-sm bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700">{{ .flash }}</div>
@@ -132,6 +132,53 @@
     {{ block "content" . }}{{ end }}
   </main>
 
+  {{ if .username }}
+  <footer class="border-t border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm mt-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+      <div class="flex items-center gap-3">
+        <span>ECS Monitor <span id="footer-version" class="font-mono">v0.4.0</span></span>
+        <a href="https://github.com/WithZeng/dns-panel" target="_blank" rel="noopener" class="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200 transition">
+          <svg class="h-4 w-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" id="checkUpdateBtn" onclick="checkForUpdate()" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+          <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+          检查更新
+        </button>
+        <span id="updateStatus" class="hidden"></span>
+      </div>
+    </div>
+  </footer>
+  {{ end }}
+
+  <script>
+    function checkForUpdate() {
+      var btn = document.getElementById('checkUpdateBtn');
+      var status = document.getElementById('updateStatus');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-70'); }
+      fetch('/api/check_update')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (status) {
+            status.classList.remove('hidden');
+            if (data.has_update) {
+              status.innerHTML = '<a href="' + (data.release_url || 'https://github.com/WithZeng/dns-panel/releases') + '" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">🎉 ' + data.message + '</a>';
+            } else {
+              status.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400">✅ ' + data.message + '</span>';
+              setTimeout(function() { status.classList.add('hidden'); }, 5000);
+            }
+          }
+        })
+        .catch(function() {
+          if (status) { status.classList.remove('hidden'); status.innerHTML = '<span class="text-amber-600">检查失败</span>'; }
+        })
+        .finally(function() {
+          if (btn) { btn.disabled = false; btn.classList.remove('opacity-70'); }
+        });
+    }
+  </script>
   <script>
     (function () {
       const html = document.documentElement;

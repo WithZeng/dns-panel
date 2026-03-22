@@ -351,6 +351,10 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 			existing.PublicIP = d.PublicIP
 			existing.CredentialStatus = "ok"
 			existing.CredentialError = ""
+			existing.TrafficStrategy = "life"
+			existing.LifeTotalLimit = 500
+			existing.AutoStartEnabled = true
+			existing.MonitorEnabled = true
 			database.DB.Save(&existing)
 			updated++
 		} else {
@@ -361,9 +365,11 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 				AccessKeyID:       encAK,
 				AccessKeySK:       encSK,
 				IsEncrypted:       true,
-				TrafficStrategy:   "cycle",
+				TrafficStrategy:   "life",
+				LifeTotalLimit:    500,
 				AlertThresholdPct: 80,
 				MonitorEnabled:    true,
+				AutoStartEnabled:  true,
 				Status:            d.Status,
 				PublicIP:          d.PublicIP,
 				Tag:               accountSlug,

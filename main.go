@@ -233,6 +233,10 @@ func main() {
 		auth.GET("/api/dns_failover/logs", handler.APIDNSFailoverLogs)
 		auth.POST("/api/dns_failover/:id/test", handler.APIDNSFailoverTestSwitch)
 
+		// Version & update
+		auth.GET("/api/version", handler.VersionInfo)
+		auth.GET("/api/check_update", handler.CheckUpdate)
+
 		// API
 		auth.GET("/api/instances", handler.APIInstances)
 		auth.POST("/api/instance/:id/notes", handler.UpdateNotes)
