@@ -8,73 +8,60 @@
 
 | 模块 | 说明 |
 |------|------|
-| **流量监控** | 5 分钟轮询阿里云 API，按月/生命周期两种计量模式统计流量，超限自动停机 |
-| **Dashboard** | 实例状态总览、流量占比图表、固定静态布局（不支持拖拽） |
+| **流量监控** | 5 分钟轮询阿里云 CDT/账单 API，按月/生命周期两种计量模式统计流量，超限自动停机 |
+| **Dashboard** | 实例状态总览、流量占比图表、3 个月 CDT 流量账单卡片 |
 | **定时任务** | 按星期/小时/分钟维度定时开关 ECS 实例 |
 | **DNS 故障转移** | 结合 Cloudflare DNS，通过 Ping/端口探测自动切换 A/AAAA 记录 |
 | **探针/Checker** | 可在国内/国外部署独立探测节点，WebSocket 实时上报 |
-| **通知告警** | 支持企业微信、钉钉、Telegram Webhook；含每日流量报告 |
+| **通知告警** | 支持企业微信、钉钉、Telegram Webhook；含每日流量报告与异常检测 |
 | **安全组管理** | 在线查看/编辑阿里云安全组规则，一键开启 IPv6 |
-| **AK/SK 加密** | Fernet 对称加密存储阿里云密钥 |
+| **AK/SK 加密** | Fernet 对称加密存储阿里云密钥，丢失检测与告警 |
 | **自动备份** | 每日凌晨本地备份 SQLite，可选 Google Drive 远程备份 |
+| **批量导入** | 支持 CSV 和文本批量导入实例，后台异步处理，断点续传 |
+| **凭证状态** | 实时检测 AK/SK 有效性，Dashboard 显示凭证失效告警 |
+
+---
+
+## 分支说明
+
+| 分支 | 语言 | 状态 |
+|------|------|------|
+| `main` | Python (Flask) | 当前稳定版，功能完整 |
+| `go-rewrite` | Go (Gin) | 全新重写版，单二进制部署，性能更优 |
+
+> Go 版本已完成全部核心功能迁移（监控、调度、通知、探针、DNS 故障转移、安全组），采用原生阿里云 API 签名无需 SDK 依赖。稳定后将合入 main。
 
 ---
 
 ## 项目文件结构
 
-> **仅以下为本项目代码**，`komari-1.1.7/` 为第三方无关项目，已在 `.gitignore` 中排除。
-
 ```
 dns-panel/
-│
-├── app.py                  # Flask 主入口，调度器、数据库初始化、定时任务注册
-├── models.py               # SQLAlchemy 数据模型（User / EcsInstance / DnsFailover …）
-├── routes.py               # Web 路由（登录、Dashboard、实例管理、安全组、日志…）
-├── probe_routes.py         # 探针 & DNS 故障转移路由（WebSocket、Checker API）
-├── monitor.py              # 阿里云 ECS API 封装（流量查询、开/关/释放、安全组操作）
-├── cloudflare_manager.py   # Cloudflare DNS API 封装（CRUD、Upsert）
+├── app.py                  # Flask 主入口，调度器、数据库初始化
+├── models.py               # SQLAlchemy 数据模型
+├── routes.py               # Web 路由（登录、Dashboard、实例管理）
+├── route_helpers.py         # 路由辅助函数（安全组、导入、发现等）
+├── probe_routes.py         # 探针 & DNS 故障转移路由（WebSocket）
+├── monitor.py              # 阿里云 ECS API（流量查询、启停、安全组）
+├── cloudflare_manager.py   # Cloudflare DNS API 封装
 ├── notifier.py             # 告警通知（企业微信 / 钉钉 / Telegram）
-├── crypto_utils.py         # AK/SK Fernet 加解密
+├── crypto_utils.py         # AK/SK Fernet 加解密（含丢失检测）
+├── extensions.py           # Flask 扩展初始化
 ├── backup_utils.py         # Google Drive 远程备份
 ├── gunicorn.conf.py        # Gunicorn 生产配置（gevent worker）
 ├── requirements.txt        # Python 依赖
 │
 ├── templates/              # Jinja2 HTML 模板
-│   ├── base.html           #   公共布局
-│   ├── login.html          #   登录页
-│   ├── dashboard.html      #   Dashboard 总览
-│   ├── instance_detail.html#   实例详情
-│   ├── dns_failover.html   #   DNS 故障转移配置
-│   ├── probe_servers.html  #   探针节点管理
-│   ├── schedules.html      #   定时任务
-│   ├── security_group.html #   安全组管理
-│   ├── alert_config.html   #   告警配置
-│   ├── logs.html           #   操作日志
-│   └── ...                 #   其他页面
-│
-├── agent/                  # 远程探针 Agent
-│   ├── agent.py            #   Agent 主程序
-│   ├── port_checker.py     #   端口探测服务
-│   ├── install.sh          #   Agent 安装脚本
-│   ├── install_checker.sh  #   Checker 安装脚本
-│   ├── install_checker_cn.sh   # 国内加速安装脚本
-│   └── install_checker_global.sh # 国际线路安装脚本
-│
+├── static/                 # 前端静态资源
+├── agent/                  # 远程探针 Agent & Checker
 ├── tests/                  # 单元测试
-│   ├── test_auth_force_password_change.py
-│   └── test_dns_failover_api.py
-│
-├── tools/                  # 辅助工具
-│   ├── check_text_encoding.py
-│   └── security_audit.sh
+├── tools/                  # 辅助运维工具
 │
 ├── Dockerfile              # Docker 镜像定义
 ├── docker-compose.yml      # Docker Compose 编排
-├── install.sh              # 远程一键部署/更新引导脚本（curl 直接调用）
-├── panel.sh                # Linux 统一管理脚本（deploy/update/restart/stop/…）
-├── panel.ps1               # Windows 统一管理脚本
-├── README-Docker.md        # Docker 部署详细文档
-├── .gitignore              # Git 忽略规则
+├── install.sh              # 远程一键部署/更新脚本
+├── panel.sh                # Linux 管理脚本
+├── panel.ps1               # Windows 管理脚本
 └── .env                    # 环境变量（不入库）
 ```
 
@@ -89,8 +76,6 @@ dns-panel/
 - *(可选)* Cloudflare API Token（DNS 故障转移功能）
 
 ### 一键部署（推荐）
-
-服务器上执行一条命令即可部署，无需手动 clone：
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
@@ -108,7 +93,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/inst
 bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) restart
 ```
 
-> 新安装默认目录仍为 `/opt/dns-panel`；远程更新脚本会优先自动识别已有安装目录并原地升级（如 `/root/dns-panel`、当前项目目录），也可通过 `INSTALL_DIR=/your/path` 强制指定。
+> 新安装默认目录为 `/opt/dns-panel`；远程更新脚本会自动识别已有安装目录并原地升级，也可通过 `INSTALL_DIR=/your/path` 强制指定。
 
 <details>
 <summary>手动 clone 部署（备选）</summary>
@@ -140,24 +125,6 @@ http://<服务器IP>:5000
 
 ---
 
-## 一键更新
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
-```
-
-或在项目目录内直接执行：
-
-```bash
-bash panel.sh update
-```
-
-流程：备份 DB → `git pull` → `docker compose build --no-cache` → 重启 → 健康检查。
-
-可选参数：`--skip-backup` / `--skip-pull`（Linux），`-SkipBackup` / `-SkipPull`（Windows）。
-
----
-
 ## 环境变量
 
 在 `.env` 中配置（首次部署自动生成）：
@@ -171,17 +138,18 @@ bash panel.sh update
 | `TZ` | 时区 | `Asia/Shanghai` |
 | `DNS_FAILOVER_TEST_MODE` | 故障检测模式（`panel_local` / `checker`） | `panel_local` |
 | `DNS_PANEL_DISABLE_SCHEDULER` | 强制禁用定时任务（测试用） | `0` |
-| `DNS_PANEL_ROLE` | 进程角色（`web`/`scheduler`/`all`），仅 `scheduler` 或 `all` 运行调度器 | `all` |
+| `DNS_PANEL_ROLE` | 进程角色（`web`/`scheduler`/`all`） | `all` |
+| `DATA_RETENTION_DAYS` | 日志保留天数 | `90` |
 
 ---
 
 ## 技术栈
 
-- **后端**：Python 3.11 / Flask / SQLAlchemy / APScheduler / gevent
-- **前端**：Jinja2 + Bootstrap（服务端渲染）
-- **数据库**：SQLite（通过 Volume 持久化至 `instance/`）
+- **后端**：Python 3.11 / Flask 3.0 / SQLAlchemy / APScheduler / gevent
+- **前端**：Jinja2 + Tailwind CSS（服务端渲染）
+- **数据库**：SQLite（WAL 模式，Volume 持久化至 `instance/`）
 - **容器**：Docker + Gunicorn（gevent worker）
-- **云 API**：阿里云 ECS SDK / Cloudflare REST API
+- **云 API**：阿里云 ECS/CDT/Billing SDK / Cloudflare REST API
 
 ---
 
@@ -199,29 +167,26 @@ bash panel.sh help        # 查看所有命令
 
 ### 数据备份与恢复
 
-数据库文件位于 `instance/ecs_monitor.db`，每次执行 `update` 命令前会自动备份到 `instance/backups/`。
+数据库文件位于 `instance/ecs_monitor.db`，每次 `update` 前会自动备份到 `instance/backups/`。
 
 ```bash
 # 手动备份
 bash panel.sh backup
 
-# 一键恢复到最新备份（会先备份当前数据库再恢复）
+# 一键恢复到最新备份
 bash panel.sh restore
 
 # 指定某个备份恢复
 bash panel.sh restore instance/backups/ecs_monitor_20260223_120000.db
-
-# 查看所有备份
-ls -lh instance/backups/
 ```
 
 ### 重置管理员密码
 
 ```bash
-# 方法 1：查看初始密码（仅首次部署未改密码时有效）
+# 查看初始密码（仅首次部署未改密码时有效）
 cat instance/initial_admin_credentials.txt
 
-# 方法 2：进容器重置密码（特殊字符用脚本方式避免 shell 转义问题）
+# 进容器重置密码
 cat > /tmp/reset_pw.py << 'EOF'
 from app import app, db
 from models import User
@@ -238,8 +203,6 @@ docker exec dns-panel python /app/reset_pw.py
 docker exec dns-panel rm /app/reset_pw.py
 rm /tmp/reset_pw.py
 ```
-
-更多细节请参阅 [README-Docker.md](README-Docker.md)。
 
 ---
 
@@ -259,14 +222,31 @@ curl -fsSL http://<面板IP>:5000/agent/install_checker_global.sh -o /tmp/instal
 
 ---
 
+## 更新日志
+
+### v0.3.0 (2026-03-22)
+
+**关键修复**
+- 修复 VPS 更新后数据丢失和密码被重置的问题
+- SQLite 并发保护：bootstrap 阶段文件锁 + WAL 模式
+- 加密密钥丢失检测，防止静默重新生成导致 AK/SK 不可读
+- `.dockerignore` 排除 `instance/` 目录，避免数据被 Docker 镜像覆盖
+
+**新功能**
+- 3 个月 CDT 流量账单卡片（QueryInstanceBill + CDT API 双通道）
+- AK/SK 凭证状态实时检测与 Dashboard 告警展示
+- 批量操作前强制勾选实例
+- 停机检测自动启动
+- 路由代码拆分重构（route_helpers.py）
+- 添加 CI 工作流
+
+**Go 重写分支**
+- `go-rewrite` 分支完成全部功能迁移（Go/Gin/GORM）
+- 单二进制部署，无需 Python 环境
+- 原生阿里云 API 签名，无 SDK 依赖
+
+---
+
 ## License
 
-Private project — all rights reserved.
-
-
-## 备份/导入增强（vNext）
-
-- 备份 zip 现在会尽量包含 `instance/encrypt.key`（若存在），用于跨环境恢复 AK/SK。
-- CSV 导出新增字段：`ak_format`、`is_encrypted`。
-- CSV 导入支持密文迁移（`ak_format=fernet_encrypted`）与原有明文导入。
-- 建议上线前参考 `docs/DEPLOY_CHECKLIST.md`。
+MIT
