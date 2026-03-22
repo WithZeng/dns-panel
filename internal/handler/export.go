@@ -11,6 +11,7 @@ import (
 
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
+	"github.com/WithZeng/dns-panel/internal/service/aliyun"
 	"github.com/gin-gonic/gin"
 )
 
@@ -139,6 +140,57 @@ func APITrafficForecast(c *gin.Context) {
 		"days_remaining": math.Round(daysRemaining*10) / 10,
 		"exhaust_date":   exhaustDate,
 		"message":        fmt.Sprintf("按当前速率（%.2f GB/天），预计 %s 用尽配额", gbPerDay, exhaustDate),
+	})
+}
+
+func APICDTThreeMonths(c *gin.Context) {
+	instanceIDParam := c.Query("instance_id")
+
+	var instances []models.EcsInstance
+	if instanceIDParam != "" {
+		database.DB.Where("instance_id = ?", instanceIDParam).Find(&instances)
+	} else {
+		database.DB.Limit(1).Find(&instances)
+	}
+
+	if len(instances) == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "未找到实例"})
+		return
+	}
+
+	inst := instances[0]
+	client, err := getClientFromInstance(&inst)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	billing, err := aliyun.GetCDTThreeMonthBilling(client, instanceIDParam, inst.RegionID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	months := make([]gin.H, 0)
+	if billing.Months != nil {
+		for _, m := range billing.Months {
+			months = append(months, gin.H{
+				"month":        m.Month,
+				"traffic":      m.Traffic,
+				"amount":       m.Amount,
+				"traffic_unit": m.TrafficUnit,
+				"currency":     m.Currency,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"months":        months,
+		"total_traffic": billing.TotalTraffic,
+		"total_amount":  billing.TotalAmount,
+		"currency":      billing.Currency,
+		"scope":         billing.Scope,
 	})
 }
 

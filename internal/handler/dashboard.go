@@ -80,35 +80,84 @@ func Dashboard(c *gin.Context) {
 }
 
 func APIInstances(c *gin.Context) {
+	tag := c.Query("tag")
 	var instances []models.EcsInstance
-	database.DB.Order("tag, name").Find(&instances)
+	q := database.DB.Order("tag, name")
+	if tag != "" {
+		q = q.Where("tag = ?", tag)
+	}
+	q.Find(&instances)
 
-	type instanceResp struct {
-		models.EcsInstance
-		TrafficPct float64 `json:"traffic_pct"`
+	type instanceJSON struct {
+		ID                uint    `json:"id"`
+		Name              string  `json:"name"`
+		InstanceID        string  `json:"instance_id"`
+		RegionID          string  `json:"region_id"`
+		Status            string  `json:"status"`
+		PublicIP          string  `json:"public_ip"`
+		IPv6Addr          string  `json:"ipv6_addr"`
+		Tag               string  `json:"tag"`
+		TrafficStrategy   string  `json:"traffic_strategy"`
+		CurrentMonthTraffic float64 `json:"current_month_traffic"`
+		MonthlyLimit      float64 `json:"monthly_limit"`
+		TotalTrafficSum   float64 `json:"total_traffic_sum"`
+		LifeTotalLimit    float64 `json:"life_total_limit"`
+		CredentialStatus  string  `json:"credential_status"`
+		CredentialError   string  `json:"credential_error"`
+		LastChecked       string  `json:"last_checked"`
+		TrafficPct        float64 `json:"traffic_pct"`
 	}
 
-	result := make([]instanceResp, len(instances))
+	var online, stopped int
+	var totalTraffic, totalCost float64
+	result := make([]instanceJSON, len(instances))
+
 	for i, inst := range instances {
-		result[i].EcsInstance = inst
+		if inst.Status == "Running" || inst.Status == "Starting" {
+			online++
+		} else if inst.Status == "Stopped" {
+			stopped++
+		}
+		totalTraffic += inst.CurrentMonthTraffic
+		totalCost += inst.HourlyPrice * 24 * 30
+
+		r := instanceJSON{
+			ID: inst.ID, Name: inst.Name, InstanceID: inst.InstanceID,
+			RegionID: inst.RegionID, Status: inst.Status, PublicIP: inst.PublicIP,
+			IPv6Addr: inst.IPv6Addr, Tag: inst.Tag, TrafficStrategy: inst.TrafficStrategy,
+			CurrentMonthTraffic: inst.CurrentMonthTraffic, MonthlyLimit: inst.MonthlyLimit,
+			TotalTrafficSum: inst.TotalTrafficSum, LifeTotalLimit: inst.LifeTotalLimit,
+			CredentialStatus: inst.CredentialStatus, CredentialError: inst.CredentialError,
+		}
+		if !inst.LastChecked.IsZero() {
+			r.LastChecked = inst.LastChecked.Format("01-02 15:04")
+		}
 		var limit float64
 		if inst.TrafficStrategy == "life" {
 			limit = inst.LifeTotalLimit
+			if limit > 0 {
+				r.TrafficPct = inst.TotalTrafficSum / limit * 100
+			}
 		} else {
 			limit = inst.MonthlyLimit
-		}
-		if limit > 0 {
-			var used float64
-			if inst.TrafficStrategy == "life" {
-				used = inst.TotalTrafficSum
-			} else {
-				used = inst.CurrentMonthTraffic
+			if limit > 0 {
+				r.TrafficPct = inst.CurrentMonthTraffic / limit * 100
 			}
-			result[i].TrafficPct = used / limit * 100
 		}
+		result[i] = r
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "instances": result})
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"instances": result,
+		"summary": gin.H{
+			"total":         len(instances),
+			"online":        online,
+			"stopped":       stopped,
+			"total_traffic": totalTraffic,
+			"total_cost":    totalCost,
+		},
+	})
 }
 
 func BatchAction(c *gin.Context) {

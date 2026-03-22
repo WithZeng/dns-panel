@@ -135,10 +135,21 @@ func InstanceDetail(c *gin.Context) {
 	var logs []models.OperationLog
 	database.DB.Where("instance_id = ?", id).Order("timestamp DESC").Limit(50).Find(&logs)
 
+	token := generateIPv6ScriptToken(id)
+	scheme := "http"
+	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	scriptURL := fmt.Sprintf("%s://%s/public/instance/%d/ipv6_script.sh?token=%s", scheme, c.Request.Host, id, token)
+	curlCommand := fmt.Sprintf("curl -fsSL '%s' | sudo bash", scriptURL)
+
 	c.HTML(http.StatusOK, "instance_detail.html", gin.H{
-		"instance": inst,
-		"logs":     logs,
-		"username": c.GetString("username"),
+		"instance":                      inst,
+		"logs":                          logs,
+		"username":                      c.GetString("username"),
+		"ipv6_script_url":               scriptURL,
+		"ipv6_curl_command":             curlCommand,
+		"ipv6_script_token_expires_min": 30,
 	})
 }
 

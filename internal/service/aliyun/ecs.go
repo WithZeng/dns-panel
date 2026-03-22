@@ -71,6 +71,119 @@ func DescribeInstances(c *Client) ([]InstanceBasicInfo, error) {
 	return result, nil
 }
 
+type IPv6Info struct {
+	Enabled      bool     `json:"enabled"`
+	Addresses    []string `json:"addresses"`
+	PrimaryENIID string   `json:"primary_eni_id"`
+	Message      string   `json:"message"`
+}
+
+func GetIPv6Info(c *Client, instanceID string) (*IPv6Info, error) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	idsJSON, _ := json.Marshal([]string{instanceID})
+	data, err := c.DoAction(domain, "2014-05-26", "DescribeInstances", map[string]string{
+		"InstanceIds": string(idsJSON),
+	})
+	if err != nil {
+		return &IPv6Info{Message: err.Error()}, nil
+	}
+
+	var resp struct {
+		Instances struct {
+			Instance []struct {
+				VpcAttributes struct {
+					Ipv6Addresses struct {
+						Ipv6Address []string `json:"Ipv6Address"`
+					} `json:"Ipv6Addresses"`
+				} `json:"VpcAttributes"`
+				NetworkInterfaces struct {
+					NetworkInterface []struct {
+						NetworkInterfaceId string `json:"NetworkInterfaceId"`
+						Ipv6Sets           struct {
+							Ipv6Set []struct {
+								Ipv6Address string `json:"Ipv6Address"`
+							} `json:"Ipv6Set"`
+						} `json:"Ipv6Sets"`
+					} `json:"NetworkInterface"`
+				} `json:"NetworkInterfaces"`
+			} `json:"Instance"`
+		} `json:"Instances"`
+	}
+
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return &IPv6Info{Message: "parse error"}, nil
+	}
+	if len(resp.Instances.Instance) == 0 {
+		return &IPv6Info{Message: "实例不存在或无权限"}, nil
+	}
+
+	inst := resp.Instances.Instance[0]
+	info := &IPv6Info{Message: "ok"}
+
+	var addrs []string
+	for _, a := range inst.VpcAttributes.Ipv6Addresses.Ipv6Address {
+		if a != "" {
+			addrs = append(addrs, a)
+		}
+	}
+
+	var eniID string
+	for _, ni := range inst.NetworkInterfaces.NetworkInterface {
+		if eniID == "" && ni.NetworkInterfaceId != "" {
+			eniID = ni.NetworkInterfaceId
+		}
+		for _, s := range ni.Ipv6Sets.Ipv6Set {
+			if s.Ipv6Address != "" {
+				found := false
+				for _, existing := range addrs {
+					if existing == s.Ipv6Address {
+						found = true
+						break
+					}
+				}
+				if !found {
+					addrs = append(addrs, s.Ipv6Address)
+				}
+			}
+		}
+	}
+
+	info.PrimaryENIID = eniID
+	info.Addresses = addrs
+	info.Enabled = len(addrs) > 0
+	return info, nil
+}
+
+func EnableIPv6(c *Client, instanceID string) (bool, string, []string) {
+	info, err := GetIPv6Info(c, instanceID)
+	if err != nil {
+		return false, fmt.Sprintf("获取 IPv6 信息失败: %v", err), nil
+	}
+	if info.Enabled {
+		return true, fmt.Sprintf("IPv6 已开启: %s", strings.Join(info.Addresses, ", ")), info.Addresses
+	}
+
+	eniID := info.PrimaryENIID
+	if eniID == "" {
+		return false, fmt.Sprintf("未找到主网卡，无法分配 IPv6（%s）", info.Message), nil
+	}
+
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	_, err = c.DoAction(domain, "2014-05-26", "AssignIpv6Addresses", map[string]string{
+		"NetworkInterfaceId": eniID,
+		"Ipv6AddressCount":  "1",
+	})
+	if err != nil {
+		return false, fmt.Sprintf("分配 IPv6 失败: %v", err), nil
+	}
+
+	refresh, _ := GetIPv6Info(c, instanceID)
+	if refresh != nil && refresh.Enabled {
+		return true, fmt.Sprintf("IPv6 已成功开启: %s", strings.Join(refresh.Addresses, ", ")), refresh.Addresses
+	}
+	return true, "IPv6 分配指令已发送，请稍后刷新查看", nil
+}
+
 func ECSStart(c *Client, instanceID string) (bool, string) {
 	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
 	_, err := c.DoAction(domain, "2014-05-26", "StartInstance", map[string]string{

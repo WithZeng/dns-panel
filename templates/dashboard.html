@@ -105,9 +105,9 @@
 
 <!-- Instance Cards -->
 {{ if .instances }}
-<div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+<div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
   {{ range .instances }}
-  <section data-id="{{ .ID }}" class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-card transition-shadow overflow-hidden">
+  <section data-id="{{ .ID }}" class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
     <div class="p-5">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
@@ -136,7 +136,7 @@
       <!-- Credential Alert -->
       {{ if and .CredentialStatus (ne .CredentialStatus "ok") }}
       <div data-field="credential_alert" class="mt-3 rounded-xl border px-3 py-2 text-xs {{ if eq .CredentialStatus "invalid_access_key" }}border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300{{ else }}border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300{{ end }}">
-        <div class="font-semibold">{{ if eq .CredentialStatus "invalid_access_key" }}凭据失效{{ else }}权限不足{{ end }}</div>
+        <div class="font-semibold">{{ if eq .CredentialStatus "invalid_access_key" }}🚨 凭据失效（InvalidAccessKeyId / 签名错误）{{ else }}⚠️ Unauthorized / 权限不足{{ end }}</div>
         {{ if .CredentialError }}<div class="mt-1 break-all opacity-80">{{ .CredentialError }}</div>{{ end }}
       </div>
       {{ end }}
@@ -155,9 +155,14 @@
           </div>
           {{ if gt .LifeTotalLimit 0.0 }}
           <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-            <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+            <div class="h-full rounded-full {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-emerald-500 to-teal-600{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+          </div>
+          <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span>已用 {{ printf "%.2f" .TotalTrafficSum }} GB</span>
+            <span>配额 {{ printf "%.2f" .LifeTotalLimit }} GB</span>
           </div>
           {{ end }}
+          <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">本月流量：{{ printf "%.2f" .CurrentMonthTraffic }} GB</div>
         </div>
         {{ else }}
         <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3">
@@ -171,7 +176,11 @@
           </div>
           {{ if gt .MonthlyLimit 0.0 }}
           <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-            <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
+            <div class="h-full rounded-full {{ if gt (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-blue-500 to-indigo-600{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
+          </div>
+          <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span>已用 {{ printf "%.2f" .CurrentMonthTraffic }} GB</span>
+            <span>配额 {{ printf "%.2f" .MonthlyLimit }} GB</span>
           </div>
           {{ end }}
         </div>
@@ -184,34 +193,117 @@
       <!-- Actions -->
       <div class="mt-3 flex items-center gap-2 flex-wrap">
         <a href="/instance/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">详情</a>
-        <a href="/instance/edit/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">编辑</a>
-        <a href="/instance/{{ .ID }}/schedules" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">⏰ 定时</a>
-        <a href="/instance/{{ .ID }}/security_groups" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">🔒 安全组</a>
+        <a href="/api/instance/{{ .ID }}/check" class="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition" onclick="event.preventDefault(); fetch('/api/instance/{{ .ID }}/check',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成',d.success?'success':'error');setTimeout(function(){location.reload()},1500)})">🔍 检查</a>
+        <a href="/instance/edit/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">✏️ 编辑</a>
+        <button type="button" onclick="if(confirm('确认仅删除本地记录？'))fetch('/instance/delete/{{ .ID }}',{method:'POST'}).then(function(){location.reload()})" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">🗑️ 移除</button>
+        {{ if eq .Status "Stopped" }}
+        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/start',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 transition">▶ 开机</button>
+        {{ end }}
+        {{ if eq .Status "Running" }}
+        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/stop',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-lg bg-slate-900 dark:bg-slate-600 px-3 py-1.5 text-xs text-white hover:bg-slate-800 dark:hover:bg-slate-500 transition">⏸ 关机</button>
+        {{ end }}
+        <button type="button" class="js-open-release rounded-lg border border-red-200 dark:border-red-700 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition" data-id="{{ .ID }}" data-name="{{ .Name }}">⚠️ 释放</button>
       </div>
     </div>
   </section>
   {{ end }}
 </div>
 {{ else }}
-<div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm text-center py-16">
+<div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm text-center py-16 mb-6">
   <p class="text-3xl mb-3">📡</p>
   <p class="text-slate-500 dark:text-slate-400 mb-4">暂无实例</p>
   <a href="/instance/add" class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-5 py-2.5 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition">添加第一个实例</a>
 </div>
 {{ end }}
+
+<!-- CDT Billing (3 Months) -->
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white">📊 近3个月 CDT 计费流量</h2>
+    <span id="cdtScopeBadge" class="text-xs rounded-full px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">加载中</span>
+  </div>
+  <div id="cdtBillingError" class="hidden rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 mb-3"></div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-left text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2">月份</th>
+          <th class="py-2">计费流量</th>
+          <th class="py-2">金额</th>
+        </tr>
+      </thead>
+      <tbody id="cdtBillingTbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tr><td colspan="3" class="py-3 text-slate-400">正在加载...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+    <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+      <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计流量</div>
+      <div id="cdtTotalTraffic" class="text-lg font-semibold text-slate-900 dark:text-white mt-1">-</div>
+    </div>
+    <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+      <div class="text-xs text-slate-500 dark:text-slate-400">三个月累计金额</div>
+      <div id="cdtTotalAmount" class="text-lg font-semibold text-slate-900 dark:text-white mt-1">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- Region Traffic Chart -->
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-5 sm:p-8 mb-6">
+  <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">🌍 区域流量对比</h2>
+  <div class="relative" style="height: 280px;">
+    <canvas id="regionChart"></canvas>
+  </div>
+  <p id="noRegionData" class="hidden text-center text-slate-400 dark:text-slate-500 py-8">暂无区域数据</p>
+</div>
+
+<!-- Release Confirm Modal -->
+<div id="releaseModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/20 dark:bg-black/40 p-4">
+  <div class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-6 shadow-xl">
+    <h3 class="text-xl font-bold text-slate-900 dark:text-white">确认释放实例</h3>
+    <p class="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-6">
+      你将释放实例 <span id="releaseTargetName" class="font-semibold text-slate-900 dark:text-white"></span>。该操作具有风险，请确认已完成数据备份。
+    </p>
+    <div class="mt-4 rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+      危险操作：释放后可能无法恢复。
+    </div>
+    <div class="mt-6 flex justify-end gap-2">
+      <button type="button" id="cancelRelease" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">取消</button>
+      <button type="button" id="confirmRelease" class="inline-flex items-center rounded-lg border border-red-200 dark:border-red-700 bg-white dark:bg-slate-700 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">确认释放</button>
+    </div>
+  </div>
+</div>
 {{ end }}
 
 {{ define "scripts" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function() {
   var countdownEl = document.getElementById('countdown');
   var seconds = 30;
 
   function updateInstances() {
-    return fetch('/api/instances')
+    var qs = new URLSearchParams(window.location.search || '');
+    var tag = qs.get('tag');
+    var apiUrl = tag ? '/api/instances?tag=' + encodeURIComponent(tag) : '/api/instances';
+    return fetch(apiUrl)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.instances) return;
+        var s = data.summary;
+        if (s) {
+          var sTotal = document.getElementById('s_total');
+          var sOnline = document.getElementById('s_online');
+          var sStopped = document.getElementById('s_stopped');
+          var sTraffic = document.getElementById('s_traffic');
+          var sCost = document.getElementById('s_cost');
+          if (sTotal) sTotal.textContent = s.total;
+          if (sOnline) sOnline.textContent = s.online;
+          if (sStopped) sStopped.textContent = s.stopped;
+          if (sTraffic) sTraffic.innerHTML = (s.total_traffic || 0).toFixed(1) + ' <span class="text-sm font-normal">GB</span>';
+          if (sCost) sCost.textContent = '\u00a5' + (s.total_cost || 0).toFixed(2);
+        }
         data.instances.forEach(function(inst) {
           var card = document.querySelector('section[data-id="' + inst.id + '"]');
           if (!card) return;
@@ -219,7 +311,7 @@
           if (lc) lc.textContent = '最后检查：' + (inst.last_checked || '-');
         });
       })
-      .catch(function() { });
+      .catch(function() {});
   }
 
   function updateProbeOverview() {
@@ -257,7 +349,7 @@
           });
         }
       })
-      .catch(function() { });
+      .catch(function() {});
   }
 
   function fetchAll() {
@@ -299,6 +391,38 @@
     }
     window.location.href = url;
   });
+
+  // Release modal
+  var modal = document.getElementById('releaseModal');
+  var releaseTargetName = document.getElementById('releaseTargetName');
+  var cancelBtn = document.getElementById('cancelRelease');
+  var confirmBtn = document.getElementById('confirmRelease');
+  var releaseId = null;
+
+  function openModal() { if (modal) modal.classList.remove('hidden'); modal.classList.add('flex'); }
+  function closeModal() { if (modal) modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if (modal) modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+
+  document.querySelectorAll('.js-open-release').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      releaseId = btn.dataset.id;
+      if (releaseTargetName) releaseTargetName.textContent = btn.dataset.name;
+      openModal();
+    });
+  });
+
+  if (confirmBtn) confirmBtn.addEventListener('click', function() {
+    if (!releaseId) return;
+    fetch('/api/instance/' + releaseId + '/release', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        closeModal();
+        showToast(d.message || '释放完成', d.success ? 'success' : 'error');
+        if (d.success) setTimeout(function() { location.reload(); }, 1500);
+      })
+      .catch(function() { closeModal(); showToast('释放失败', 'error'); });
+  });
 })();
 
 function batchAction(action) {
@@ -310,6 +434,92 @@ function batchAction(action) {
     .then(function(d) { showToast(d.message || '操作完成', d.success ? 'success' : 'error'); setTimeout(function() { location.reload(); }, 1500); })
     .catch(function() { showToast('操作失败', 'error'); });
 }
+
+// CDT Billing (3 Months)
+(function() {
+  var tbody = document.getElementById('cdtBillingTbody');
+  var totalTraffic = document.getElementById('cdtTotalTraffic');
+  var totalAmount = document.getElementById('cdtTotalAmount');
+  var scopeBadge = document.getElementById('cdtScopeBadge');
+  var errorBox = document.getElementById('cdtBillingError');
+
+  function renderError(msg) {
+    if (errorBox) { errorBox.textContent = msg || 'CDT 计费数据加载失败'; errorBox.classList.remove('hidden'); }
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+    if (scopeBadge) scopeBadge.textContent = '加载失败';
+    if (totalTraffic) totalTraffic.textContent = '-';
+    if (totalAmount) totalAmount.textContent = '-';
+  }
+
+  fetch('/api/billing/cdt/three_months')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) throw new Error(data.message || 'CDT 计费数据加载失败');
+      if (errorBox) errorBox.classList.add('hidden');
+      var months = data.months || [];
+      var currency = data.currency || 'CNY';
+
+      if (scopeBadge) scopeBadge.textContent = data.scope === 'instance' ? '实例级' : '账号级';
+
+      if (tbody) {
+        tbody.textContent = '';
+        if (!months.length) {
+          tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+        } else {
+          months.forEach(function(m) {
+            var tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/30 transition';
+            tr.innerHTML = '<td class="py-2 text-slate-700 dark:text-slate-200">' + (m.month || '-') + '</td>' +
+              '<td class="py-2 text-slate-700 dark:text-slate-200">' + Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB') + '</td>' +
+              '<td class="py-2 text-slate-700 dark:text-slate-200">' + Number(m.amount || 0).toFixed(2) + ' ' + currency + '</td>';
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      if (totalTraffic) totalTraffic.textContent = Number(data.total_traffic || 0).toFixed(2) + ' GB';
+      if (totalAmount) totalAmount.textContent = Number(data.total_amount || 0).toFixed(2) + ' ' + currency;
+    })
+    .catch(function(err) { renderError((err && err.message) || ''); });
+})();
+
+// Region Traffic Chart
+fetch('/api/region_traffic')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data || data.length === 0) {
+      document.getElementById('noRegionData').classList.remove('hidden');
+      document.getElementById('regionChart').style.display = 'none';
+      return;
+    }
+    var isDark = document.documentElement.classList.contains('dark');
+    var gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
+    var textColor = isDark ? '#94a3b8' : '#64748b';
+
+    new Chart(document.getElementById('regionChart'), {
+      type: 'bar',
+      data: {
+        labels: data.map(function(d) { return d.region; }),
+        datasets: [
+          { label: '已用 (GB)', data: data.map(function(d) { return d.used; }), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 },
+          { label: '上限 (GB)', data: data.map(function(d) { return d.limit; }), backgroundColor: 'rgba(148,163,184,0.3)', borderRadius: 6 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: textColor } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: textColor } },
+          y: { grid: { color: gridColor }, ticks: { color: textColor, callback: function(v) { return v + ' GB'; } }, beginAtZero: true }
+        }
+      }
+    });
+  }).catch(function() {
+    var el = document.getElementById('noRegionData');
+    if (el) el.classList.remove('hidden');
+    var rc = document.getElementById('regionChart');
+    if (rc) rc.style.display = 'none';
+  });
 </script>
 {{ end }}
 

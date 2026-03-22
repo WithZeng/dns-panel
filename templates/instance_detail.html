@@ -29,7 +29,35 @@
       <a href="/instance/edit/{{ .instance.ID }}" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">编辑</a>
       <a href="/instance/{{ .instance.ID }}/schedules" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">⏰ 定时</a>
       <a href="/instance/{{ .instance.ID }}/security_groups" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">🔒 安全组</a>
+      <button type="button" onclick="enableIPv6()" class="inline-flex items-center rounded-xl border border-indigo-200 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 text-sm text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">🌐 一键开启 IPv6</button>
+      <a href="/instance/{{ .instance.ID }}/ipv6_script.sh" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">⬇️ 下载 IPv6 配置脚本</a>
     </div>
+  </div>
+
+  <!-- IPv6 Status -->
+  <div id="ipv6StatusBox" class="mt-5 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/20 p-4">
+    <div class="text-sm font-medium text-slate-700 dark:text-slate-300">IPv6 状态</div>
+    <div id="ipv6StatusContent" class="mt-2 text-sm">
+      {{ if .instance.IPv6Addr }}
+      <span class="text-emerald-700 dark:text-emerald-300">已开启：{{ .instance.IPv6Addr }}</span>
+      {{ else }}
+      <span class="text-amber-700 dark:text-amber-300">未检测到 IPv6 地址</span>
+      {{ end }}
+    </div>
+    <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">推荐直接在目标服务器执行下方 curl 一键命令：无需手动下载脚本。</div>
+  </div>
+
+  <!-- IPv6 Curl Command -->
+  <div class="mt-4 rounded-xl border border-indigo-100 dark:border-indigo-800/50 bg-indigo-50/70 dark:bg-indigo-900/20 p-4">
+    <div class="flex items-center justify-between gap-2">
+      <div class="text-sm font-medium text-indigo-700 dark:text-indigo-300">🚀 curl 一键配置 IPv6（无需手动下载）</div>
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ipv6CurlCommand').value); this.innerText='已复制'; setTimeout(()=>this.innerText='复制命令', 1200);"
+        class="inline-flex items-center rounded-lg border border-indigo-200 dark:border-indigo-700 px-3 py-1.5 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30 transition">复制命令</button>
+    </div>
+    <div class="mt-2 text-xs text-indigo-600 dark:text-indigo-300/80">命令有效期约 {{ .ipv6_script_token_expires_min }} 分钟，过期后请刷新页面重新复制。</div>
+    <input id="ipv6CurlCommand" type="text" readonly value="{{ .ipv6_curl_command }}"
+      class="mt-2 w-full rounded-lg border border-indigo-100 dark:border-indigo-800/50 bg-white/80 dark:bg-slate-800 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200">
+    <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 break-all">脚本地址：{{ .ipv6_script_url }}</div>
   </div>
 
   <!-- Action Buttons -->
@@ -304,6 +332,37 @@ function saveNotes() {
     }
   });
 }
+
+// Enable IPv6
+function enableIPv6() {
+  fetch('/api/instance/' + instanceId + '/enable_ipv6', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      showToast(d.message || '操作完成', d.success ? 'success' : 'error');
+      if (d.success) setTimeout(function() { location.reload(); }, 1500);
+    })
+    .catch(function() { showToast('操作失败', 'error'); });
+}
+
+// Refresh IPv6 status on page load
+(function() {
+  fetch('/api/instance/' + instanceId + '/ipv6_status')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.ipv6_info) return;
+      var info = data.ipv6_info;
+      var el = document.getElementById('ipv6StatusContent');
+      if (!el) return;
+      if (info.enabled && info.addresses && info.addresses.length > 0) {
+        el.innerHTML = '<span class="text-emerald-700 dark:text-emerald-300">已开启：' + info.addresses.join(', ') + '</span>';
+      } else {
+        var msg = '未检测到 IPv6 地址';
+        if (info.message && info.message !== 'ok') msg += '（' + info.message + '）';
+        el.innerHTML = '<span class="text-amber-700 dark:text-amber-300">' + msg + '</span>';
+      }
+    })
+    .catch(function() {});
+})();
 
 // Instance actions
 function instanceAction(action) {

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 
@@ -259,30 +261,78 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 	}
 
 	var allDiscovered []discoveredInst
-	for i, region := range regions {
-		if scanAll {
-			pct := 30 + int(float64(i)/float64(len(regions))*50)
-			updateJob("扫描实例", fmt.Sprintf("扫描区域 %s (%d/%d)...", region, i+1, len(regions)), pct)
-		}
-		client := aliyun.NewClient(ak, sk, region)
+
+	if !scanAll {
+		client := aliyun.NewClient(ak, sk, regions[0])
 		instances, err := aliyun.DescribeInstances(client)
 		if err != nil {
-			log.Printf("[import] region %s scan failed: %v", region, err)
-			if !scanAll {
-				failJob(fmt.Sprintf("扫描区域 %s 失败: %v", region, err), "network_error")
-				return
-			}
-			continue
+			failJob(fmt.Sprintf("扫描区域 %s 失败: %v", regions[0], err), "network_error")
+			return
 		}
 		for _, inst := range instances {
 			allDiscovered = append(allDiscovered, discoveredInst{
-				InstanceID: inst.InstanceID,
-				Name:       inst.Name,
-				RegionID:   inst.RegionID,
-				Status:     inst.Status,
-				PublicIP:   inst.PublicIP,
+				InstanceID: inst.InstanceID, Name: inst.Name,
+				RegionID: inst.RegionID, Status: inst.Status, PublicIP: inst.PublicIP,
 			})
 		}
+	} else {
+		const workers = 10
+		var (
+			mu        sync.Mutex
+			wg        sync.WaitGroup
+			completed int64
+			total     = int64(len(regions))
+			sem       = make(chan struct{}, workers)
+		)
+
+		go func() {
+			for {
+				done := atomic.LoadInt64(&completed)
+				if done >= total {
+					return
+				}
+				pct := 30 + int(float64(done)/float64(total)*50)
+				mu.Lock()
+				lastRegion := ""
+				if int(done) < len(regions) {
+					lastRegion = regions[done]
+				}
+				mu.Unlock()
+				updateJob("扫描实例", fmt.Sprintf("并行扫描区域 (%d/%d) %s...", done, total, lastRegion), pct)
+				time.Sleep(300 * time.Millisecond)
+			}
+		}()
+
+		for _, region := range regions {
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(r string) {
+				defer wg.Done()
+				defer func() { <-sem }()
+
+				client := aliyun.NewClient(ak, sk, r)
+				instances, err := aliyun.DescribeInstances(client)
+				if err != nil {
+					log.Printf("[import] region %s scan failed: %v", r, err)
+					atomic.AddInt64(&completed, 1)
+					return
+				}
+
+				var batch []discoveredInst
+				for _, inst := range instances {
+					batch = append(batch, discoveredInst{
+						InstanceID: inst.InstanceID, Name: inst.Name,
+						RegionID: inst.RegionID, Status: inst.Status, PublicIP: inst.PublicIP,
+					})
+				}
+
+				mu.Lock()
+				allDiscovered = append(allDiscovered, batch...)
+				mu.Unlock()
+				atomic.AddInt64(&completed, 1)
+			}(region)
+		}
+		wg.Wait()
 	}
 
 	updateJob("入库", "正在导入实例数据...", 85)
