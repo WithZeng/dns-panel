@@ -33,10 +33,13 @@
         {{ if .need_fernet }}
         <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
           <div class="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">检测到 Python 版加密凭据（{{ .instance_count }} 个实例）</div>
-          <p class="text-xs text-amber-600 dark:text-amber-400 mb-3">请输入旧版 Python 面板的 ENCRYPT_KEY（Fernet 密钥），通常在旧面板的 <code>.env</code> 文件或 <code>instance/encrypt.key</code> 中。</p>
-          <input type="text" name="fernet_key" placeholder="例如：dGhpc0lzQVRlc3RLZXlGb3JUZXN0aW5n..."
-            class="w-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-amber-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-mono"
-            required>
+          <p class="text-xs text-amber-600 dark:text-amber-400 mb-3">请输入旧版 ENCRYPT_KEY 以转换凭据。密钥在旧面板的 <code>.env</code> 或 <code>instance/encrypt.key</code> 中。</p>
+          <input type="text" name="fernet_key" placeholder="Fernet 密钥（留空则跳过凭据）"
+            class="w-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-amber-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-mono mb-3">
+          <label class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 cursor-pointer">
+            <input type="checkbox" name="skip_credentials" value="1" class="rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500/20">
+            密钥丢失，跳过凭据导入（仅导入实例信息，之后用「账户导入」补充 AK/SK）
+          </label>
         </div>
         {{ else }}
         <details class="rounded-xl border border-slate-200 dark:border-slate-600">

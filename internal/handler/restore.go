@@ -25,6 +25,7 @@ func RestoreDBPage(c *gin.Context) {
 func RestoreDBPost(c *gin.Context) {
 	username := c.GetString("username")
 	fernetKey := c.PostForm("fernet_key")
+	skipCreds := c.PostForm("skip_credentials") == "1"
 
 	file, _, err := c.Request.FormFile("db_file")
 	if err != nil {
@@ -114,18 +115,20 @@ func RestoreDBPost(c *gin.Context) {
 		}
 	}
 
-	if hasFernet && fernetKey == "" {
+	if hasFernet && fernetKey == "" && !skipCreds {
 		c.HTML(http.StatusOK, "restore_db.html", gin.H{
-			"username":      username,
-			"need_fernet":   true,
+			"username":       username,
+			"need_fernet":    true,
 			"instance_count": len(srcInstances),
-			"error":         "检测到 Python 版 Fernet 加密的凭据，请输入旧版加密密钥（ENCRYPT_KEY）后重新提交。",
 		})
 		return
 	}
 
 	reencrypt := func(ciphertext string) (string, error) {
 		if ciphertext == "" {
+			return "", nil
+		}
+		if skipCreds && crypto.IsFernetToken(ciphertext) {
 			return "", nil
 		}
 		if crypto.IsFernetToken(ciphertext) {
@@ -144,7 +147,7 @@ func RestoreDBPost(c *gin.Context) {
 		return crypto.Encrypt(ciphertext)
 	}
 
-	imported, updated, credErrors := 0, 0, 0
+	imported, updated, credErrors, skippedCreds := 0, 0, 0, 0
 	for _, s := range srcInstances {
 		newAK, errAK := reencrypt(s.AccessKeyID)
 		newSK, errSK := reencrypt(s.AccessKeySK)
@@ -153,6 +156,9 @@ func RestoreDBPost(c *gin.Context) {
 			log.Printf("[restore] credential re-encrypt failed for %s: AK=%v SK=%v", s.InstanceID, errAK, errSK)
 			newAK = ""
 			newSK = ""
+		}
+		if skipCreds && (crypto.IsFernetToken(s.AccessKeyID) || crypto.IsFernetToken(s.AccessKeySK)) {
+			skippedCreds++
 		}
 
 		var existing models.EcsInstance
@@ -222,6 +228,9 @@ func RestoreDBPost(c *gin.Context) {
 	log.Printf("[restore] Imported %d, updated %d, credential errors %d", imported, updated, credErrors)
 
 	msg := fmt.Sprintf("导入完成！新增 %d 个实例，更新 %d 个实例。", imported, updated)
+	if skippedCreds > 0 {
+		msg += fmt.Sprintf(" 已跳过 %d 个实例的凭据，请通过「账户导入」重新扫描补充 AK/SK。", skippedCreds)
+	}
 	if credErrors > 0 {
 		msg += fmt.Sprintf(" 其中 %d 个实例凭据转换失败（密钥可能不正确），需要手动重新填写 AK/SK。", credErrors)
 	}
