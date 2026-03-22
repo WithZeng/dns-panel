@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 RUN apk add --no-cache gcc musl-dev
@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 go build -o dns-panel -ldflags="-s -w" .
 
-FROM alpine:3.19
+FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates tzdata curl
 
