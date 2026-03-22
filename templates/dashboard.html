@@ -75,11 +75,12 @@
   </div>
   <div class="flex flex-wrap gap-2 items-center">
     {{ if .tags }}
-    <select id="tagFilter" onchange="window.location='?tag='+this.value"
+    <select id="tagFilter" onchange="window.location='?tag='+encodeURIComponent(this.value)"
       class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none min-h-[44px]">
-      <option value="">全部标签</option>
+      <option value="" {{ if not .currentTag }}selected{{ end }}>全部标签</option>
+      {{ $cur := .currentTag }}
       {{ range .tags }}
-      <option value="{{ . }}">{{ . }}</option>
+      <option value="{{ . }}" {{ if eq . $cur }}selected{{ end }}>{{ . }}</option>
       {{ end }}
     </select>
     {{ end }}
