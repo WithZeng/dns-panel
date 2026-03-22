@@ -20,10 +20,6 @@ func StartScheduler() {
 		CheckAllInstances()
 	})
 
-	Cron.AddFunc("0 */1 * * * *", func() {
-		RefreshProbeOnlineStatuses()
-	})
-
 	Cron.AddFunc("0 0 0 1 * *", func() {
 		log.Println("[scheduler] monthly_traffic_reset")
 		MonthlyTrafficReset()
@@ -53,7 +49,7 @@ func StartScheduler() {
 	})
 
 	Cron.Start()
-	log.Println("Scheduler started with 8 jobs.")
+	log.Println("Scheduler started with 7 jobs.")
 }
 
 func StopScheduler() {
@@ -133,12 +129,6 @@ func DataRetentionCleanup(days int) {
 	r2 := database.DB.Where("timestamp < ?", cutoff).Delete(&models.NotificationLog{})
 	log.Printf("Data retention cleanup: removed %d traffic logs, %d notification logs older than %d days.",
 		r1.RowsAffected, r2.RowsAffected, days)
-}
-
-func RefreshProbeOnlineStatuses() {
-	cutoff := time.Now().Add(-30 * time.Second)
-	database.DB.Model(&models.ProbeServer{}).Where("is_online = ? AND (last_seen IS NULL OR last_seen < ?)", true, cutoff).
-		Update("is_online", false)
 }
 
 func RunScheduledTasks() {

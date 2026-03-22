@@ -148,11 +148,6 @@ func main() {
 	// Public IPv6 script (token auth)
 	r.GET("/public/instance/:id/ipv6_script.sh", handler.PublicIPv6Script)
 
-	// Probe agent (token auth, no session)
-	r.POST("/api/probe/report", handler.APIProbeReport)
-	r.GET("/api/probe/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
-	r.GET("/ws/agent", handler.WSAgent)
-
 	// ─── Authenticated routes ───────────────────────────────────
 	auth := r.Group("/")
 	auth.Use(middleware.AuthRequired())
@@ -201,25 +196,23 @@ func main() {
 		// Batch & check all
 		auth.POST("/api/batch", handler.BatchAction)
 		auth.GET("/api/check_all", handler.CheckAll)
-		auth.GET("/api/dashboard_probe_overview", handler.DashboardProbeOverview)
 		auth.GET("/api/region_traffic", handler.APIRegionTraffic)
 		auth.GET("/api/billing/cdt/three_months", handler.APICDTThreeMonths)
 		auth.GET("/api/traffic_forecast/:id", handler.APITrafficForecast)
 
-		// Checker deploy
-		auth.GET("/checker_deploy", handler.CheckerDeployPage)
-
-		// Probe servers
-		auth.GET("/probe/servers", handler.ProbeServersPage)
-		auth.GET("/probe/server/:id", handler.ProbeServerDetail)
-
 		// ECS actions
 		auth.POST("/api/instance/:id/start", handler.ECSStartAction)
 		auth.POST("/api/instance/:id/stop", handler.ECSStopAction)
+		auth.POST("/api/instance/:id/reboot", handler.ECSRebootAction)
 		auth.POST("/api/instance/:id/release", handler.ECSReleaseAction)
 		auth.POST("/api/instance/:id/refresh", handler.ECSRefreshStatus)
 		auth.GET("/api/instance/:id/billing", handler.ECSTrafficBilling)
 		auth.POST("/api/instance/:id/check", handler.ForceCheckInstance)
+		auth.GET("/api/instance/:id/vnc", handler.ECSVncUrl)
+		auth.POST("/api/instance/:id/password", handler.ECSModifyPasswordAction)
+		auth.GET("/api/instance/:id/images", handler.ECSImagesAction)
+		auth.POST("/api/instance/:id/reset_system", handler.ECSResetSystemAction)
+		auth.POST("/api/instance/:id/rename", handler.ECSRenameAction)
 
 		// IPv6
 		auth.POST("/api/instance/:id/enable_ipv6", handler.EnableIPv6)
@@ -252,12 +245,6 @@ func main() {
 		auth.GET("/api/instances", handler.APIInstances)
 		auth.POST("/api/instance/:id/notes", handler.UpdateNotes)
 		auth.GET("/api/traffic_history/:id", handler.APITrafficHistory)
-		auth.GET("/api/probe/servers", handler.APIProbeServers)
-		auth.POST("/api/probe/servers", handler.APIProbeServerCreate)
-		auth.GET("/api/probe/servers/:id", handler.APIProbeServerGet)
-		auth.POST("/api/probe/servers/:id", handler.APIProbeServerUpdate)
-		auth.DELETE("/api/probe/servers/:id", handler.APIProbeServerDelete)
-		auth.POST("/api/probe/servers/:id/reset-token", handler.APIProbeServerResetToken)
 	}
 
 	addr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)

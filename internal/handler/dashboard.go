@@ -9,6 +9,7 @@ import (
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/WithZeng/dns-panel/internal/service"
+	"github.com/WithZeng/dns-panel/internal/service/aliyun"
 	"github.com/gin-gonic/gin"
 )
 
@@ -48,21 +49,6 @@ func Dashboard(c *gin.Context) {
 		tagList = append(tagList, t)
 	}
 
-	var probeServers []models.ProbeServer
-	database.DB.Find(&probeServers)
-	probeOnline, probeOffline := 0, 0
-	for _, s := range probeServers {
-		if s.IsOnline {
-			probeOnline++
-		} else {
-			probeOffline++
-		}
-	}
-
-	var dnsTotal, dnsEnabled int64
-	database.DB.Model(&models.DnsFailover{}).Count(&dnsTotal)
-	database.DB.Model(&models.DnsFailover{}).Where("enabled = ?", true).Count(&dnsEnabled)
-
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"instances":    instances,
 		"total":        len(instances),
@@ -72,11 +58,6 @@ func Dashboard(c *gin.Context) {
 		"totalCost":    totalCost,
 		"tags":         tagList,
 		"currentTag":   tag,
-		"probeTotal":   len(probeServers),
-		"probeOnline":  probeOnline,
-		"probeOffline": probeOffline,
-		"dnsTotal":     dnsTotal,
-		"dnsEnabled":   dnsEnabled,
 		"username":     c.GetString("username"),
 	})
 }
@@ -97,6 +78,7 @@ func APIInstances(c *gin.Context) {
 		RegionID          string  `json:"region_id"`
 		Status            string  `json:"status"`
 		PublicIP          string  `json:"public_ip"`
+		PrivateIP         string  `json:"private_ip"`
 		IPv6Addr          string  `json:"ipv6_addr"`
 		Tag               string  `json:"tag"`
 		TrafficStrategy   string  `json:"traffic_strategy"`
@@ -108,6 +90,12 @@ func APIInstances(c *gin.Context) {
 		CredentialError   string  `json:"credential_error"`
 		LastChecked       string  `json:"last_checked"`
 		TrafficPct        float64 `json:"traffic_pct"`
+		CPU               int     `json:"cpu"`
+		Memory            int     `json:"memory"`
+		Bandwidth         int     `json:"bandwidth"`
+		OSType            string  `json:"os_type"`
+		CreationTime      string  `json:"creation_time"`
+		ExpiredTime       string  `json:"expired_time"`
 	}
 
 	var online, stopped int
@@ -126,10 +114,13 @@ func APIInstances(c *gin.Context) {
 		r := instanceJSON{
 			ID: inst.ID, Name: inst.Name, InstanceID: inst.InstanceID,
 			RegionID: inst.RegionID, Status: inst.Status, PublicIP: inst.PublicIP,
-			IPv6Addr: inst.IPv6Addr, Tag: inst.Tag, TrafficStrategy: inst.TrafficStrategy,
+			PrivateIP: inst.PrivateIP, IPv6Addr: inst.IPv6Addr, Tag: inst.Tag,
+			TrafficStrategy: inst.TrafficStrategy,
 			CurrentMonthTraffic: inst.CurrentMonthTraffic, MonthlyLimit: inst.MonthlyLimit,
 			TotalTrafficSum: inst.TotalTrafficSum, LifeTotalLimit: inst.LifeTotalLimit,
 			CredentialStatus: inst.CredentialStatus, CredentialError: inst.CredentialError,
+			CPU: inst.CPU, Memory: inst.Memory, Bandwidth: inst.Bandwidth,
+			OSType: inst.OSType, CreationTime: inst.CreationTime, ExpiredTime: inst.ExpiredTime,
 		}
 		if !inst.LastChecked.IsZero() {
 			r.LastChecked = inst.LastChecked.Format("01-02 15:04")
@@ -164,8 +155,12 @@ func APIInstances(c *gin.Context) {
 
 func BatchAction(c *gin.Context) {
 	var body struct {
-		Action string `json:"action"`
-		IDs    []uint `json:"ids"`
+		Action   string `json:"action"`
+		IDs      []uint `json:"ids"`
+		Password string `json:"password"`
+		ImageID  string `json:"image_id"`
+		Name     string `json:"name"`
+		Port     string `json:"port"`
 	}
 	if err := c.BindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "参数错误"})
@@ -201,21 +196,43 @@ func BatchAction(c *gin.Context) {
 			case "start":
 				if inst.Status == "Stopped" {
 					ok, _ := service.ECSAction(inst.ID, "start")
-					if ok {
-						atomic.AddInt64(&countVal, 1)
-					} else {
-						atomic.AddInt64(&errorsVal, 1)
-					}
+					if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
 				}
 			case "stop":
 				if inst.Status == "Running" {
 					ok, _ := service.ECSAction(inst.ID, "stop")
-					if ok {
-						atomic.AddInt64(&countVal, 1)
-					} else {
-						atomic.AddInt64(&errorsVal, 1)
-					}
+					if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
 				}
+			case "reboot":
+				if inst.Status == "Running" {
+					ok, _ := service.ECSAction(inst.ID, "reboot")
+					if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
+				}
+			case "password":
+				if body.Password == "" { continue }
+				client, err := getClientForBatch(&inst)
+				if err != nil { atomic.AddInt64(&errorsVal, 1); continue }
+				ok, _ := aliyun.ECSModifyPassword(client, inst.InstanceID, body.Password)
+				if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
+			case "reset_system":
+				if body.ImageID == "" || inst.Status != "Stopped" { atomic.AddInt64(&errorsVal, 1); continue }
+				client, err := getClientForBatch(&inst)
+				if err != nil { atomic.AddInt64(&errorsVal, 1); continue }
+				ok, _ := aliyun.ECSReplaceSystemDisk(client, inst.InstanceID, body.ImageID)
+				if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
+			case "rename":
+				if body.Name == "" { continue }
+				inst.Name = body.Name
+				database.DB.Save(&inst)
+				atomic.AddInt64(&countVal, 1)
+			case "open_port":
+				if body.Port == "" { continue }
+				client, err := getClientForBatch(&inst)
+				if err != nil { atomic.AddInt64(&errorsVal, 1); continue }
+				sgIDs, err := aliyun.GetSecurityGroups(client, inst.InstanceID)
+				if err != nil || len(sgIDs) == 0 { atomic.AddInt64(&errorsVal, 1); continue }
+				ok, _ := aliyun.AuthorizeSG(client, sgIDs[0], "tcp", body.Port+"/"+body.Port, "0.0.0.0/0", "accept", "batch")
+				if ok { atomic.AddInt64(&countVal, 1) } else { atomic.AddInt64(&errorsVal, 1) }
 			case "delete":
 				database.DB.Delete(&inst)
 				logOperation("batch_delete", fmt.Sprintf("批量移除实例 %s", inst.Name), nil, c)
@@ -226,15 +243,27 @@ func BatchAction(c *gin.Context) {
 	count := int(countVal)
 	errors := int(errorsVal)
 
-	actionNames := map[string]string{"start": "启动", "stop": "停止", "check": "检查", "delete": "移除"}
-	msg := fmt.Sprintf("已对 %d 个实例执行 %s 操作", count, actionNames[body.Action])
+	actionNames := map[string]string{
+		"start": "启动", "stop": "关机", "reboot": "重启", "check": "检查",
+		"delete": "移除", "password": "改密", "reset_system": "重置系统",
+		"rename": "备注", "open_port": "开放端口",
+	}
+	name := actionNames[body.Action]
+	if name == "" { name = body.Action }
+	msg := fmt.Sprintf("已对 %d 个实例执行 %s 操作", count, name)
 	if errors > 0 {
 		msg += fmt.Sprintf("，%d 个失败", errors)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": msg,
-	})
+	logOperation("batch_"+body.Action, msg, nil, c)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": msg})
+}
+
+func getClientForBatch(inst *models.EcsInstance) (*aliyun.Client, error) {
+	ak, err := decryptField(inst.AccessKeyID)
+	if err != nil { return nil, err }
+	sk, err := decryptField(inst.AccessKeySK)
+	if err != nil { return nil, err }
+	return aliyun.NewClient(ak, sk, inst.RegionID), nil
 }
 
 func CheckAll(c *gin.Context) {
@@ -246,35 +275,3 @@ func CheckAll(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": fmt.Sprintf("已触发检查 %d 个实例", len(instances))})
 }
 
-func DashboardProbeOverview(c *gin.Context) {
-	var servers []models.ProbeServer
-	database.DB.Order("created_at desc").Find(&servers)
-
-	online, offline := 0, 0
-	type miniServer struct {
-		ID       uint   `json:"id"`
-		Name     string `json:"name"`
-		IsOnline bool   `json:"is_online"`
-	}
-	var miniList []miniServer
-	for _, s := range servers {
-		isOnline := s.IsOnline
-		if isOnline {
-			online++
-		} else {
-			offline++
-		}
-		if len(miniList) < 8 {
-			miniList = append(miniList, miniServer{ID: s.ID, Name: s.Name, IsOnline: isOnline})
-		}
-	}
-
-	var totalRules, enabledRules int64
-	database.DB.Model(&models.DnsFailover{}).Count(&totalRules)
-	database.DB.Model(&models.DnsFailover{}).Where("enabled = ?", true).Count(&enabledRules)
-
-	c.JSON(http.StatusOK, gin.H{
-		"probe": gin.H{"total": len(servers), "online": online, "offline": offline, "servers": miniList},
-		"dns":   gin.H{"total_rules": totalRules, "enabled_rules": enabledRules},
-	})
-}

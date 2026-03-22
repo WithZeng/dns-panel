@@ -21,8 +21,8 @@ func DNSFailoverPage(c *gin.Context) {
 	var rules []models.DnsFailover
 	database.DB.Preload("PrimaryServer").Preload("CurrentActiveServer").Find(&rules)
 
-	var probes []models.ProbeServer
-	database.DB.Order("name").Find(&probes)
+	var instances []models.EcsInstance
+	database.DB.Order("name").Find(&instances)
 
 	var logs []models.DnsFailoverLog
 	database.DB.Order("created_at DESC").Limit(50).Find(&logs)
@@ -30,7 +30,7 @@ func DNSFailoverPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "dns_failover.html", gin.H{
 		"cf_config": cfgCF,
 		"rules":     rules,
-		"probes":    probes,
+		"instances": instances,
 		"logs":      logs,
 		"username":  c.GetString("username"),
 	})
@@ -141,18 +141,18 @@ func APIDNSFailoverTestSwitch(c *gin.Context) {
 		return
 	}
 
-	var target models.ProbeServer
+	var target models.EcsInstance
 	if err := database.DB.First(&target, backupIDs[0]).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "备用服务器不存在"})
 		return
 	}
 
-	targetIP := target.IPv4
+	targetIP := target.PublicIP
 	if targetIP == "" {
-		targetIP = target.IPv6
+		targetIP = target.IPv6Addr
 	}
 	if targetIP == "" {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "目标服务器无 IP"})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "目标实例无公网 IP"})
 		return
 	}
 

@@ -255,6 +255,8 @@ func ECSAction(instanceID uint, action string) (bool, string) {
 		return aliyun.ECSStart(client, inst.InstanceID)
 	case "stop":
 		return aliyun.ECSStop(client, inst.InstanceID)
+	case "reboot":
+		return aliyun.ECSReboot(client, inst.InstanceID)
 	case "release":
 		return aliyun.ECSRelease(client, inst.InstanceID)
 	default:

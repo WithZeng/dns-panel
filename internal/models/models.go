@@ -46,6 +46,15 @@ type EcsInstance struct {
 	PrivateIP string `gorm:"size:100;default:''" json:"private_ip"`
 	IPv6Addr  string `gorm:"size:100;default:''" json:"ipv6_addr"`
 
+	CPU          int    `gorm:"default:0" json:"cpu"`
+	Memory       int    `gorm:"default:0" json:"memory"`
+	OSType       string `gorm:"size:20;default:''" json:"os_type"`
+	OSName       string `gorm:"size:200;default:''" json:"os_name"`
+	ImageID      string `gorm:"size:200;default:''" json:"image_id"`
+	Bandwidth    int    `gorm:"default:0" json:"bandwidth"`
+	ExpiredTime  string `gorm:"size:50;default:''" json:"expired_time"`
+	CreationTime string `gorm:"size:50;default:''" json:"creation_time"`
+
 	AutoStopEnabled  bool `gorm:"default:false" json:"auto_stop_enabled"`
 	AutoStartEnabled bool `gorm:"default:false" json:"auto_start_enabled"`
 	MonitorEnabled   bool `gorm:"default:true" json:"monitoring_enabled"`
@@ -61,7 +70,6 @@ type EcsInstance struct {
 
 	TrafficLogs   []TrafficLog   `gorm:"foreignKey:InstanceID;constraint:OnDelete:CASCADE" json:"-"`
 	OperationLogs []OperationLog `gorm:"foreignKey:InstanceID;constraint:OnDelete:CASCADE" json:"-"`
-	ProbeServers  []ProbeServer  `gorm:"foreignKey:EcsInstanceID" json:"-"`
 	Schedules     []ScheduleTask `gorm:"foreignKey:InstanceID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
@@ -112,58 +120,6 @@ type ScheduleTask struct {
 	Instance EcsInstance `gorm:"foreignKey:InstanceID" json:"-"`
 }
 
-type ProbeServer struct {
-	ID         uint   `gorm:"primaryKey" json:"id"`
-	Name       string `gorm:"size:150;not null" json:"name"`
-	Token      string `gorm:"size:255;uniqueIndex;not null" json:"-"`
-	ServerType string `gorm:"size:20;default:generic" json:"server_type"`
-
-	IPv4           string `gorm:"size:64;default:''" json:"ipv4"`
-	IPv6           string `gorm:"size:128;default:''" json:"ipv6"`
-	CPUName        string `gorm:"size:255;default:''" json:"cpu_name"`
-	CPUCores       int    `gorm:"default:0" json:"cpu_cores"`
-	Arch           string `gorm:"size:64;default:''" json:"arch"`
-	OSInfo         string `gorm:"size:255;default:''" json:"os_info"`
-	Virtualization string `gorm:"size:128;default:''" json:"virtualization"`
-
-	MemTotal  int64 `gorm:"default:0" json:"mem_total"`
-	SwapTotal int64 `gorm:"default:0" json:"swap_total"`
-	DiskTotal int64 `gorm:"default:0" json:"disk_total"`
-
-	IsOnline         bool       `gorm:"default:false" json:"is_online"`
-	LastSeen         *time.Time `json:"last_seen"`
-	LatestReportJSON string     `gorm:"type:text;default:''" json:"-"`
-	ReportUpdatedAt  *time.Time `json:"report_updated_at"`
-
-	EcsInstanceID *uint  `gorm:"index" json:"ecs_instance_id"`
-	Notes         string `gorm:"type:text;default:''" json:"notes"`
-	Tag           string `gorm:"size:100;default:''" json:"tag"`
-	CreatedAt     time.Time `json:"created_at"`
-
-	EcsInstance *EcsInstance `gorm:"foreignKey:EcsInstanceID" json:"-"`
-}
-
-func (p *ProbeServer) GetLatestReport() map[string]any {
-	if p.LatestReportJSON == "" {
-		return nil
-	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(p.LatestReportJSON), &m); err != nil {
-		return nil
-	}
-	return m
-}
-
-func (p *ProbeServer) SetLatestReport(payload map[string]any) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-	p.LatestReportJSON = string(data)
-	now := time.Now()
-	p.ReportUpdatedAt = &now
-}
-
 type CloudflareConfig struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	APIToken  string    `gorm:"size:800;default:''" json:"-"`
@@ -190,8 +146,8 @@ type DnsFailover struct {
 	LastSwitchTime *time.Time `json:"last_switch_time"`
 	CreatedAt      time.Time  `json:"created_at"`
 
-	PrimaryServer       ProbeServer    `gorm:"foreignKey:PrimaryServerID" json:"-"`
-	CurrentActiveServer *ProbeServer   `gorm:"foreignKey:CurrentActiveServerID" json:"-"`
+	PrimaryServer       EcsInstance      `gorm:"foreignKey:PrimaryServerID" json:"-"`
+	CurrentActiveServer *EcsInstance     `gorm:"foreignKey:CurrentActiveServerID" json:"-"`
 	Logs                []DnsFailoverLog `gorm:"foreignKey:FailoverID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
@@ -252,7 +208,6 @@ func AllModels() []any {
 		&AlertConfig{},
 		&NotificationLog{},
 		&ScheduleTask{},
-		&ProbeServer{},
 		&CloudflareConfig{},
 		&DnsFailover{},
 		&DnsFailoverLog{},

@@ -8,10 +8,18 @@ import (
 )
 
 type ECSInfo struct {
-	Status    string `json:"status"`
-	PublicIP  string `json:"public_ip"`
-	PrivateIP string `json:"private_ip"`
-	IPv6Addr  string `json:"ipv6_addr"`
+	Status       string `json:"status"`
+	PublicIP     string `json:"public_ip"`
+	PrivateIP    string `json:"private_ip"`
+	IPv6Addr     string `json:"ipv6_addr"`
+	CPU          int    `json:"cpu"`
+	Memory       int    `json:"memory"`
+	OSType       string `json:"os_type"`
+	OSName       string `json:"os_name"`
+	ImageID      string `json:"image_id"`
+	Bandwidth    int    `json:"bandwidth"`
+	ExpiredTime  string `json:"expired_time"`
+	CreationTime string `json:"creation_time"`
 }
 
 type InstanceBasicInfo struct {
@@ -235,6 +243,14 @@ func GetECSInfo(c *Client, instanceID string) (*ECSInfo, error) {
 		Instances struct {
 			Instance []struct {
 				Status    string `json:"Status"`
+				Cpu       int    `json:"Cpu"`
+				Memory    int    `json:"Memory"`
+				OSType    string `json:"OSType"`
+				OSName    string `json:"OSName"`
+				ImageId   string `json:"ImageId"`
+				CreationTime string `json:"CreationTime"`
+				ExpiredTime  string `json:"ExpiredTime"`
+				InternetMaxBandwidthOut int `json:"InternetMaxBandwidthOut"`
 				PublicIP  struct {
 					IpAddress []string `json:"IpAddress"`
 				} `json:"PublicIpAddress"`
@@ -271,7 +287,17 @@ func GetECSInfo(c *Client, instanceID string) (*ECSInfo, error) {
 	}
 
 	inst := resp.Instances.Instance[0]
-	info := &ECSInfo{Status: inst.Status}
+	info := &ECSInfo{
+		Status:       inst.Status,
+		CPU:          inst.Cpu,
+		Memory:       inst.Memory / 1024,
+		OSType:       strings.ToLower(inst.OSType),
+		OSName:       inst.OSName,
+		ImageID:      inst.ImageId,
+		Bandwidth:    inst.InternetMaxBandwidthOut,
+		CreationTime: inst.CreationTime,
+		ExpiredTime:  inst.ExpiredTime,
+	}
 
 	publicIPs := inst.PublicIP.IpAddress
 	if inst.EipAddress.IpAddress != "" {
@@ -405,4 +431,110 @@ func RevokeSG(c *Client, sgID, ipProtocol, portRange, sourceCidr, policy string)
 		return false, err.Error()
 	}
 	return true, "ok"
+}
+
+func ECSReboot(c *Client, instanceID string) (bool, string) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	_, err := c.DoAction(domain, "2014-05-26", "RebootInstance", map[string]string{
+		"InstanceId": instanceID,
+		"ForceStop":  "false",
+	})
+	if err != nil {
+		log.Printf("[ecs] reboot failed %s: %v", instanceID, err)
+		return false, err.Error()
+	}
+	return true, "reboot command sent"
+}
+
+func ECSGetVncUrl(c *Client, instanceID string) (string, error) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	data, err := c.DoAction(domain, "2014-05-26", "DescribeInstanceVncUrl", map[string]string{
+		"InstanceId": instanceID,
+	})
+	if err != nil {
+		return "", err
+	}
+	var resp struct {
+		VncUrl string `json:"VncUrl"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return "", fmt.Errorf("parse VncUrl: %w", err)
+	}
+	return resp.VncUrl, nil
+}
+
+func ECSModifyPassword(c *Client, instanceID, password string) (bool, string) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	_, err := c.DoAction(domain, "2014-05-26", "ModifyInstanceAttribute", map[string]string{
+		"InstanceId": instanceID,
+		"Password":   password,
+	})
+	if err != nil {
+		return false, err.Error()
+	}
+	return true, "密码已修改，需重启实例后生效"
+}
+
+type ImageInfo struct {
+	ImageID  string `json:"image_id"`
+	Name     string `json:"name"`
+	OSName   string `json:"os_name"`
+	OSType   string `json:"os_type"`
+	Size     int    `json:"size"`
+	Platform string `json:"platform"`
+}
+
+func ECSDescribeImages(c *Client, instanceType string) ([]ImageInfo, error) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	params := map[string]string{
+		"ImageOwnerAlias": "system",
+		"PageSize":        "50",
+		"Status":          "Available",
+	}
+	if instanceType != "" {
+		params["InstanceType"] = instanceType
+	}
+	data, err := c.DoAction(domain, "2014-05-26", "DescribeImages", params)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Images struct {
+			Image []struct {
+				ImageId  string `json:"ImageId"`
+				ImageName string `json:"ImageName"`
+				OSName   string `json:"OSName"`
+				OSType   string `json:"OSType"`
+				Size     int    `json:"Size"`
+				Platform string `json:"Platform"`
+			} `json:"Image"`
+		} `json:"Images"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("parse DescribeImages: %w", err)
+	}
+	var result []ImageInfo
+	for _, img := range resp.Images.Image {
+		result = append(result, ImageInfo{
+			ImageID:  img.ImageId,
+			Name:     img.ImageName,
+			OSName:   img.OSName,
+			OSType:   strings.ToLower(img.OSType),
+			Size:     img.Size,
+			Platform: img.Platform,
+		})
+	}
+	return result, nil
+}
+
+func ECSReplaceSystemDisk(c *Client, instanceID, imageID string) (bool, string) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	_, err := c.DoAction(domain, "2014-05-26", "ReplaceSystemDisk", map[string]string{
+		"InstanceId": instanceID,
+		"ImageId":    imageID,
+	})
+	if err != nil {
+		return false, err.Error()
+	}
+	return true, "系统盘更换已开始，约10分钟完成"
 }

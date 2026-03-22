@@ -58,6 +58,30 @@ func ECSRefreshStatus(c *gin.Context) {
 	if info.IPv6Addr != "" {
 		inst.IPv6Addr = info.IPv6Addr
 	}
+	if info.CPU > 0 {
+		inst.CPU = info.CPU
+	}
+	if info.Memory > 0 {
+		inst.Memory = info.Memory
+	}
+	if info.OSType != "" {
+		inst.OSType = info.OSType
+	}
+	if info.OSName != "" {
+		inst.OSName = info.OSName
+	}
+	if info.ImageID != "" {
+		inst.ImageID = info.ImageID
+	}
+	if info.Bandwidth > 0 {
+		inst.Bandwidth = info.Bandwidth
+	}
+	if info.ExpiredTime != "" {
+		inst.ExpiredTime = info.ExpiredTime
+	}
+	if info.CreationTime != "" {
+		inst.CreationTime = info.CreationTime
+	}
 	database.DB.Save(&inst)
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "instance": inst})
@@ -221,6 +245,141 @@ func APISecurityGroupRevoke(c *gin.Context) {
 	logOperation("sg_revoke", fmt.Sprintf("安全组 %s 删除规则 %s %s", body.SGID, body.Protocol, body.PortRange), &inst.ID, c)
 	c.JSON(http.StatusOK, gin.H{"success": ok, "message": msg})
 }
+
+func ECSRebootAction(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	ok, msg := service.ECSAction(uint(id), "reboot")
+	if ok {
+		logOperation("reboot", "重启实例", uintPtr(uint(id)), c)
+	}
+	c.JSON(http.StatusOK, gin.H{"success": ok, "message": msg})
+}
+
+func ECSVncUrl(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	client, err := getClientFromInstance(&inst)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	vncUrl, err := aliyun.ECSGetVncUrl(client, inst.InstanceID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	isWindows := strings.ToLower(inst.OSType) == "windows"
+	fullUrl := fmt.Sprintf("https://g.alicdn.com/aliyun/ecs-console-vnc2/0.0.8/index.html?vncUrl=%s&instanceId=%s&isWindows=%v",
+		vncUrl, inst.InstanceID, isWindows)
+	logOperation("vnc", "获取VNC连接", uintPtr(uint(id)), c)
+	c.JSON(http.StatusOK, gin.H{"success": true, "url": fullUrl})
+}
+
+func ECSModifyPasswordAction(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var body struct {
+		Password string `json:"password"`
+	}
+	if err := c.BindJSON(&body); err != nil || body.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "请输入密码"})
+		return
+	}
+	if len(body.Password) < 8 || len(body.Password) > 30 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "密码长度需为8-30字符"})
+		return
+	}
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	client, err := getClientFromInstance(&inst)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	ok, msg := aliyun.ECSModifyPassword(client, inst.InstanceID, body.Password)
+	if ok {
+		logOperation("change_password", "修改实例密码", uintPtr(uint(id)), c)
+	}
+	c.JSON(http.StatusOK, gin.H{"success": ok, "message": msg})
+}
+
+func ECSImagesAction(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	client, err := getClientFromInstance(&inst)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	images, err := aliyun.ECSDescribeImages(client, "")
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "images": images})
+}
+
+func ECSResetSystemAction(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var body struct {
+		ImageID string `json:"image_id"`
+	}
+	if err := c.BindJSON(&body); err != nil || body.ImageID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "请选择镜像"})
+		return
+	}
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	if inst.Status != "Stopped" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "实例必须处于已停止状态才能重置系统"})
+		return
+	}
+	client, err := getClientFromInstance(&inst)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	ok, msg := aliyun.ECSReplaceSystemDisk(client, inst.InstanceID, body.ImageID)
+	if ok {
+		logOperation("reset_system", fmt.Sprintf("重置系统 镜像:%s", body.ImageID), uintPtr(uint(id)), c)
+	}
+	c.JSON(http.StatusOK, gin.H{"success": ok, "message": msg})
+}
+
+func ECSRenameAction(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.BindJSON(&body); err != nil || body.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "请输入名称"})
+		return
+	}
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	inst.Name = body.Name
+	database.DB.Save(&inst)
+	logOperation("rename", fmt.Sprintf("重命名为 %s", body.Name), uintPtr(uint(id)), c)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "已重命名"})
+}
+
+func uintPtr(v uint) *uint { return &v }
 
 func ForceCheckInstance(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))

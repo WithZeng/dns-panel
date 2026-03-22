@@ -58,13 +58,13 @@
           <div>
             <label class="text-xs text-gray-500 dark:text-gray-400">主用服务器</label>
             <select name="primary_server_id" required class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-              {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
+              {{ range .instances }}<option value="{{ .ID }}">{{ .Name }} ({{ .PublicIP }})</option>{{ end }}
             </select>
           </div>
           <div>
             <label class="text-xs text-gray-500 dark:text-gray-400">备用服务器（多选）</label>
             <select name="backup_server_ids[]" multiple class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm min-h-[100px]">
-              {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
+              {{ range .instances }}<option value="{{ .ID }}">{{ .Name }} ({{ .PublicIP }})</option>{{ end }}
             </select>
           </div>
           <div class="sm:col-span-2 flex justify-end">
@@ -143,8 +143,8 @@
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">手动切换 DNS</h3>
     <p id="switchDomain" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
     <select id="switchTargetSelect" class="w-full mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-      {{ range .probes }}
-      <option value="{{ .ID }}">{{ .Name }} ({{ if .IPv4 }}{{ .IPv4 }}{{ else if .IPv6 }}{{ .IPv6 }}{{ else }}无 IP{{ end }})</option>
+      {{ range .instances }}
+      <option value="{{ .ID }}">{{ .Name }} ({{ if .PublicIP }}{{ .PublicIP }}{{ else }}无 IP{{ end }})</option>
       {{ end }}
     </select>
     <div class="flex justify-end gap-2 mt-4">
