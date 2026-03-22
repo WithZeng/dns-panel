@@ -1,11 +1,11 @@
 {{ define "title" }}导入数据库 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
-    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">从数据库导入实例</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">上传 SQLite 数据库文件，自动导入其中的实例信息到当前面板。</p>
+  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">从数据库导入实例</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">上传 SQLite 数据库文件，自动导入其中的实例信息到当前面板。</p>
 
-    <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-700 dark:text-blue-300 mb-6">
+    <div class="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-700 dark:text-blue-300 mb-6">
       <div class="font-semibold mb-1">导入说明</div>
       <ul class="list-disc list-inside space-y-1 text-xs leading-5">
         <li>仅导入实例数据（AK/SK、流量、配置等），<strong>不会更改面板密码</strong></li>
@@ -16,54 +16,54 @@
     </div>
 
     {{ if .error }}
-    <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
+    <div class="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
     {{ end }}
     {{ if .flash }}
-    <div class="rounded-xl border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
+    <div class="rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
     {{ end }}
 
     <form method="POST" enctype="multipart/form-data">
       <div class="space-y-4">
-        <div class="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
+        <div class="rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
           <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,.bak" required
-            class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-slate-900 file:text-white dark:file:bg-blue-600 hover:file:bg-slate-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">支持任意 SQLite 数据库文件</p>
+            class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-900 file:text-white dark:file:bg-blue-600 hover:file:bg-gray-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">支持任意 SQLite 数据库文件</p>
         </div>
 
         {{ if .need_fernet }}
-        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
           <div class="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">检测到 Python 版加密凭据（{{ .instance_count }} 个实例）</div>
           <p class="text-xs text-amber-600 dark:text-amber-400 mb-3">请输入旧版 ENCRYPT_KEY 以转换凭据。密钥在旧面板的 <code>.env</code> 或 <code>instance/encrypt.key</code> 中。</p>
           <input type="text" name="fernet_key" placeholder="Fernet 密钥（留空则跳过凭据）"
-            class="w-full bg-white dark:bg-slate-700 border border-amber-200 dark:border-amber-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-mono mb-3">
+            class="w-full bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-600 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-sm font-mono mb-3">
           <label class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 cursor-pointer">
             <input type="checkbox" name="skip_credentials" value="1" class="rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500/20">
             密钥丢失，跳过凭据导入（仅导入实例信息，之后用「账户导入」补充 AK/SK）
           </label>
         </div>
         {{ else }}
-        <details class="rounded-xl border border-slate-200 dark:border-slate-600">
-          <summary class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+        <details class="rounded-lg border border-gray-200 dark:border-gray-700">
+          <summary class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition">
             从 Python 版导入？点击展开填写旧版加密密钥
           </summary>
           <div class="px-4 pb-4">
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">如果数据库来自 Python 版面板，请输入旧版 ENCRYPT_KEY 以正确转换 AK/SK 凭据。密钥在旧面板的 <code>.env</code> 文件或 <code>instance/encrypt.key</code> 中。</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">如果数据库来自 Python 版面板，请输入旧版 ENCRYPT_KEY 以正确转换 AK/SK 凭据。密钥在旧面板的 <code>.env</code> 文件或 <code>instance/encrypt.key</code> 中。</p>
             <input type="text" name="fernet_key" placeholder="Fernet 密钥（留空则自动检测）"
-              class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-mono">
+              class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-mono">
           </div>
         </details>
         {{ end }}
       </div>
 
       <button type="submit"
-        class="mt-6 w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10"
+        class="mt-6 w-full bg-gray-900 dark:bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-gray-800 dark:hover:bg-blue-700 transition-colors shadow-sm"
         onclick="return confirm('确定导入吗？已有的相同实例会被更新。')">
         上传并导入实例
       </button>
     </form>
 
     <div class="mt-6 flex items-center justify-between">
-      <a href="/dashboard" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm">&larr; 返回仪表盘</a>
+      <a href="/dashboard" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm">&larr; 返回仪表盘</a>
       <a href="/download_backup" class="text-blue-600 dark:text-blue-400 hover:underline text-sm">下载当前备份</a>
     </div>
   </div>

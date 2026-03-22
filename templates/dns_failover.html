@@ -1,91 +1,91 @@
 {{ define "title" }}DNS 故障转移 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="space-y-5">
-  <section class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+  <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4 sm:px-6 sm:py-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">DNS 故障转移管理</h1>
-        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">自动检测并切换 DNS 记录，保证服务高可用</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">DNS 故障转移管理</h1>
+        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">自动检测并切换 DNS 记录，保证服务高可用</p>
       </div>
-      <a href="/checker_deploy" class="inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">🚀 部署测试机</a>
+      <a href="/checker_deploy" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">🚀 部署测试机</a>
     </div>
   </section>
 
-  <div id="pageHint" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
+  <div id="pageHint" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
 
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
     <div class="xl:col-span-2 space-y-5">
       <!-- Cloudflare Config -->
-      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Cloudflare 配置</h2>
+      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Cloudflare 配置</h2>
         <form method="POST" action="/dns_failover/cf_config" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="sm:col-span-2">
-            <label class="text-xs text-slate-500 dark:text-slate-400">API Token（留空则不修改）</label>
-            <input name="api_token" type="password" placeholder="CF 令牌" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
-            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">建议只给 Zone.DNS.Edit 权限。</p>
+            <label class="text-xs text-gray-500 dark:text-gray-400">API Token（留空则不修改）</label>
+            <input name="api_token" type="password" placeholder="CF 令牌" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">建议只给 Zone.DNS.Edit 权限。</p>
           </div>
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">Zone ID</label>
-            <input name="zone_id" value="{{ .cf_config.ZoneID }}" placeholder="84fffdbe84f52b455a..." class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+            <label class="text-xs text-gray-500 dark:text-gray-400">Zone ID</label>
+            <input name="zone_id" value="{{ .cf_config.ZoneID }}" placeholder="84fffdbe84f52b455a..." class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
           </div>
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">默认域名</label>
-            <input name="domain" value="{{ .cf_config.Domain }}" placeholder="test.example.com" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+            <label class="text-xs text-gray-500 dark:text-gray-400">默认域名</label>
+            <input name="domain" value="{{ .cf_config.Domain }}" placeholder="test.example.com" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
           </div>
           <div class="sm:col-span-2">
-            <label class="text-xs text-slate-500 dark:text-slate-400">国内测试机 IP（checker 模式）</label>
-            <input id="testerIpInput" name="tester_ip" value="{{ .cf_config.TesterIP }}" placeholder="例如：1.1.1.1" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
-            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">该机器需已部署 checker，确保面板机能访问 <code>http://测试机IP:8888/ping</code>。</p>
+            <label class="text-xs text-gray-500 dark:text-gray-400">国内测试机 IP（checker 模式）</label>
+            <input id="testerIpInput" name="tester_ip" value="{{ .cf_config.TesterIP }}" placeholder="例如：1.1.1.1" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">该机器需已部署 checker，确保面板机能访问 <code>http://测试机IP:8888/ping</code>。</p>
           </div>
           <div class="sm:col-span-2 flex justify-end">
-            <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">保存配置</button>
+            <button type="submit" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">保存配置</button>
           </div>
         </form>
       </section>
 
       <!-- New Rule -->
-      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">新增规则</h2>
+      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">新增规则</h2>
         <form method="POST" action="/dns_failover/rules" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">域名</label>
-            <input name="domain" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+            <label class="text-xs text-gray-500 dark:text-gray-400">域名</label>
+            <input name="domain" required class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
           </div>
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">检查间隔（分钟）</label>
-            <input name="check_interval_minutes" type="number" value="10" min="1" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+            <label class="text-xs text-gray-500 dark:text-gray-400">检查间隔（分钟）</label>
+            <input name="check_interval_minutes" type="number" value="10" min="1" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
           </div>
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">主用服务器</label>
-            <select name="primary_server_id" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+            <label class="text-xs text-gray-500 dark:text-gray-400">主用服务器</label>
+            <select name="primary_server_id" required class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
               {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
             </select>
           </div>
           <div>
-            <label class="text-xs text-slate-500 dark:text-slate-400">备用服务器（多选）</label>
-            <select name="backup_server_ids[]" multiple class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm min-h-[100px]">
+            <label class="text-xs text-gray-500 dark:text-gray-400">备用服务器（多选）</label>
+            <select name="backup_server_ids[]" multiple class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm min-h-[100px]">
               {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
             </select>
           </div>
           <div class="sm:col-span-2 flex justify-end">
-            <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">创建规则</button>
+            <button type="submit" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">创建规则</button>
           </div>
         </form>
       </section>
 
       <!-- Rule List -->
-      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
         <div class="flex items-center justify-between gap-2 mb-3">
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">规则列表</h2>
-          <span class="text-xs text-slate-500 dark:text-slate-400">共 {{ len .rules }} 条</span>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">规则列表</h2>
+          <span class="text-xs text-gray-500 dark:text-gray-400">共 {{ len .rules }} 条</span>
         </div>
         <div class="space-y-3">
           {{ range .rules }}
-          <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
-                <div class="text-sm font-semibold text-slate-900 dark:text-white break-all">{{ .Domain }}</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ .Domain }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   主用: {{ if .PrimaryServer.Name }}{{ .PrimaryServer.Name }}{{ else }}ID:{{ .PrimaryServerID }}{{ end }}
                   · 当前: {{ if .CurrentActiveServer }}{{ .CurrentActiveServer.Name }}{{ else }}-{{ end }}
                   · 间隔: {{ .CheckIntervalMinutes }}分钟
@@ -97,14 +97,14 @@
                   <span class="h-2 w-2 rounded-full bg-emerald-500"></span>启用
                 </span>
                 {{ else }}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                  <span class="h-2 w-2 rounded-full bg-slate-400"></span>禁用
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">
+                  <span class="h-2 w-2 rounded-full bg-gray-400"></span>禁用
                 </span>
                 {{ end }}
                 <form method="POST" action="/dns_failover/rules/{{ .ID }}/toggle" class="inline">
-                  <button type="submit" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 text-sm min-h-[40px]">{{ if .Enabled }}禁用{{ else }}启用{{ end }}</button>
+                  <button type="submit" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm min-h-[40px]">{{ if .Enabled }}禁用{{ else }}启用{{ end }}</button>
                 </form>
-                <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-2 text-sm min-h-[40px] js-manual-switch" data-id="{{ .ID }}" data-domain="{{ .Domain }}">手动切换</button>
+                <button type="button" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm min-h-[40px] js-manual-switch" data-id="{{ .ID }}" data-domain="{{ .Domain }}">手动切换</button>
                 <form method="POST" action="/dns_failover/rules/{{ .ID }}/delete" onsubmit="return confirm('确认删除该规则？')">
                   <button type="submit" class="rounded-lg border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 px-3 py-2 text-sm min-h-[40px]">删除</button>
                 </form>
@@ -112,7 +112,7 @@
             </div>
           </div>
           {{ else }}
-          <div class="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-8 text-center text-sm text-slate-500 dark:text-slate-400">暂无规则，先创建一条用于自动故障切换。</div>
+          <div class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">暂无规则，先创建一条用于自动故障切换。</div>
           {{ end }}
         </div>
       </section>
@@ -120,16 +120,16 @@
 
     <!-- Right Column: Logs -->
     <div class="space-y-5">
-      <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">切换日志</h2>
+      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">切换日志</h2>
         <div class="space-y-2 max-h-[760px] overflow-auto">
           {{ range .logs }}
-          <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
-            <div class="text-xs text-slate-500 dark:text-slate-400">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
+          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
             <div class="text-sm mt-1 break-words">[{{ .Action }}] {{ .Message }}</div>
           </div>
           {{ else }}
-          <div class="text-sm text-slate-500 dark:text-slate-400">暂无日志</div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">暂无日志</div>
           {{ end }}
         </div>
       </section>
@@ -138,18 +138,18 @@
 </div>
 
 <!-- Switch Modal -->
-<div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
-  <div class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-5">
-    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">手动切换 DNS</h3>
-    <p id="switchDomain" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
-    <select id="switchTargetSelect" class="w-full mt-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+<div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 p-4">
+  <div class="w-full max-w-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">手动切换 DNS</h3>
+    <p id="switchDomain" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
+    <select id="switchTargetSelect" class="w-full mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
       {{ range .probes }}
       <option value="{{ .ID }}">{{ .Name }} ({{ if .IPv4 }}{{ .IPv4 }}{{ else if .IPv6 }}{{ .IPv6 }}{{ else }}无 IP{{ end }})</option>
       {{ end }}
     </select>
     <div class="flex justify-end gap-2 mt-4">
-      <button id="closeSwitchModal" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">取消</button>
-      <button id="confirmSwitch" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">确认切换</button>
+      <button id="closeSwitchModal" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm">取消</button>
+      <button id="confirmSwitch" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">确认切换</button>
     </div>
   </div>
 </div>
@@ -164,7 +164,7 @@
     var cls = type === 'error'
       ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
       : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300';
-    pageHint.className = 'rounded-xl border px-4 py-3 text-sm ' + cls;
+    pageHint.className = 'rounded-lg border px-4 py-3 text-sm ' + cls;
     pageHint.textContent = text;
     pageHint.classList.remove('hidden');
     setTimeout(function() { pageHint.classList.add('hidden'); }, 2400);

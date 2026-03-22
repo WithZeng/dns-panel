@@ -2,36 +2,36 @@
 {{ define "content" }}
 <div class="max-w-4xl mx-auto">
   <div class="mb-6">
-    <a href="/instance/{{ .instance.ID }}" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">&larr; 返回 {{ .instance.Name }}</a>
+    <a href="/instance/{{ .instance.ID }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">&larr; 返回 {{ .instance.Name }}</a>
   </div>
 
   {{ if .error }}
-  <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-red-600 dark:text-red-300 text-sm">{{ .error }}</div>
+  <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-300 text-sm">{{ .error }}</div>
   {{ end }}
 
   {{ range .groups }}
   <!-- Security Group Card -->
-  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
+  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-6">
     <div class="flex items-center justify-between mb-4">
-      <h1 class="text-xl font-bold text-slate-900 dark:text-white">🔒 安全组规则</h1>
-      <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ .ID }}</span>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">🔒 安全组规则</h1>
+      <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">{{ .ID }}</span>
     </div>
 
     <!-- Quick Open All -->
     <div class="mb-6">
       <button type="button" onclick="openAllPorts('{{ .ID }}')"
-        class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+        class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg font-medium hover:shadow-lg transition-all">
         🚀 一键开放全部端口 (IPv4/IPv6 + TCP + UDP)
       </button>
     </div>
 
     <!-- Custom Rule Form -->
-    <h2 class="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">自定义规则</h2>
+    <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">自定义规则</h2>
     <div class="space-y-3 mb-6" id="addRuleForm-{{ .ID }}">
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div>
-          <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">协议</label>
-          <select data-field="protocol" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">协议</label>
+          <select data-field="protocol" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200">
             <option value="tcp+udp">TCP + UDP</option>
             <option value="tcp">TCP</option>
             <option value="udp">UDP</option>
@@ -39,37 +39,37 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">端口 <span class="text-slate-400">(空=全部)</span></label>
-          <input data-field="port" type="text" placeholder="如 80/80 或 1/65535" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">端口 <span class="text-gray-400">(空=全部)</span></label>
+          <input data-field="port" type="text" placeholder="如 80/80 或 1/65535" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200">
         </div>
         <div>
-          <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">来源 CIDR</label>
-          <input data-field="cidr" type="text" value="0.0.0.0/0" placeholder="0.0.0.0/0" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">来源 CIDR</label>
+          <input data-field="cidr" type="text" value="0.0.0.0/0" placeholder="0.0.0.0/0" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200">
         </div>
         <div>
-          <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">备注</label>
-          <input data-field="desc" type="text" placeholder="可选" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">备注</label>
+          <input data-field="desc" type="text" placeholder="可选" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-700 dark:text-gray-200">
         </div>
       </div>
       <button type="button" onclick="addRule('{{ .ID }}')"
-        class="w-full py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-blue-600 dark:to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition-all text-sm">
+        class="w-full py-2.5 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-blue-600 dark:to-blue-700 text-white rounded-lg font-medium hover:shadow-lg transition-all text-sm">
         ➕ 添加规则
       </button>
     </div>
   </div>
 
   <!-- Rules Table -->
-  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
-    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-900 dark:text-white">入站规则
-        <span class="text-sm font-normal text-slate-500">({{ len .Rules }})</span>
+  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white">入站规则
+        <span class="text-sm font-normal text-gray-500">({{ len .Rules }})</span>
       </h2>
     </div>
 
     {{ if .Rules }}
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="text-left text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50">
+        <thead class="text-left text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50">
           <tr>
             <th class="px-4 py-3 font-medium">协议</th>
             <th class="px-4 py-3 font-medium">端口范围</th>
@@ -79,26 +79,26 @@
             <th class="px-4 py-3 font-medium text-right">操作</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
           {{ range .Rules }}
-          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition">
             <td class="px-4 py-3">
               {{ if eq .IpProtocol "TCP" }}
               <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">TCP</span>
               {{ else if eq .IpProtocol "UDP" }}
               <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">UDP</span>
               {{ else }}
-              <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-600 dark:text-slate-300">{{ .IpProtocol }}</span>
+              <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ .IpProtocol }}</span>
               {{ end }}
             </td>
-            <td class="px-4 py-3 font-mono text-slate-800 dark:text-slate-200">{{ .PortRange }}</td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-400">
+            <td class="px-4 py-3 font-mono text-gray-900 dark:text-gray-200">{{ .PortRange }}</td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
               {{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else if .Ipv6SourceCidr }}{{ .Ipv6SourceCidr }} <span class="text-xs text-blue-500">IPv6</span>{{ else }}-{{ end }}
             </td>
             <td class="px-4 py-3">
               {{ if eq .Policy "Accept" }}<span class="text-emerald-600 dark:text-emerald-400">✓ 允许</span>{{ else }}<span class="text-red-600 dark:text-red-400">✗ 拒绝</span>{{ end }}
             </td>
-            <td class="px-4 py-3 text-slate-400 text-xs max-w-[120px] truncate">{{ .Description }}</td>
+            <td class="px-4 py-3 text-gray-400 text-xs max-w-[120px] truncate">{{ .Description }}</td>
             <td class="px-4 py-3 text-right">
               <button onclick="revokeRule('{{ .IpProtocol }}', '{{ .PortRange }}', '{{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else }}{{ .Ipv6SourceCidr }}{{ end }}', '{{ .Policy }}', this.closest('[data-sg-id]').dataset.sgId)"
                 class="rounded-lg border border-red-200 dark:border-red-700 px-2.5 py-1 text-xs text-red-600 bg-red-50 dark:bg-red-900/20 hover:opacity-80 transition">删除</button>
@@ -111,7 +111,7 @@
     {{ else }}
     <div class="text-center py-12">
       <p class="text-3xl mb-2">🔓</p>
-      <p class="text-slate-400">暂无入站规则</p>
+      <p class="text-gray-400">暂无入站规则</p>
     </div>
     {{ end }}
   </div>

@@ -3,44 +3,44 @@
 <div class="space-y-5">
   <div class="flex items-start justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">国内测试机部署</h1>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">用于部署独立 Ping Checker，避免跨境网络导致误判</p>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">国内测试机部署</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">用于部署独立 Ping Checker，避免跨境网络导致误判</p>
     </div>
-    <a href="/dns_failover" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">返回 DNS 管理</a>
+    <a href="/dns_failover" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">返回 DNS 管理</a>
   </div>
 
-  <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-4">
-    <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
-      <div class="text-sm font-semibold text-slate-900 dark:text-white">国内机器一键部署（推荐）</div>
-      <pre class="mt-2 rounded-lg bg-slate-950 text-slate-100 text-xs p-3 overflow-auto whitespace-pre-wrap select-all">{{ .install_cmd_cn }}</pre>
+  <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm space-y-4">
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4">
+      <div class="text-sm font-semibold text-gray-900 dark:text-white">国内机器一键部署（推荐）</div>
+      <pre class="mt-2 rounded-lg bg-gray-950 text-gray-100 text-xs p-3 overflow-auto whitespace-pre-wrap select-all">{{ .install_cmd_cn }}</pre>
     </div>
 
-    <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
-      <div class="text-sm font-semibold text-slate-900 dark:text-white">国外机器一键部署</div>
-      <pre class="mt-2 rounded-lg bg-slate-950 text-slate-100 text-xs p-3 overflow-auto whitespace-pre-wrap select-all">{{ .install_cmd_global }}</pre>
-      <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">兼容命令：<code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">{{ .install_cmd_legacy }}</code></div>
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4">
+      <div class="text-sm font-semibold text-gray-900 dark:text-white">国外机器一键部署</div>
+      <pre class="mt-2 rounded-lg bg-gray-950 text-gray-100 text-xs p-3 overflow-auto whitespace-pre-wrap select-all">{{ .install_cmd_global }}</pre>
+      <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">兼容命令：<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">{{ .install_cmd_legacy }}</code></div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-xl border border-slate-200 dark:border-slate-600 p-4">
-        <div class="text-sm font-semibold text-slate-900 dark:text-white mb-2">部署完成后检查</div>
-        <ol class="list-decimal ml-5 text-sm text-slate-600 dark:text-slate-300 space-y-1">
-          <li><code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">systemctl status dns-panel-checker --no-pager</code></li>
-          <li><code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">{{ .verify_cmd }}</code></li>
-          <li><code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">journalctl -u dns-panel-checker -f</code></li>
+      <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="text-sm font-semibold text-gray-900 dark:text-white mb-2">部署完成后检查</div>
+        <ol class="list-decimal ml-5 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+          <li><code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">systemctl status dns-panel-checker --no-pager</code></li>
+          <li><code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">{{ .verify_cmd }}</code></li>
+          <li><code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">journalctl -u dns-panel-checker -f</code></li>
         </ol>
       </div>
-      <div class="rounded-xl border border-slate-200 dark:border-slate-600 p-4">
-        <div class="text-sm font-semibold text-slate-900 dark:text-white mb-2">网络与安全建议</div>
-        <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
-          <li>开放端口：<code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">8888/tcp</code></li>
+      <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="text-sm font-semibold text-gray-900 dark:text-white mb-2">网络与安全建议</div>
+        <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+          <li>开放端口：<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">8888/tcp</code></li>
           <li>建议仅允许面板机 IP 访问</li>
-          <li>UFW 示例：<code class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-xs">ufw allow from 面板机IP to any port 8888 proto tcp</code></li>
+          <li>UFW 示例：<code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">ufw allow from 面板机IP to any port 8888 proto tcp</code></li>
         </ul>
       </div>
     </div>
 
-    <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200">
+    <div class="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200">
       面板自动故障转移检测模式受环境变量 <code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">DNS_FAILOVER_TEST_MODE</code> 控制：
       <code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">panel_local</code>（默认）或 <code class="bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs">checker</code>。
     </div>

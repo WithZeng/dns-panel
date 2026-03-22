@@ -1,29 +1,29 @@
 {{ define "title" }}发现实例 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
-    <h1 class="text-2xl font-bold text-slate-800 dark:text-white mb-1">实例自动发现</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
+  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">实例自动发现</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
 
     <form method="POST" class="space-y-4 mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey ID</label>
+          <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">AccessKey ID</label>
           <input name="access_key_id" type="text" value="{{ .ak }}" required
-            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">AccessKey Secret</label>
+          <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">AccessKey Secret</label>
           <input name="access_key_secret" type="password" value="{{ .sk }}" required
-            class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
         </div>
       </div>
 
       <!-- Region Selector -->
       <div class="relative">
-        <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">区域 ID</label>
+        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">区域 ID</label>
         <select id="region_select"
-          class="w-full appearance-none bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 pr-10 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+          class="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 pr-10 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
           <optgroup label="华北">
             <option value="cn-beijing">cn-beijing（北京）</option>
             <option value="cn-zhangjiakou">cn-zhangjiakou（张家口）</option>
@@ -70,28 +70,28 @@
           </optgroup>
           <option value="__custom__">自定义输入...</option>
         </select>
-        <span class="pointer-events-none absolute right-3 top-[43px] text-slate-400">
+        <span class="pointer-events-none absolute right-3 top-[43px] text-gray-400">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
         </span>
         <input id="region_custom" type="text"
-          class="hidden mt-2 w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          class="hidden mt-2 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           placeholder="输入自定义 Region ID">
         <input id="region_id" name="region_id" type="hidden" required value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}">
       </div>
 
       <button type="submit"
-        class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">
+        class="w-full bg-gray-900 dark:bg-indigo-600 text-white font-medium py-3 rounded-lg hover:bg-gray-800 dark:hover:bg-indigo-500 transition-colors shadow-sm">
         🔍 扫描实例
       </button>
     </form>
 
     {{ if .discovered }}
-    <div class="border-t border-slate-100 dark:border-slate-700 pt-5">
-      <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-3">发现 {{ len .discovered }} 个实例</h2>
+    <div class="border-t border-gray-200 dark:border-gray-800 pt-5">
+      <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">发现 {{ len .discovered }} 个实例</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-100 dark:border-slate-700 text-left text-slate-500 dark:text-slate-400">
+            <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-gray-500 dark:text-gray-400">
               <th class="py-2 pr-4">Instance ID</th>
               <th class="py-2 pr-4">名称</th>
               <th class="py-2 pr-4">IP 地址</th>
@@ -101,11 +101,11 @@
           </thead>
           <tbody>
             {{ range .discovered }}
-            <tr class="border-b border-slate-50 dark:border-slate-700/50">
-              <td class="py-2.5 pr-4 font-mono text-xs text-slate-600 dark:text-slate-300">{{ .InstanceID }}</td>
-              <td class="py-2.5 pr-4 text-slate-700 dark:text-slate-200">{{ if .Name }}{{ .Name }}{{ else }}-{{ end }}</td>
+            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+              <td class="py-2.5 pr-4 font-mono text-xs text-gray-600 dark:text-gray-300">{{ .InstanceID }}</td>
+              <td class="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{{ if .Name }}{{ .Name }}{{ else }}-{{ end }}</td>
               <td class="py-2.5 pr-4">
-                <div class="text-[10px] font-mono text-slate-500">
+                <div class="text-[10px] font-mono text-gray-500">
                   {{ if .PublicIP }}<span class="text-blue-600 dark:text-blue-400">{{ .PublicIP }}</span>{{ end }}
                 </div>
               </td>
@@ -115,12 +115,12 @@
                 {{ else if eq .Status "Stopped" }}
                 <span class="inline-flex items-center text-xs font-medium text-red-500 dark:text-red-400">● Stopped</span>
                 {{ else }}
-                <span class="text-xs text-slate-400">{{ .Status }}</span>
+                <span class="text-xs text-gray-400">{{ .Status }}</span>
                 {{ end }}
               </td>
               <td class="py-2.5">
                 {{ if .Added }}
-                <span class="text-xs text-slate-400 dark:text-slate-500">已添加</span>
+                <span class="text-xs text-gray-400 dark:text-gray-500">已添加</span>
                 {{ else }}
                 <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">+ 添加</a>
                 {{ end }}
@@ -133,7 +133,7 @@
     </div>
     {{ end }}
 
-    <a href="/dashboard" class="block text-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm mt-4">&larr; 返回</a>
+    <a href="/dashboard" class="block text-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm mt-4">&larr; 返回</a>
   </div>
 </div>
 {{ end }}

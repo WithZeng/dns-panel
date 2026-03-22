@@ -465,7 +465,7 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 
 	syncTarget := ""
 	if githubRepo != "" {
-		updateJob("同步GitHub", "正在同步到 GitHub 私有仓库...", 90)
+		updateJob("同步GitHub", "正在连接 GitHub...", 88)
 
 		var ghInstances []service.GitHubSyncInstance
 		for _, d := range allDiscovered {
@@ -495,7 +495,17 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 			Instances:         ghInstances,
 		}
 
-		ok, info := service.SyncAccountToGitHub(githubRepo, payload)
+		ghSteps := 0
+		onProgress := func(step string) {
+			ghSteps++
+			pct := 88 + ghSteps*3
+			if pct > 98 {
+				pct = 98
+			}
+			updateJob("同步GitHub", step, pct)
+		}
+
+		ok, info := service.SyncAccountToGitHubWithProgress(githubRepo, payload, onProgress)
 		if ok {
 			syncTarget = info
 			log.Printf("[import] GitHub sync success: %s", info)

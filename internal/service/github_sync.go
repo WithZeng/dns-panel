@@ -38,12 +38,24 @@ func safeYAML(s string) string {
 }
 
 func SyncAccountToGitHub(repo string, payload *GitHubSyncPayload) (bool, string) {
+	return SyncAccountToGitHubWithProgress(repo, payload, nil)
+}
+
+func SyncAccountToGitHubWithProgress(repo string, payload *GitHubSyncPayload, onProgress func(step string)) (bool, string) {
+	progress := func(s string) {
+		if onProgress != nil {
+			onProgress(s)
+		}
+	}
+
 	if _, err := exec.LookPath("gh"); err != nil {
 		return false, "未检测到 gh CLI，请先安装并执行 gh auth login"
 	}
 
+	progress("检查仓库是否存在...")
 	check := exec.Command("gh", "repo", "view", repo)
 	if out, err := check.CombinedOutput(); err != nil {
+		progress("创建私有仓库...")
 		create := exec.Command("gh", "repo", "create", repo, "--private", "--confirm")
 		if cOut, cErr := create.CombinedOutput(); cErr != nil {
 			return false, fmt.Sprintf("创建 GitHub 仓库失败: %s", strings.TrimSpace(string(cOut)))
@@ -53,6 +65,7 @@ func SyncAccountToGitHub(repo string, payload *GitHubSyncPayload) (bool, string)
 
 	filePath := fmt.Sprintf("accounts/%s/account.yaml", payload.AccountSlug)
 
+	progress("生成 YAML 数据...")
 	var lines []string
 	lines = append(lines,
 		fmt.Sprintf("account_slug: %s", safeYAML(payload.AccountSlug)),
@@ -79,8 +92,10 @@ func SyncAccountToGitHub(repo string, payload *GitHubSyncPayload) (bool, string)
 	content := strings.Join(lines, "\n") + "\n"
 	contentB64 := base64.StdEncoding.EncodeToString([]byte(content))
 
+	progress("获取文件版本...")
 	sha := getFileSHA(repo, filePath)
 
+	progress("推送到 GitHub...")
 	cmd := []string{
 		"gh", "api", "--method", "PUT",
 		fmt.Sprintf("repos/%s/contents/%s", repo, filePath),

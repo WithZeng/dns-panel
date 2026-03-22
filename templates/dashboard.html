@@ -1,82 +1,78 @@
 {{ define "title" }}仪表盘 - ECS Monitor{{ end }}
 {{ define "content" }}
-<!-- Hero Section -->
-<section class="mb-5 rounded-2xl border border-white/[.06] bg-slate-900/40 backdrop-blur-xl px-4 py-4 sm:px-6 sm:py-5">
-  <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">控制台总览</h1>
-      <p class="text-xs sm:text-sm text-slate-400 mt-1">核心指标、实例状态与区域流量统一视图</p>
-    </div>
-  </div>
-</section>
+<!-- Page Header -->
+<div class="mb-5">
+  <h1 class="text-xl font-bold text-gray-900 dark:text-white">控制台总览</h1>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">核心指标、实例状态与区域流量统一视图</p>
+</div>
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
-    <div class="text-xs text-slate-500">实例总数</div>
-    <div class="text-2xl font-bold text-white mt-1" id="s_total">{{ .total }}</div>
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3.5">
+    <div class="text-xs text-gray-500 dark:text-gray-400">实例总数</div>
+    <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="s_total">{{ .total }}</div>
   </div>
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
-    <div class="text-xs text-slate-500">在线</div>
-    <div class="text-2xl font-bold text-emerald-400 mt-1" id="s_online">{{ .online }}</div>
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3.5">
+    <div class="text-xs text-gray-500 dark:text-gray-400">在线</div>
+    <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1" id="s_online">{{ .online }}</div>
   </div>
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
-    <div class="text-xs text-slate-500">已停机</div>
-    <div class="text-2xl font-bold text-slate-400 mt-1" id="s_stopped">{{ .stopped }}</div>
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3.5">
+    <div class="text-xs text-gray-500 dark:text-gray-400">已停机</div>
+    <div class="text-2xl font-bold text-gray-400 mt-1" id="s_stopped">{{ .stopped }}</div>
   </div>
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
-    <div class="text-xs text-slate-500">本月总流量</div>
-    <div class="text-2xl font-bold text-blue-400 mt-1" id="s_traffic">{{ printf "%.1f" .totalTraffic }} <span class="text-sm font-normal">GB</span></div>
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3.5">
+    <div class="text-xs text-gray-500 dark:text-gray-400">本月总流量</div>
+    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1" id="s_traffic">{{ printf "%.1f" .totalTraffic }} <span class="text-sm font-normal">GB</span></div>
   </div>
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
-    <div class="text-xs text-slate-500">预估费用</div>
-    <div class="text-2xl font-bold text-amber-400 mt-1" id="s_cost">&yen;{{ printf "%.2f" .totalCost }}</div>
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3.5">
+    <div class="text-xs text-gray-500 dark:text-gray-400">预估费用</div>
+    <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1" id="s_cost">&yen;{{ printf "%.2f" .totalCost }}</div>
   </div>
 </div>
 
 <!-- Probe + DNS Overview -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
     <div class="flex items-center justify-between mb-2">
-      <h3 class="text-sm font-semibold text-white">探针服务器概览</h3>
-      <a href="/probe/servers" class="text-xs text-indigo-400 hover:underline">查看全部</a>
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">探针服务器概览</h3>
+      <a href="/probe/servers" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">查看全部</a>
     </div>
     <div class="flex items-center gap-4 text-xs mb-3">
-      <span class="text-slate-500">总计 <strong class="text-slate-300" id="p_total">{{ .probeTotal }}</strong></span>
-      <span class="text-emerald-400">在线 <strong id="p_online">{{ .probeOnline }}</strong></span>
-      <span class="text-rose-400">离线 <strong id="p_offline">{{ .probeOffline }}</strong></span>
+      <span class="text-gray-500">总计 <strong class="text-gray-700 dark:text-gray-300" id="p_total">{{ .probeTotal }}</strong></span>
+      <span class="text-emerald-600 dark:text-emerald-400">在线 <strong id="p_online">{{ .probeOnline }}</strong></span>
+      <span class="text-red-500 dark:text-rose-400">离线 <strong id="p_offline">{{ .probeOffline }}</strong></span>
     </div>
-    <div id="probeMiniList" class="space-y-1 text-xs text-slate-300"></div>
+    <div id="probeMiniList" class="space-y-1 text-xs text-gray-600 dark:text-gray-300"></div>
   </div>
 
-  <div class="rounded-2xl bg-white/[.04] border border-white/[.06] p-4">
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
     <div class="flex items-center justify-between mb-2">
-      <h3 class="text-sm font-semibold text-white">DNS 解析状态</h3>
-      <a href="/dns_failover" class="text-xs text-indigo-400 hover:underline">管理</a>
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">DNS 解析状态</h3>
+      <a href="/dns_failover" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">管理</a>
     </div>
     <div class="grid grid-cols-2 gap-3 text-sm">
-      <div class="rounded-xl border border-white/[.06] p-3">
-        <div class="text-xs text-slate-500">规则总数</div>
-        <div id="dns_total_rules" class="font-semibold text-white mt-1">{{ .dnsTotal }}</div>
+      <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+        <div class="text-xs text-gray-500 dark:text-gray-400">规则总数</div>
+        <div id="dns_total_rules" class="font-semibold text-gray-900 dark:text-white mt-1">{{ .dnsTotal }}</div>
       </div>
-      <div class="rounded-xl border border-white/[.06] p-3">
-        <div class="text-xs text-slate-500">启用规则</div>
-        <div id="dns_enabled_rules" class="font-semibold text-white mt-1">{{ .dnsEnabled }}</div>
+      <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+        <div class="text-xs text-gray-500 dark:text-gray-400">启用规则</div>
+        <div id="dns_enabled_rules" class="font-semibold text-gray-900 dark:text-white mt-1">{{ .dnsEnabled }}</div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Action Bar -->
-<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
   <div>
-    <h2 class="text-2xl font-bold text-white tracking-tight">实例仪表盘</h2>
-    <p class="text-xs text-slate-500 mt-1">自动刷新 <span id="countdown" class="font-mono text-indigo-400">30</span>s</p>
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white">实例仪表盘</h2>
+    <p class="text-xs text-gray-500 mt-0.5">自动刷新 <span id="countdown" class="font-mono text-indigo-600 dark:text-indigo-400">30</span>s</p>
   </div>
   <div class="flex flex-wrap gap-2 items-center">
     {{ if .tags }}
     <select id="tagFilter" onchange="window.location='?tag='+encodeURIComponent(this.value)"
-      class="rounded-xl border border-white/[.1] bg-white/[.06] px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 min-h-[44px]">
+      class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
       <option value="" {{ if not .currentTag }}selected{{ end }}>全部标签</option>
       {{ $cur := .currentTag }}
       {{ range .tags }}
@@ -84,111 +80,109 @@
       {{ end }}
     </select>
     {{ end }}
-    <a href="/api/check_all" class="inline-flex items-center rounded-xl border border-white/[.1] bg-white/[.06] px-4 py-2 text-sm text-slate-200 hover:bg-white/[.1] transition min-h-[44px]">全部检查</a>
+    <a href="/api/check_all" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">全部检查</a>
     <div class="relative" id="exportDropdown">
-      <button type="button" onclick="document.getElementById('exportMenu').classList.toggle('hidden')" class="inline-flex items-center rounded-xl border border-white/[.1] bg-white/[.06] px-4 py-2 text-sm text-slate-200 hover:bg-white/[.1] transition min-h-[44px]">
+      <button type="button" onclick="document.getElementById('exportMenu').classList.toggle('hidden')" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
         导出备份 <svg class="ml-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="exportMenu" class="hidden absolute right-0 mt-1 w-44 rounded-xl border border-white/[.1] bg-slate-800 shadow-lg z-20 overflow-hidden">
-        <button type="button" id="exportCsvBtn" class="w-full text-left px-4 py-2.5 text-sm text-slate-200 hover:bg-white/[.08] transition">导出 CSV</button>
-        <a href="/download_backup" class="block px-4 py-2.5 text-sm text-slate-200 hover:bg-white/[.08] transition">下载数据库</a>
+      <div id="exportMenu" class="hidden absolute right-0 mt-1 w-44 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 overflow-hidden">
+        <button type="button" id="exportCsvBtn" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">导出 CSV</button>
+        <a href="/download_backup" class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">下载数据库</a>
       </div>
     </div>
-    <a href="/restore_db" class="inline-flex items-center rounded-xl border border-white/[.1] bg-white/[.06] px-4 py-2 text-sm text-slate-200 hover:bg-white/[.1] transition min-h-[44px]">导入数据库</a>
-    <a href="/instance/add" class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500 transition min-h-[44px]">添加实例</a>
+    <a href="/restore_db" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">导入数据库</a>
+    <a href="/instance/add" class="inline-flex items-center rounded-lg bg-gray-900 dark:bg-indigo-600 px-3.5 py-2 text-sm text-white hover:bg-gray-800 dark:hover:bg-indigo-500 transition">添加实例</a>
   </div>
 </div>
 
 <!-- Batch Operations -->
-<form id="batchForm" class="flex flex-wrap gap-2 items-center bg-white/[.04] rounded-2xl border border-white/[.06] p-3 mb-6">
-  <span class="text-sm text-slate-400 font-medium">批量操作:</span>
+<form id="batchForm" class="flex flex-wrap gap-2 items-center bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3 mb-5">
+  <span class="text-sm text-gray-500 font-medium">批量操作:</span>
   <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
-    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500/30 cursor-pointer">
-    <span class="text-sm text-slate-300">全选</span>
+    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-600 focus:ring-indigo-500/30 cursor-pointer">
+    <span class="text-sm text-gray-600 dark:text-gray-300">全选</span>
   </label>
-  <span id="selectedCount" class="hidden rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs font-semibold text-indigo-300 transition-all">已选 0</span>
-  <button type="button" onclick="batchAction('check')" class="inline-flex items-center rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-300 hover:bg-blue-500/20 transition min-h-[44px]">🔍 检查</button>
-  <button type="button" onclick="batchAction('start')" class="inline-flex items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 hover:bg-emerald-500/20 transition min-h-[44px]">▶ 启动</button>
-  <button type="button" onclick="if(confirm('确定要批量停止吗？'))batchAction('stop')" class="inline-flex items-center rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-500/20 transition min-h-[44px]">⏸ 停止</button>
-  <button type="button" onclick="if(confirm('确定要批量移除选中的实例吗？仅删除本地记录，不影响阿里云。'))batchAction('delete')" class="inline-flex items-center rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/20 transition min-h-[44px]">🗑️ 移除</button>
+  <span id="selectedCount" class="hidden rounded-full bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 transition-all">已选 0</span>
+  <button type="button" onclick="batchAction('check')" class="inline-flex items-center rounded-md border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition">检查</button>
+  <button type="button" onclick="batchAction('start')" class="inline-flex items-center rounded-md border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition">启动</button>
+  <button type="button" onclick="if(confirm('确定要批量停止吗？'))batchAction('stop')" class="inline-flex items-center rounded-md border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition">停止</button>
+  <button type="button" onclick="if(confirm('确定要批量移除选中的实例吗？仅删除本地记录，不影响阿里云。'))batchAction('delete')" class="inline-flex items-center rounded-md border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-3 py-1.5 text-sm text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/20 transition">移除</button>
 </form>
 
 <!-- Instance Cards -->
 {{ if .instances }}
-<div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+<div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
   {{ range .instances }}
-  <section data-id="{{ .ID }}" class="rounded-2xl bg-white/[.04] border border-white/[.06] hover:border-white/[.12] hover:bg-white/[.06] transition-all overflow-hidden">
-    <div class="p-5">
+  <section data-id="{{ .ID }}" class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all overflow-hidden">
+    <div class="p-4">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <input type="checkbox" class="instance-checkbox w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-500 cursor-pointer shrink-0" data-instance-id="{{ .ID }}">
+          <input type="checkbox" class="instance-checkbox w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-600 cursor-pointer shrink-0" data-instance-id="{{ .ID }}">
           <div class="min-w-0">
-            <a href="/instance/{{ .ID }}" class="text-base font-semibold text-white hover:text-indigo-400 transition truncate block">{{ .Name }}</a>
-            <p class="text-xs text-slate-500 mt-0.5 truncate" data-field="meta_line">
+            <a href="/instance/{{ .ID }}" class="text-sm font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition truncate block">{{ .Name }}</a>
+            <p class="text-xs text-gray-500 mt-0.5 truncate" data-field="meta_line">
               {{ .InstanceID }} · {{ .RegionID }}
-              {{ if .PublicIP }}<span class="ml-1 px-1.5 py-0.5 rounded bg-white/[.06] font-mono text-[10px] text-slate-400">{{ .PublicIP }}</span>{{ end }}
-              {{ if .IPv6Addr }}<span class="ml-1 px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono text-[10px]">{{ .IPv6Addr }}</span>{{ end }}
-              {{ if .Tag }}<span class="inline-block ml-1 rounded-full bg-white/[.08] px-2 py-0.5 text-[10px] font-medium text-slate-300">{{ .Tag }}</span>{{ end }}
+              {{ if .PublicIP }}<span class="ml-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono text-[10px] text-gray-500 dark:text-gray-400">{{ .PublicIP }}</span>{{ end }}
+              {{ if .IPv6Addr }}<span class="ml-1 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono text-[10px]">{{ .IPv6Addr }}</span>{{ end }}
+              {{ if .Tag }}<span class="inline-block ml-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-300">{{ .Tag }}</span>{{ end }}
             </p>
           </div>
         </div>
         {{ if or (eq .Status "Running") (eq .Status "Starting") }}
-        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-emerald-500/15 text-emerald-400 shrink-0">
-          <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>在线
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 shrink-0">
+          <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span>在线
         </span>
         {{ else }}
-        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-white/[.06] text-slate-400 shrink-0">
-          <span class="h-2 w-2 rounded-full bg-slate-500"></span>{{ if .Status }}{{ .Status }}{{ else }}停止{{ end }}
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 shrink-0">
+          <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>{{ if .Status }}{{ .Status }}{{ else }}停止{{ end }}
         </span>
         {{ end }}
       </div>
 
-      <!-- Credential Alert -->
       {{ if and .CredentialStatus (ne .CredentialStatus "ok") }}
-      <div data-field="credential_alert" class="mt-3 rounded-xl border px-3 py-2 text-xs {{ if eq .CredentialStatus "invalid_access_key" }}border-red-500/20 bg-red-500/10 text-red-400{{ else }}border-amber-500/20 bg-amber-500/10 text-amber-400{{ end }}">
+      <div data-field="credential_alert" class="mt-3 rounded-lg border px-3 py-2 text-xs {{ if eq .CredentialStatus "invalid_access_key" }}border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400{{ else }}border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400{{ end }}">
         <div class="font-semibold">{{ if eq .CredentialStatus "invalid_access_key" }}凭据失效（InvalidAccessKeyId / 签名错误）{{ else }}Unauthorized / 权限不足{{ end }}</div>
         {{ if .CredentialError }}<div class="mt-1 break-all opacity-80">{{ .CredentialError }}</div>{{ end }}
       </div>
       {{ end }}
 
-      <!-- Traffic -->
-      <div class="mt-4 space-y-3">
+      <div class="mt-3 space-y-2">
         {{ if eq .TrafficStrategy "life" }}
-        <div class="rounded-xl bg-white/[.04] p-3">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-medium text-slate-300">周期已用</span>
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-300">周期已用</span>
             {{ if gt .LifeTotalLimit 0.0 }}
-            <span class="text-xs font-semibold text-emerald-400">{{ printf "%.1f" .TotalTrafficSum }} / {{ printf "%.0f" .LifeTotalLimit }} GB</span>
+            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ printf "%.1f" .TotalTrafficSum }} / {{ printf "%.0f" .LifeTotalLimit }} GB</span>
             {{ else }}
-            <span class="text-xs text-slate-500">未设限额</span>
+            <span class="text-xs text-gray-400">未设限额</span>
             {{ end }}
           </div>
           {{ if gt .LifeTotalLimit 0.0 }}
-          <div class="h-2 w-full rounded-full bg-slate-700 overflow-hidden">
-            <div class="h-full rounded-full {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-emerald-500 to-teal-500{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+          <div class="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div class="h-full rounded-full {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 90.0 }}bg-red-500{{ else }}bg-emerald-500{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
           </div>
-          <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <div class="flex justify-between text-[11px] text-gray-400 mt-1">
             <span>周期已用 {{ printf "%.2f" .TotalTrafficSum }} GB</span>
             <span>配额 {{ printf "%.2f" .LifeTotalLimit }} GB</span>
           </div>
           {{ end }}
-          <div class="text-xs text-slate-500 mt-1">本月流量：{{ printf "%.2f" .CurrentMonthTraffic }} GB</div>
+          <div class="text-[11px] text-gray-400 mt-1">本月流量：{{ printf "%.2f" .CurrentMonthTraffic }} GB</div>
         </div>
         {{ else }}
-        <div class="rounded-xl bg-white/[.04] p-3">
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-medium text-slate-300">月度流量</span>
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-300">月度流量</span>
             {{ if gt .MonthlyLimit 0.0 }}
-            <span class="text-xs font-semibold text-blue-400">{{ printf "%.1f" .CurrentMonthTraffic }} / {{ printf "%.0f" .MonthlyLimit }} GB</span>
+            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">{{ printf "%.1f" .CurrentMonthTraffic }} / {{ printf "%.0f" .MonthlyLimit }} GB</span>
             {{ else }}
-            <span class="text-xs text-slate-500">未设限额</span>
+            <span class="text-xs text-gray-400">未设限额</span>
             {{ end }}
           </div>
           {{ if gt .MonthlyLimit 0.0 }}
-          <div class="h-2 w-full rounded-full bg-slate-700 overflow-hidden">
-            <div class="h-full rounded-full {{ if gt (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-blue-500 to-indigo-500{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
+          <div class="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div class="h-full rounded-full {{ if gt (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 90.0 }}bg-red-500{{ else }}bg-blue-500{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
           </div>
-          <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <div class="flex justify-between text-[11px] text-gray-400 mt-1">
             <span>已用 {{ printf "%.2f" .CurrentMonthTraffic }} GB</span>
             <span>配额 {{ printf "%.2f" .MonthlyLimit }} GB</span>
           </div>
@@ -197,90 +191,87 @@
         {{ end }}
       </div>
 
-      <!-- Last checked -->
-      <div class="mt-3 text-xs text-slate-500" data-field="last_checked">最后检查：{{ .LastChecked.Format "01-02 15:04" }}</div>
+      <div class="mt-2.5 text-[11px] text-gray-400" data-field="last_checked">最后检查：{{ .LastChecked.Format "01-02 15:04" }}</div>
 
-      <!-- Actions -->
-      <div class="mt-3 flex items-center gap-2 flex-wrap">
-        <a href="/instance/{{ .ID }}" class="rounded-lg border border-white/[.1] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[.08] transition">详情</a>
-        <a href="/api/instance/{{ .ID }}/check" class="rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs text-blue-300 hover:bg-blue-500/20 transition" onclick="event.preventDefault(); fetch('/api/instance/{{ .ID }}/check',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成',d.success?'success':'error');setTimeout(function(){location.reload()},1500)})">检查</a>
-        <a href="/instance/edit/{{ .ID }}" class="rounded-lg border border-white/[.1] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[.08] transition">编辑</a>
-        <button type="button" onclick="if(confirm('确认仅删除本地记录？'))fetch('/instance/delete/{{ .ID }}',{method:'POST'}).then(function(){location.reload()})" class="rounded-lg border border-white/[.1] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[.08] transition">移除</button>
+      <div class="mt-2.5 flex items-center gap-1.5 flex-wrap">
+        <a href="/instance/{{ .ID }}" class="rounded-md border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">详情</a>
+        <a href="/api/instance/{{ .ID }}/check" class="rounded-md border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition" onclick="event.preventDefault(); fetch('/api/instance/{{ .ID }}/check',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成',d.success?'success':'error');setTimeout(function(){location.reload()},1500)})">检查</a>
+        <a href="/instance/edit/{{ .ID }}" class="rounded-md border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">编辑</a>
+        <button type="button" onclick="if(confirm('确认仅删除本地记录？'))fetch('/instance/delete/{{ .ID }}',{method:'POST'}).then(function(){location.reload()})" class="rounded-md border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">移除</button>
         {{ if eq .Status "Stopped" }}
-        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/start',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-500 transition">开机</button>
+        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/start',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-md bg-emerald-600 px-2.5 py-1 text-xs text-white hover:bg-emerald-500 transition">开机</button>
         {{ end }}
         {{ if eq .Status "Running" }}
-        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/stop',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-lg bg-slate-700 px-3 py-1.5 text-xs text-white hover:bg-slate-600 transition">关机</button>
+        <button type="button" onclick="fetch('/api/instance/{{ .ID }}/stop',{method:'POST'}).then(function(r){return r.json()}).then(function(d){showToast(d.message||'操作完成','success');setTimeout(function(){location.reload()},1500)})" class="rounded-md bg-gray-600 px-2.5 py-1 text-xs text-white hover:bg-gray-500 transition">关机</button>
         {{ end }}
-        <button type="button" class="js-open-release rounded-lg border border-red-500/20 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition" data-id="{{ .ID }}" data-name="{{ .Name }}">释放</button>
+        <button type="button" class="js-open-release rounded-md border border-red-200 dark:border-red-500/20 px-2.5 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition" data-id="{{ .ID }}" data-name="{{ .Name }}">释放</button>
       </div>
     </div>
   </section>
   {{ end }}
 </div>
 {{ else }}
-<div class="rounded-2xl bg-white/[.04] border border-white/[.06] text-center py-16 mb-6">
-  <p class="text-3xl mb-3">📡</p>
-  <p class="text-slate-400 mb-4">暂无实例</p>
-  <a href="/instance/add" class="inline-flex items-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm text-white hover:bg-indigo-500 transition">添加第一个实例</a>
+<div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 text-center py-16 mb-5">
+  <p class="text-gray-400 mb-4">暂无实例</p>
+  <a href="/instance/add" class="inline-flex items-center rounded-lg bg-gray-900 dark:bg-indigo-600 px-5 py-2.5 text-sm text-white hover:bg-gray-800 dark:hover:bg-indigo-500 transition">添加第一个实例</a>
 </div>
 {{ end }}
 
-<!-- CDT Billing (3 Months) -->
-<div class="bg-white/[.04] rounded-2xl border border-white/[.06] p-5 sm:p-8 mb-6">
+<!-- CDT Billing -->
+<div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 mb-5">
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-lg font-bold text-white">近3个月 CDT 计费流量</h2>
-    <span id="cdtScopeBadge" class="text-xs rounded-full px-2 py-1 bg-white/[.06] text-slate-300">加载中</span>
+    <h2 class="text-base font-bold text-gray-900 dark:text-white">近3个月 CDT 计费流量</h2>
+    <span id="cdtScopeBadge" class="text-xs rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">加载中</span>
   </div>
-  <div id="cdtBillingError" class="hidden rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400 mb-3"></div>
+  <div id="cdtBillingError" class="hidden rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400 mb-3"></div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
-      <thead class="text-left text-slate-500">
+      <thead class="text-left text-gray-500 dark:text-gray-400">
         <tr>
-          <th class="py-2">月份</th>
-          <th class="py-2">计费流量</th>
-          <th class="py-2">金额</th>
+          <th class="py-2 font-medium">月份</th>
+          <th class="py-2 font-medium">计费流量</th>
+          <th class="py-2 font-medium">金额</th>
         </tr>
       </thead>
-      <tbody id="cdtBillingTbody" class="divide-y divide-white/[.06]">
-        <tr><td colspan="3" class="py-3 text-slate-500">正在加载...</td></tr>
+      <tbody id="cdtBillingTbody" class="divide-y divide-gray-100 dark:divide-gray-800">
+        <tr><td colspan="3" class="py-3 text-gray-400">正在加载...</td></tr>
       </tbody>
     </table>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-    <div class="rounded-xl border border-white/[.06] p-3">
-      <div class="text-xs text-slate-500">三个月累计流量</div>
-      <div id="cdtTotalTraffic" class="text-lg font-semibold text-white mt-1">-</div>
+    <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+      <div class="text-xs text-gray-500 dark:text-gray-400">三个月累计流量</div>
+      <div id="cdtTotalTraffic" class="text-base font-semibold text-gray-900 dark:text-white mt-1">-</div>
     </div>
-    <div class="rounded-xl border border-white/[.06] p-3">
-      <div class="text-xs text-slate-500">三个月累计金额</div>
-      <div id="cdtTotalAmount" class="text-lg font-semibold text-white mt-1">-</div>
+    <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+      <div class="text-xs text-gray-500 dark:text-gray-400">三个月累计金额</div>
+      <div id="cdtTotalAmount" class="text-base font-semibold text-gray-900 dark:text-white mt-1">-</div>
     </div>
   </div>
 </div>
 
 <!-- Region Traffic Chart -->
-<div class="bg-white/[.04] rounded-2xl border border-white/[.06] p-5 sm:p-8 mb-6">
-  <h2 class="text-lg font-bold text-white mb-4">区域流量对比</h2>
-  <div class="relative" style="height: 280px;">
+<div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 mb-5">
+  <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4">区域流量对比</h2>
+  <div class="relative" style="height: 260px;">
     <canvas id="regionChart"></canvas>
   </div>
-  <p id="noRegionData" class="hidden text-center text-slate-500 py-8">暂无区域数据</p>
+  <p id="noRegionData" class="hidden text-center text-gray-400 py-8">暂无区域数据</p>
 </div>
 
 <!-- Release Confirm Modal -->
-<div id="releaseModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-  <div class="w-full max-w-md rounded-2xl border border-white/[.1] bg-slate-900/90 backdrop-blur-xl p-6 shadow-2xl">
-    <h3 class="text-xl font-bold text-white">确认释放实例</h3>
-    <p class="text-sm text-slate-300 mt-3 leading-6">
-      你将释放实例 <span id="releaseTargetName" class="font-semibold text-white"></span>。该操作具有风险，请确认已完成数据备份。
+<div id="releaseModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+  <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 shadow-xl">
+    <h3 class="text-lg font-bold text-gray-900 dark:text-white">确认释放实例</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-300 mt-3 leading-6">
+      你将释放实例 <span id="releaseTargetName" class="font-semibold text-gray-900 dark:text-white"></span>。该操作具有风险，请确认已完成数据备份。
     </p>
-    <div class="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+    <div class="mt-4 rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">
       危险操作：释放后可能无法恢复。
     </div>
-    <div class="mt-6 flex justify-end gap-2">
-      <button type="button" id="cancelRelease" class="inline-flex items-center rounded-lg border border-white/[.1] bg-white/[.06] px-4 py-2 text-slate-200 hover:bg-white/[.1] transition">取消</button>
-      <button type="button" id="confirmRelease" class="inline-flex items-center rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2 text-red-400 hover:bg-red-500/20 transition">确认释放</button>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" id="cancelRelease" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">取消</button>
+      <button type="button" id="confirmRelease" class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500 transition">确认释放</button>
     </div>
   </div>
 </div>
@@ -346,12 +337,12 @@
           list.textContent = '';
           (probe.servers || []).slice(0, 5).forEach(function(s) {
             var row = document.createElement('div');
-            row.className = 'flex items-center justify-between rounded-lg border border-white/[.06] px-2.5 py-1.5';
+            row.className = 'flex items-center justify-between rounded-md border border-gray-200 dark:border-gray-800 px-2.5 py-1.5';
             var nameSpan = document.createElement('span');
             nameSpan.className = 'truncate';
             nameSpan.textContent = s.name;
             var statusSpan = document.createElement('span');
-            statusSpan.className = s.is_online ? 'text-emerald-400' : 'text-rose-400';
+            statusSpan.className = s.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-rose-400';
             statusSpan.textContent = s.is_online ? '在线' : '离线';
             row.appendChild(nameSpan);
             row.appendChild(statusSpan);
@@ -376,7 +367,6 @@
 
   fetchAll();
 
-  // Select all / batch
   var selectAll = document.getElementById('selectAll');
   var countBadge = document.getElementById('selectedCount');
   var checkboxes = function() { return document.querySelectorAll('.instance-checkbox'); };
@@ -390,14 +380,12 @@
   if (selectAll) selectAll.addEventListener('change', function() { checkboxes().forEach(function(cb) { cb.checked = selectAll.checked; }); updateCount(); });
   document.addEventListener('change', function(e) { if (e.target.classList.contains('instance-checkbox')) updateCount(); });
 
-  // Close export dropdown on outside click
   document.addEventListener('click', function(e) {
     var dd = document.getElementById('exportDropdown');
     var menu = document.getElementById('exportMenu');
     if (dd && menu && !dd.contains(e.target)) menu.classList.add('hidden');
   });
 
-  // Export CSV
   var exportBtn = document.getElementById('exportCsvBtn');
   if (exportBtn) exportBtn.addEventListener('click', function() {
     var checked = document.querySelectorAll('.instance-checkbox:checked');
@@ -409,7 +397,6 @@
     window.location.href = url;
   });
 
-  // Release modal
   var modal = document.getElementById('releaseModal');
   var releaseTargetName = document.getElementById('releaseTargetName');
   var cancelBtn = document.getElementById('cancelRelease');
@@ -452,7 +439,6 @@ function batchAction(action) {
     .catch(function() { showToast('操作失败', 'error'); });
 }
 
-// CDT Billing (3 Months)
 (function() {
   var tbody = document.getElementById('cdtBillingTbody');
   var totalTraffic = document.getElementById('cdtTotalTraffic');
@@ -462,7 +448,7 @@ function batchAction(action) {
 
   function renderError(msg) {
     if (errorBox) { errorBox.textContent = msg || '查询 CDT 账单数据失败'; errorBox.classList.remove('hidden'); }
-    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-gray-400">暂无数据</td></tr>';
     if (scopeBadge) scopeBadge.textContent = '查询失败';
     if (totalTraffic) totalTraffic.textContent = '-';
     if (totalAmount) totalAmount.textContent = '-';
@@ -481,14 +467,14 @@ function batchAction(action) {
       if (tbody) {
         tbody.textContent = '';
         if (!months.length) {
-          tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-gray-400">暂无数据</td></tr>';
         } else {
           months.forEach(function(m) {
             var tr = document.createElement('tr');
-            tr.className = 'hover:bg-white/[.04] transition';
-            tr.innerHTML = '<td class="py-2 text-slate-200">' + (m.month || '-') + '</td>' +
-              '<td class="py-2 text-slate-200">' + Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB') + '</td>' +
-              '<td class="py-2 text-slate-200">' + Number(m.amount || 0).toFixed(2) + ' ' + currency + '</td>';
+            tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition';
+            tr.innerHTML = '<td class="py-2 text-gray-700 dark:text-gray-200">' + (m.month || '-') + '</td>' +
+              '<td class="py-2 text-gray-700 dark:text-gray-200">' + Number(m.traffic || 0).toFixed(2) + ' ' + (m.traffic_unit || 'GB') + '</td>' +
+              '<td class="py-2 text-gray-700 dark:text-gray-200">' + Number(m.amount || 0).toFixed(2) + ' ' + currency + '</td>';
             tbody.appendChild(tr);
           });
         }
@@ -500,7 +486,6 @@ function batchAction(action) {
     .catch(function(err) { renderError(err && err.message ? err.message : '网络请求失败，请检查连接'); });
 })();
 
-// Region Traffic Chart
 fetch('/api/region_traffic')
   .then(function(r) { return r.json(); })
   .then(function(data) {
@@ -509,24 +494,25 @@ fetch('/api/region_traffic')
       document.getElementById('regionChart').style.display = 'none';
       return;
     }
-    var gridColor = 'rgba(148,163,184,0.08)';
-    var textColor = '#64748b';
+    var isDark = document.documentElement.classList.contains('dark');
+    var gridColor = isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? '#64748b' : '#9ca3af';
 
     new Chart(document.getElementById('regionChart'), {
       type: 'bar',
       data: {
         labels: data.map(function(d) { return d.region; }),
         datasets: [
-          { label: '已用 (GB)', data: data.map(function(d) { return d.used; }), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 },
-          { label: '上限 (GB)', data: data.map(function(d) { return d.limit; }), backgroundColor: 'rgba(148,163,184,0.3)', borderRadius: 6 }
+          { label: '已用 (GB)', data: data.map(function(d) { return d.used; }), backgroundColor: isDark ? 'rgba(99,102,241,0.7)' : 'rgba(79,70,229,0.75)', borderRadius: 4 },
+          { label: '上限 (GB)', data: data.map(function(d) { return d.limit; }), backgroundColor: isDark ? 'rgba(148,163,184,0.3)' : 'rgba(209,213,219,0.6)', borderRadius: 4 }
         ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: textColor } } },
+        plugins: { legend: { labels: { color: textColor, font: { size: 12 } } } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: textColor } },
-          y: { grid: { color: gridColor }, ticks: { color: textColor, callback: function(v) { return v + ' GB'; } }, beginAtZero: true }
+          x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+          y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, callback: function(v) { return v + ' GB'; } }, beginAtZero: true }
         }
       }
     });

@@ -2,13 +2,13 @@
 {{ define "content" }}
 <div class="flex items-center justify-between mb-5">
   <div>
-    <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{{ .probe.Name }}</h1>
-    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ .probe.ServerType }} · 最后心跳 {{ if .probe.LastSeen }}{{ .probe.LastSeen.Format "2006-01-02 15:04:05" }}{{ else }}-{{ end }}</p>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{{ .probe.Name }}</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ .probe.ServerType }} · 最后心跳 {{ if .probe.LastSeen }}{{ .probe.LastSeen.Format "2006-01-02 15:04:05" }}{{ else }}-{{ end }}</p>
   </div>
   <div class="flex items-center gap-2">
-    <button id="openEditModal" class="inline-flex items-center rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">编辑</button>
+    <button id="openEditModal" class="inline-flex items-center rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">编辑</button>
     <button id="resetTokenBtn" class="inline-flex items-center rounded-lg border border-rose-200 dark:border-rose-700 text-rose-600 dark:text-rose-400 px-3 py-2 text-sm">重置 Token</button>
-    <a href="/probe/servers" class="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">返回列表</a>
+    <a href="/probe/servers" class="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">返回列表</a>
   </div>
 </div>
 
@@ -16,40 +16,40 @@
   <div class="xl:col-span-2 space-y-5">
     <!-- Live Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400">CPU 使用率</div>
-        <div id="cpuPercent" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">-</div>
+      <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+        <div class="text-xs text-gray-500 dark:text-gray-400">CPU 使用率</div>
+        <div id="cpuPercent" class="text-2xl font-bold text-gray-900 dark:text-white mt-1">-</div>
       </div>
-      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400">内存使用率</div>
-        <div id="memPercent" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">-</div>
+      <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+        <div class="text-xs text-gray-500 dark:text-gray-400">内存使用率</div>
+        <div id="memPercent" class="text-2xl font-bold text-gray-900 dark:text-white mt-1">-</div>
       </div>
-      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400">磁盘使用率</div>
-        <div id="diskPercent" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">-</div>
+      <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+        <div class="text-xs text-gray-500 dark:text-gray-400">磁盘使用率</div>
+        <div id="diskPercent" class="text-2xl font-bold text-gray-900 dark:text-white mt-1">-</div>
       </div>
     </div>
 
     <!-- Network Chart -->
-    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-5 shadow-sm">
-      <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-3">网络流量（实时）</h2>
+    <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3">网络流量（实时）</h2>
       <div style="height: 280px;"><canvas id="netChart"></canvas></div>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-        <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-          <div class="text-xs text-slate-500 dark:text-slate-400">总上行</div>
-          <div id="totalUpVal" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0 GB</div>
+        <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400">总上行</div>
+          <div id="totalUpVal" class="text-lg font-bold text-gray-900 dark:text-white mt-1">0 GB</div>
         </div>
-        <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-          <div class="text-xs text-slate-500 dark:text-slate-400">总下行</div>
-          <div id="totalDownVal" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0 GB</div>
+        <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400">总下行</div>
+          <div id="totalDownVal" class="text-lg font-bold text-gray-900 dark:text-white mt-1">0 GB</div>
         </div>
-        <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-          <div class="text-xs text-slate-500 dark:text-slate-400">合计流量</div>
-          <div id="totalTrafficVal" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0 GB</div>
+        <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400">合计流量</div>
+          <div id="totalTrafficVal" class="text-lg font-bold text-gray-900 dark:text-white mt-1">0 GB</div>
         </div>
-        <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
-          <div class="text-xs text-slate-500 dark:text-slate-400">当前速率</div>
-          <div id="currentRateVal" class="text-lg font-bold text-slate-900 dark:text-white mt-1">- KB/s</div>
+        <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400">当前速率</div>
+          <div id="currentRateVal" class="text-lg font-bold text-gray-900 dark:text-white mt-1">- KB/s</div>
         </div>
       </div>
     </div>
@@ -57,52 +57,52 @@
 
   <div class="space-y-5">
     <!-- Static Info -->
-    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-5 shadow-sm">
-      <h3 class="text-base font-bold text-slate-900 dark:text-white mb-3">静态信息</h3>
+    <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+      <h3 class="text-base font-bold text-gray-900 dark:text-white mb-3">静态信息</h3>
       <div class="space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">CPU</span><span class="text-slate-900 dark:text-white">{{ if .probe.CPUName }}{{ .probe.CPUName }}{{ else }}-{{ end }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">核心数</span><span class="text-slate-900 dark:text-white">{{ .probe.CPUCores }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">架构</span><span class="text-slate-900 dark:text-white">{{ if .probe.Arch }}{{ .probe.Arch }}{{ else }}-{{ end }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">OS</span><span class="text-slate-900 dark:text-white">{{ if .probe.OSInfo }}{{ .probe.OSInfo }}{{ else }}-{{ end }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">虚拟化</span><span class="text-slate-900 dark:text-white">{{ if .probe.Virtualization }}{{ .probe.Virtualization }}{{ else }}-{{ end }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">IPv4</span><span class="text-slate-900 dark:text-white font-mono text-xs">{{ if .probe.IPv4 }}{{ .probe.IPv4 }}{{ else }}-{{ end }}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">IPv6</span><span class="text-slate-900 dark:text-white font-mono text-xs">{{ if .probe.IPv6 }}{{ .probe.IPv6 }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">CPU</span><span class="text-gray-900 dark:text-white">{{ if .probe.CPUName }}{{ .probe.CPUName }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">核心数</span><span class="text-gray-900 dark:text-white">{{ .probe.CPUCores }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">架构</span><span class="text-gray-900 dark:text-white">{{ if .probe.Arch }}{{ .probe.Arch }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">OS</span><span class="text-gray-900 dark:text-white">{{ if .probe.OSInfo }}{{ .probe.OSInfo }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">虚拟化</span><span class="text-gray-900 dark:text-white">{{ if .probe.Virtualization }}{{ .probe.Virtualization }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">IPv4</span><span class="text-gray-900 dark:text-white font-mono text-xs">{{ if .probe.IPv4 }}{{ .probe.IPv4 }}{{ else }}-{{ end }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">IPv6</span><span class="text-gray-900 dark:text-white font-mono text-xs">{{ if .probe.IPv6 }}{{ .probe.IPv6 }}{{ else }}-{{ end }}</span></div>
       </div>
     </div>
 
     <!-- System Metrics -->
-    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-5 shadow-sm">
-      <h3 class="text-base font-bold text-slate-900 dark:text-white mb-3">系统指标</h3>
+    <div class="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+      <h3 class="text-base font-bold text-gray-900 dark:text-white mb-3">系统指标</h3>
       <div class="space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Load</span><span id="loadVal" class="text-slate-900 dark:text-white">-</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">TCP/UDP</span><span id="connVal" class="text-slate-900 dark:text-white">-</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">进程数</span><span id="procVal" class="text-slate-900 dark:text-white">-</span></div>
-        <div class="flex justify-between"><span class="text-slate-500 dark:text-slate-400">Uptime</span><span id="uptimeVal" class="text-slate-900 dark:text-white">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Load</span><span id="loadVal" class="text-gray-900 dark:text-white">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">TCP/UDP</span><span id="connVal" class="text-gray-900 dark:text-white">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">进程数</span><span id="procVal" class="text-gray-900 dark:text-white">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Uptime</span><span id="uptimeVal" class="text-gray-900 dark:text-white">-</span></div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Edit Modal -->
-<div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4">
-  <div class="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-6 shadow-xl">
-    <h3 class="text-xl font-bold text-slate-900 dark:text-white">编辑探针服务器</h3>
+<div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/30 p-4">
+  <div class="w-full max-w-xl rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-xl">
+    <h3 class="text-xl font-bold text-gray-900 dark:text-white">编辑探针服务器</h3>
     <form id="editProbeForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
       <div class="sm:col-span-2">
-        <label class="text-xs text-slate-500 dark:text-slate-400">名称</label>
-        <input name="name" required value="{{ .probe.Name }}" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+        <label class="text-xs text-gray-500 dark:text-gray-400">名称</label>
+        <input name="name" required value="{{ .probe.Name }}" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="text-xs text-slate-500 dark:text-slate-400">标签</label>
-        <input name="tag" value="{{ .probe.Tag }}" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+        <label class="text-xs text-gray-500 dark:text-gray-400">标签</label>
+        <input name="tag" value="{{ .probe.Tag }}" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
       </div>
       <div>
-        <label class="text-xs text-slate-500 dark:text-slate-400">备注</label>
-        <input name="notes" value="{{ .probe.Notes }}" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+        <label class="text-xs text-gray-500 dark:text-gray-400">备注</label>
+        <input name="notes" value="{{ .probe.Notes }}" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
       </div>
       <div class="sm:col-span-2 flex justify-end gap-2 mt-2">
-        <button type="button" id="closeEditModal" class="rounded-lg border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm">取消</button>
-        <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">保存</button>
+        <button type="button" id="closeEditModal" class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm">取消</button>
+        <button type="submit" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">保存</button>
       </div>
     </form>
   </div>
