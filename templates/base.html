@@ -175,14 +175,6 @@
       if (flashStack) { setTimeout(() => { flashStack.classList.add('opacity-0','transition-opacity','duration-500'); setTimeout(() => flashStack.remove(), 520); }, 3500); }
     })();
 
-    function showToast(msg, type) {
-      const el = document.createElement('div');
-      const colors = { success: 'bg-emerald-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-amber-500' };
-      el.className = 'toast text-white text-sm px-4 py-2 rounded-lg shadow-lg ' + (colors[type] || colors.info);
-      el.textContent = msg;
-      document.getElementById('toast-container').appendChild(el);
-      setTimeout(() => el.remove(), 4000);
-    }
   </script>
   <script src="/static/js/utils.js"></script>
   {{ block "scripts" . }}{{ end }}

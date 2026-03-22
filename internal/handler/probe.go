@@ -16,9 +16,21 @@ import (
 func ProbeServersPage(c *gin.Context) {
 	var probes []models.ProbeServer
 	database.DB.Order("name").Find(&probes)
+	online, aliyun := 0, 0
+	for _, p := range probes {
+		if p.IsOnline {
+			online++
+		}
+		if p.ServerType == "aliyun" {
+			aliyun++
+		}
+	}
 	c.HTML(http.StatusOK, "probe_servers.html", gin.H{
-		"probes":   probes,
-		"username": c.GetString("username"),
+		"probes":       probes,
+		"onlineCount":  online,
+		"offlineCount": len(probes) - online,
+		"aliyunCount":  aliyun,
+		"username":     c.GetString("username"),
 	})
 }
 

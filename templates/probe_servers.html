@@ -1,63 +1,384 @@
 {{ define "title" }}探针服务器 - ECS Monitor{{ end }}
 {{ define "content" }}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-xl font-bold">探针服务器</h1>
-    <button onclick="document.getElementById('add-modal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ 添加探针</button>
-</div>
-
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    {{ range .probes }}
-    <a href="/probe/server/{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 hover:shadow-md transition-shadow block">
-        <div class="flex items-center justify-between mb-3">
-            <span class="font-medium">{{ .Name }}</span>
-            {{ if .IsOnline }}
-            <span class="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
-            {{ else }}
-            <span class="w-2.5 h-2.5 bg-slate-300 rounded-full"></span>
-            {{ end }}
-        </div>
-        <div class="text-xs text-slate-500 space-y-1">
-            {{ if .IPv4 }}<div>IPv4: <span class="font-mono">{{ .IPv4 }}</span></div>{{ end }}
-            {{ if .OSInfo }}<div>OS: {{ .OSInfo }}</div>{{ end }}
-            {{ if .Tag }}<div>标签: <span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ .Tag }}</span></div>{{ end }}
-        </div>
-    </a>
-    {{ else }}
-    <div class="col-span-full text-center py-12 text-slate-400">暂无探针服务器</div>
-    {{ end }}
-</div>
-
-<!-- Add modal -->
-<div id="add-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 w-full max-w-sm">
-        <h3 class="font-semibold mb-4">添加探针服务器</h3>
-        <input id="probe-name" type="text" placeholder="名称" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm mb-4">
-        <div class="flex gap-3">
-            <button onclick="createProbe()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">创建</button>
-            <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-slate-500 px-4 py-2 text-sm">取消</button>
-        </div>
+<div class="space-y-5">
+  <section class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">探针服务器</h1>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">实时监控面板（每 3 秒自动刷新）</p>
+      </div>
+      <button id="openAddModal" type="button"
+        class="inline-flex items-center justify-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px] shadow-soft">
+        添加探针服务器
+      </button>
     </div>
+  </section>
+
+  <div id="pageAlert" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">总数</div>
+      <div id="probeTotal" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ len .probes }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">在线</div>
+      <div id="probeOnline" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ .onlineCount }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">离线</div>
+      <div id="probeOffline" class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ .offlineCount }}</div>
+    </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+      <div class="text-xs text-slate-500 dark:text-slate-400">阿里云</div>
+      <div id="probeAliyun" class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ .aliyunCount }}</div>
+    </div>
+  </div>
+
+  <!-- Search & Filter -->
+  <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-5 shadow-sm">
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-3">
+      <input id="searchInput" type="text" placeholder="搜索服务器名称或 IP..."
+        class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm">
+      <select id="filterType" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm min-h-[44px]">
+        <option value="">全部类型</option>
+        <option value="aliyun">aliyun</option>
+        <option value="generic">generic</option>
+      </select>
+      <select id="filterStatus" class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm min-h-[44px]">
+        <option value="">全部状态</option>
+        <option value="online">在线</option>
+        <option value="offline">离线</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Probe Cards Grid -->
+  <div id="probeCardGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5" aria-live="polite">
+    {{ range .probes }}
+    <section class="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-5 hover:shadow-md transition"
+      data-id="{{ .ID }}" data-type="{{ .ServerType }}" data-online="{{ if .IsOnline }}1{{ else }}0{{ end }}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <a href="/probe/server/{{ .ID }}"
+            class="text-lg font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition break-words">{{ .Name }}</a>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-1 break-all">{{ if .IPv4 }}{{ .IPv4 }}{{ else }}-{{ end }}{{ if .IPv6 }} / {{ .IPv6 }}{{ end }}</div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium {{ if eq .ServerType "aliyun" }}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{{ else }}bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300{{ end }}">{{ .ServerType }}</span>
+          {{ if .IsOnline }}
+          <span data-field="statusBadge" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 text-[11px] font-medium">
+            <span data-field="statusDot" class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span data-field="statusText">在线</span>
+          </span>
+          {{ else }}
+          <span data-field="statusBadge" class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2.5 py-1 text-[11px] font-medium">
+            <span data-field="statusDot" class="h-2 w-2 rounded-full bg-rose-500"></span>
+            <span data-field="statusText">离线</span>
+          </span>
+          {{ end }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 text-sm">
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">CPU</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="cpu">-</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">内存</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="mem">-</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">磁盘</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="disk">-</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+          <div class="text-xs text-slate-500 dark:text-slate-400">网络速率</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="net">-</div>
+        </div>
+        <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-3 sm:col-span-2 lg:col-span-1">
+          <div class="text-xs text-slate-500 dark:text-slate-400">流量统计</div>
+          <div class="font-semibold text-slate-900 dark:text-white" data-field="traffic">-</div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 relative gap-2">
+        <span class="truncate">最后心跳：<span data-field="last_seen">{{ if .LastSeen }}{{ .LastSeen.Format "01-02 15:04:05" }}{{ else }}-{{ end }}</span></span>
+        <div class="relative">
+          <button type="button" class="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-sm js-more-btn min-h-[36px]" data-id="{{ .ID }}">... 更多</button>
+          <div id="more-{{ .ID }}" class="hidden absolute right-0 mt-1 w-36 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg overflow-hidden z-20">
+            <button type="button" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600 js-deploy" data-token="{{ .Token }}">部署指令</button>
+            <a href="/probe/server/{{ .ID }}" class="block px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-600">编辑</a>
+            <button type="button" class="w-full text-left px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-600 js-delete" data-id="{{ .ID }}">删除</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    {{ end }}
+  </div>
+
+  <div id="emptyState" class="{{ if .probes }}hidden {{ end }}rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/80 p-10 text-center">
+    <div class="text-base font-semibold text-slate-700 dark:text-slate-200">暂无探针服务器</div>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">点击上方按钮添加第一台探针服务器。</p>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4">
+  <div class="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-6 shadow-xl">
+    <h3 class="text-xl font-bold text-slate-900 dark:text-white">添加探针服务器</h3>
+    <form id="addProbeForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+      <div class="sm:col-span-2">
+        <label class="text-xs text-slate-500 dark:text-slate-400">名称</label>
+        <input id="probe_name" name="name" required class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 dark:text-slate-400">类型</label>
+        <select id="probe_type" name="server_type" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+          <option value="generic">generic</option>
+          <option value="aliyun">aliyun</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 dark:text-slate-400">标签 (可选)</label>
+        <input name="tag" class="w-full mt-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2 flex justify-end gap-3">
+        <button type="button" id="closeAddModal" class="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">取消</button>
+        <button type="submit" id="submitAddProbe" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">创建</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Deploy Modal -->
+<div id="deployModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4">
+  <div class="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-6 shadow-xl">
+    <h3 class="text-xl font-bold text-slate-900 dark:text-white">部署探针</h3>
+    <div class="mt-4 space-y-4">
+      <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Token</span>
+          <button id="copyDeployToken" class="text-xs text-blue-600 hover:underline">复制</button>
+        </div>
+        <code id="deployToken" class="block text-xs font-mono text-slate-600 dark:text-slate-300 break-all bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2"></code>
+      </div>
+      <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">一键部署命令</span>
+          <button id="copyDeployCmd" class="text-xs text-blue-600 hover:underline">复制</button>
+        </div>
+        <code id="deployCmd" class="block text-xs font-mono text-slate-600 dark:text-slate-300 break-all bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2"></code>
+      </div>
+    </div>
+    <div class="mt-4 flex justify-end">
+      <button id="closeDeployModal" class="rounded-lg bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 text-sm">关闭</button>
+    </div>
+  </div>
 </div>
 {{ end }}
 
 {{ define "scripts" }}
 <script>
-async function createProbe() {
-    const name = document.getElementById('probe-name').value.trim();
-    if (!name) return;
-    const resp = await fetch('/api/probe/servers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+(function() {
+  function kbps(v) { return ((v || 0) / 1024).toFixed(1); }
+
+  var pageAlert = document.getElementById('pageAlert');
+  function showPageAlert(type, text) {
+    if (!pageAlert) return;
+    var cls = type === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300';
+    pageAlert.className = 'rounded-xl border px-4 py-3 text-sm ' + cls;
+    pageAlert.textContent = text;
+    pageAlert.classList.remove('hidden');
+    setTimeout(function() { pageAlert.classList.add('hidden'); }, 2500);
+  }
+
+  function filterCards() {
+    var keyword = (document.getElementById('searchInput').value || '').toLowerCase();
+    var typeFilter = document.getElementById('filterType').value;
+    var statusFilter = document.getElementById('filterStatus').value;
+    var visible = 0;
+    document.querySelectorAll('#probeCardGrid > section').forEach(function(card) {
+      var name = (card.querySelector('a') ? card.querySelector('a').textContent : '').toLowerCase();
+      var ip = (card.querySelector('.break-all') ? card.querySelector('.break-all').textContent : '').toLowerCase();
+      var type = card.dataset.type || '';
+      var isOnline = card.dataset.online === '1';
+      var show = true;
+      if (keyword && name.indexOf(keyword) === -1 && ip.indexOf(keyword) === -1) show = false;
+      if (typeFilter && type !== typeFilter) show = false;
+      if (statusFilter === 'online' && !isOnline) show = false;
+      if (statusFilter === 'offline' && isOnline) show = false;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
     });
-    const data = await resp.json();
-    if (data.success) {
-        showToast('探针创建成功，Token: ' + data.token, 'success');
-        setTimeout(() => location.reload(), 1500);
+    var emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.classList.toggle('hidden', visible > 0);
+  }
+
+  function updateStatusChip(card, online) {
+    var badge = card.querySelector('[data-field="statusBadge"]');
+    var dot = card.querySelector('[data-field="statusDot"]');
+    var text = card.querySelector('[data-field="statusText"]');
+    if (!badge || !dot || !text) return;
+    if (online) {
+      badge.className = 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 text-[11px] font-medium';
+      dot.className = 'h-2 w-2 rounded-full bg-emerald-500';
+      text.textContent = '在线';
     } else {
-        showToast(data.message, 'error');
+      badge.className = 'inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-2.5 py-1 text-[11px] font-medium';
+      dot.className = 'h-2 w-2 rounded-full bg-rose-500';
+      text.textContent = '离线';
     }
-}
+  }
+
+  function refreshProbeCards() {
+    return fetch('/api/probe/servers')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var servers = data.servers || [];
+        document.getElementById('probeTotal').textContent = servers.length;
+        var onlineCount = 0, aliyunCount = 0;
+        servers.forEach(function(s) { if (s.is_online) onlineCount++; if (s.server_type === 'aliyun') aliyunCount++; });
+        document.getElementById('probeOnline').textContent = onlineCount;
+        document.getElementById('probeOffline').textContent = servers.length - onlineCount;
+        document.getElementById('probeAliyun').textContent = aliyunCount;
+
+        servers.forEach(function(s) {
+          var card = document.querySelector('section[data-id="' + s.id + '"]');
+          if (!card) return;
+          var report = s.latest_report_json ? (function() { try { return JSON.parse(s.latest_report_json); } catch(e) { return {}; } })() : {};
+          var cpu = report.cpu_percent || 0;
+          var mem = report.mem_percent || 0;
+          var disk = report.disk_percent || 0;
+          var netUp = report.net_up || 0;
+          var netDown = report.net_down || 0;
+          var net = (report.network || {});
+
+          card.dataset.online = s.is_online ? '1' : '0';
+          card.dataset.type = s.server_type || '';
+          var cpuEl = card.querySelector('[data-field="cpu"]'); if (cpuEl) cpuEl.textContent = cpu.toFixed(1) + '%';
+          var memEl = card.querySelector('[data-field="mem"]'); if (memEl) memEl.textContent = mem.toFixed(1) + '%';
+          var diskEl = card.querySelector('[data-field="disk"]'); if (diskEl) diskEl.textContent = disk.toFixed(1) + '%';
+          var netEl = card.querySelector('[data-field="net"]'); if (netEl) netEl.textContent = '↑ ' + kbps(netUp) + ' KB/s ↓ ' + kbps(netDown) + ' KB/s';
+          var tUp = ((net.totalUp || 0) / (1024*1024*1024)).toFixed(2);
+          var tDown = ((net.totalDown || 0) / (1024*1024*1024)).toFixed(2);
+          var trafficEl = card.querySelector('[data-field="traffic"]'); if (trafficEl) trafficEl.textContent = '↑ ' + tUp + ' GB ↓ ' + tDown + ' GB';
+          var lastSeenEl = card.querySelector('[data-field="last_seen"]');
+          if (lastSeenEl) lastSeenEl.textContent = s.last_seen ? new Date(s.last_seen).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+          updateStatusChip(card, !!s.is_online);
+        });
+        filterCards();
+      })
+      .catch(function() { showPageAlert('error', '实时刷新失败，已自动重试。'); });
+  }
+
+  var poller = createPoller(refreshProbeCards, 3000);
+  refreshProbeCards();
+  poller.start();
+
+  document.getElementById('searchInput').addEventListener('input', filterCards);
+  document.getElementById('filterType').addEventListener('change', filterCards);
+  document.getElementById('filterStatus').addEventListener('change', filterCards);
+
+  // More menus
+  document.querySelectorAll('.js-more-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var id = btn.dataset.id;
+      document.querySelectorAll('[id^="more-"]').forEach(function(menu) {
+        if (menu.id !== 'more-' + id) menu.classList.add('hidden');
+      });
+      document.getElementById('more-' + id).classList.toggle('hidden');
+    });
+  });
+  document.addEventListener('click', function() {
+    document.querySelectorAll('[id^="more-"]').forEach(function(menu) { menu.classList.add('hidden'); });
+  });
+
+  // Delete
+  document.querySelectorAll('.js-delete').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (!confirm('确认删除该探针服务器？')) return;
+      fetch('/api/probe/servers/' + btn.dataset.id, { method: 'DELETE' })
+        .then(function(r) { if (r.ok) window.location.reload(); else showPageAlert('error', '删除失败'); });
+    });
+  });
+
+  // Deploy modal
+  var deployModal = document.getElementById('deployModal');
+  var deployTokenEl = document.getElementById('deployToken');
+  var deployCmdEl = document.getElementById('deployCmd');
+  var deployRefresh = false;
+
+  function openDeployModal(token, refresh) {
+    var wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    var serverUrl = wsScheme + '://' + location.host + '/ws/agent';
+    var cmd = 'curl -fsSL ' + location.origin + '/agent/install.sh | bash -s -- --server ' + serverUrl + ' --token ' + token;
+    deployTokenEl.textContent = token;
+    deployCmdEl.textContent = cmd;
+    deployRefresh = !!refresh;
+    deployModal.classList.remove('hidden');
+    deployModal.classList.add('flex');
+  }
+
+  document.getElementById('closeDeployModal').addEventListener('click', function() {
+    deployModal.classList.add('hidden');
+    deployModal.classList.remove('flex');
+    if (deployRefresh) window.location.reload();
+  });
+  deployModal.addEventListener('click', function(e) {
+    if (e.target === deployModal) { deployModal.classList.add('hidden'); deployModal.classList.remove('flex'); }
+  });
+
+  document.getElementById('copyDeployToken').addEventListener('click', function() {
+    copyToClipboard(deployTokenEl.textContent || '');
+  });
+  document.getElementById('copyDeployCmd').addEventListener('click', function() {
+    copyToClipboard(deployCmdEl.textContent || '');
+  });
+
+  document.querySelectorAll('.js-deploy').forEach(function(btn) {
+    btn.addEventListener('click', function() { openDeployModal(btn.dataset.token, false); });
+  });
+
+  // Add modal
+  var addModal = document.getElementById('addModal');
+  document.getElementById('openAddModal').addEventListener('click', function() {
+    addModal.classList.remove('hidden'); addModal.classList.add('flex');
+  });
+  document.getElementById('closeAddModal').addEventListener('click', function() {
+    addModal.classList.add('hidden'); addModal.classList.remove('flex');
+  });
+  addModal.addEventListener('click', function(e) {
+    if (e.target === addModal) { addModal.classList.add('hidden'); addModal.classList.remove('flex'); }
+  });
+
+  document.getElementById('addProbeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var submitBtn = document.getElementById('submitAddProbe');
+    submitBtn.disabled = true; submitBtn.textContent = '创建中...';
+    var formData = new FormData(e.target);
+    var payload = {};
+    formData.forEach(function(v, k) { payload[k] = v; });
+
+    fetch('/api/probe/servers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.success) {
+        addModal.classList.add('hidden'); addModal.classList.remove('flex');
+        openDeployModal(data.token, true);
+        showPageAlert('success', '创建成功，请复制部署命令。');
+      } else {
+        showPageAlert('error', data.message || '创建失败');
+      }
+    }).finally(function() { submitBtn.disabled = false; submitBtn.textContent = '创建'; });
+  });
+})();
 </script>
 {{ end }}
 

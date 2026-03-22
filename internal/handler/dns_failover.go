@@ -19,15 +19,19 @@ func DNSFailoverPage(c *gin.Context) {
 	database.DB.FirstOrCreate(&cfgCF)
 
 	var rules []models.DnsFailover
-	database.DB.Find(&rules)
+	database.DB.Preload("PrimaryServer").Preload("CurrentActiveServer").Find(&rules)
 
 	var probes []models.ProbeServer
 	database.DB.Order("name").Find(&probes)
+
+	var logs []models.DnsFailoverLog
+	database.DB.Order("created_at DESC").Limit(50).Find(&logs)
 
 	c.HTML(http.StatusOK, "dns_failover.html", gin.H{
 		"cf_config": cfgCF,
 		"rules":     rules,
 		"probes":    probes,
+		"logs":      logs,
 		"username":  c.GetString("username"),
 	})
 }
@@ -45,6 +49,7 @@ func SaveCloudflareConfig(c *gin.Context) {
 	}
 	cfg.ZoneID = strings.TrimSpace(c.PostForm("zone_id"))
 	cfg.Domain = strings.TrimSpace(c.PostForm("domain"))
+	cfg.TesterIP = strings.TrimSpace(c.PostForm("tester_ip"))
 	database.DB.Save(&cfg)
 
 	c.Redirect(http.StatusFound, "/dns_failover")

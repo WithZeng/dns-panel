@@ -11,7 +11,7 @@
 
   {{ range .groups }}
   <!-- Security Group Card -->
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
+  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-xl font-bold text-slate-900 dark:text-white">🔒 安全组规则</h1>
       <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ .ID }}</span>
@@ -32,6 +32,7 @@
         <div>
           <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">协议</label>
           <select data-field="protocol" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200">
+            <option value="tcp+udp">TCP + UDP</option>
             <option value="tcp">TCP</option>
             <option value="udp">UDP</option>
             <option value="all">ALL</option>
@@ -58,7 +59,7 @@
   </div>
 
   <!-- Rules Table -->
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
+  <div data-sg-id="{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
       <h2 class="text-lg font-bold text-slate-900 dark:text-white">入站规则
         <span class="text-sm font-normal text-slate-500">({{ len .Rules }})</span>
@@ -99,7 +100,7 @@
             </td>
             <td class="px-4 py-3 text-slate-400 text-xs max-w-[120px] truncate">{{ .Description }}</td>
             <td class="px-4 py-3 text-right">
-              <button onclick="revokeRule('{{ .IpProtocol }}', '{{ .PortRange }}', '{{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else }}{{ .Ipv6SourceCidr }}{{ end }}', '{{ .Policy }}')"
+              <button onclick="revokeRule('{{ .IpProtocol }}', '{{ .PortRange }}', '{{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else }}{{ .Ipv6SourceCidr }}{{ end }}', '{{ .Policy }}', this.closest('[data-sg-id]').dataset.sgId)"
                 class="rounded-lg border border-red-200 dark:border-red-700 px-2.5 py-1 text-xs text-red-600 bg-red-50 dark:bg-red-900/20 hover:opacity-80 transition">删除</button>
             </td>
           </tr>
@@ -134,13 +135,17 @@ function getFormData(sgId) {
 
 async function addRule(sgId) {
   const d = getFormData(sgId);
-  const resp = await fetch('/api/instance/' + instanceId + '/sg/add', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ sg_id: sgId, protocol: d.protocol, port_range: d.port_range, source_cidr: d.source_cidr, description: d.description, policy: 'accept' }),
-  });
-  const data = await resp.json();
-  if (data.success) { showToast('规则添加成功', 'success'); setTimeout(() => location.reload(), 800); }
-  else { showToast(data.message || '添加失败', 'error'); }
+  const protocols = d.protocol === 'tcp+udp' ? ['tcp', 'udp'] : [d.protocol];
+  let ok = true;
+  for (const proto of protocols) {
+    const resp = await fetch('/api/instance/' + instanceId + '/sg/add', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sg_id: sgId, protocol: proto, port_range: d.port_range, source_cidr: d.source_cidr, description: d.description, policy: 'accept' }),
+    });
+    const data = await resp.json();
+    if (!data.success) { showToast(data.message || '添加失败', 'error'); ok = false; }
+  }
+  if (ok) { showToast('规则添加成功', 'success'); setTimeout(() => location.reload(), 800); }
 }
 
 async function openAllPorts(sgId) {
@@ -161,9 +166,8 @@ async function openAllPorts(sgId) {
   setTimeout(() => location.reload(), 1000);
 }
 
-async function revokeRule(protocol, portRange, cidr, policy) {
+async function revokeRule(protocol, portRange, cidr, policy, sgId) {
   if (!confirm('确认删除此规则？')) return;
-  const sgId = document.querySelector('.font-mono.text-slate-400')?.textContent?.trim();
   const resp = await fetch('/api/instance/' + instanceId + '/sg/revoke', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ sg_id: sgId, protocol: protocol, port_range: portRange, source_cidr: cidr, policy: policy.toLowerCase() }),
