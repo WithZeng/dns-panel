@@ -229,9 +229,6 @@
       }
       var saved = localStorage.getItem('theme');
       applyTheme(saved === 'dark');
-      // #region agent log
-      fetch('http://127.0.0.1:7470/ingest/3a029964-e8e2-4698-87c0-c18b3b1d83eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e75fdb'},body:JSON.stringify({sessionId:'e75fdb',location:'base.html:theme-init',message:'theme initialized',data:{saved:saved,isDark:saved==='dark',htmlClass:html.className},timestamp:Date.now()})}).catch(function(){});
-      // #endregion
 
       var toggle = document.getElementById('themeToggle');
       if (toggle) {
@@ -239,10 +236,6 @@
           var isDark = html.classList.contains('dark');
           localStorage.setItem('theme', isDark ? 'light' : 'dark');
           applyTheme(!isDark);
-          // #region agent log
-          var sb = document.getElementById('sidebar');
-          fetch('http://127.0.0.1:7470/ingest/3a029964-e8e2-4698-87c0-c18b3b1d83eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e75fdb'},body:JSON.stringify({sessionId:'e75fdb',location:'base.html:theme-toggle',message:'theme toggled',data:{newTheme:isDark?'light':'dark',htmlClass:html.className,sidebarClass:sb?sb.className:'N/A'},timestamp:Date.now()})}).catch(function(){});
-          // #endregion
         });
       }
 
