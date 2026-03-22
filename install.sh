@@ -246,7 +246,7 @@ do_update() {
 
     info "重新构建容器..."
     compose down 2>/dev/null || true
-    compose build --no-cache
+    compose build
     compose up -d
 
     local port=$(grep -oP 'PANEL_PORT=\K\d+' .env 2>/dev/null || echo "5000")

@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-alpine AS deps
 
 WORKDIR /build
 RUN apk add --no-cache gcc musl-dev
@@ -6,8 +6,10 @@ RUN apk add --no-cache gcc musl-dev
 COPY go.mod go.sum ./
 RUN go mod download
 
+FROM deps AS builder
+
 COPY . .
-RUN CGO_ENABLED=1 go build -o dns-panel -ldflags="-s -w" .
+RUN CGO_ENABLED=1 GOFLAGS="-p=2" go build -o dns-panel -ldflags="-s -w" .
 
 FROM alpine:latest
 
