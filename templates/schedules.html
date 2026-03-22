@@ -1,118 +1,76 @@
-{% extends "base.html" %}
-{% block title %}定时任务 · {{ instance.name }}{% endblock %}
-{% block content %}
-<div class="max-w-3xl mx-auto">
-    <div class="mb-6">
-        <a href="{{ url_for('main.instance_detail', id=instance.id) }}"
-            class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">&larr;
-            返回 {{ instance.name }}</a>
-    </div>
-
-    <div
-        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white mb-4">⏰ 添加定时任务</h1>
-
-        <form method="POST" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">操作</label>
-                    <select name="action"
-                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200">
-                        <option value="stop">🔴 停止</option>
-                        <option value="start">🟢 启动</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">时间</label>
-                    <div class="flex gap-2">
-                        <select name="hour"
-                            class="flex-1 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-3 text-slate-700 dark:text-slate-200">
-                            {% for h in range(24) %}
-                            <option value="{{ h }}">{{ '%02d'|format(h) }}</option>
-                            {% endfor %}
-                        </select>
-                        <span class="flex items-center text-slate-400 font-bold">:</span>
-                        <select name="minute"
-                            class="flex-1 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-3 text-slate-700 dark:text-slate-200">
-                            {% for m in range(0, 60, 5) %}
-                            <option value="{{ m }}">{{ '%02d'|format(m) }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">日期
-                        <span class="text-slate-400 font-normal">(* = 每天)</span></label>
-                    <input name="days_of_week" type="text" value="*" placeholder="* 或 1,2,3,4,5"
-                        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200">
-                    <p class="text-xs text-slate-400 mt-1">1=周一 … 7=周日，逗号分隔</p>
-                </div>
-            </div>
-            <button type="submit"
-                class="w-full py-3 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-blue-600 dark:to-blue-700 text-white rounded-xl font-medium hover:shadow-lg transition-all">
-                ➕ 添加定时任务
-            </button>
-        </form>
-    </div>
-
-    <!-- Existing schedules -->
-    {% if schedules %}
-    <div
-        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-            <h2 class="text-lg font-bold text-slate-900 dark:text-white">已有任务</h2>
+{{ define "title" }}定时任务 - {{ .instance.Name }}{{ end }}
+{{ define "content" }}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold">定时任务</h1>
+            <p class="text-sm text-gray-500 mt-1">{{ .instance.Name }}</p>
         </div>
-        <div class="divide-y divide-slate-100 dark:divide-slate-700">
-            {% for task in schedules %}
-            <div
-                class="flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">{{ '🟢' if task.action == 'start' else '🔴' }}</span>
-                    <div>
-                        <div class="font-semibold text-slate-800 dark:text-white">
-                            {{ '%02d:%02d'|format(task.hour, task.minute) }}
-                            <span class="text-sm font-normal text-slate-500 dark:text-slate-400 ml-1">
-                                {{ '启动' if task.action == 'start' else '停止' }}
-                            </span>
-                        </div>
-                        <div class="text-xs text-slate-400 dark:text-slate-500">
-                            {% if task.days_of_week == '*' %}
-                            每天
-                            {% else %}
-                            {% set day_names = {'1':'一','2':'二','3':'三','4':'四','5':'五','6':'六','7':'日'} %}
-                            周{% for d in task.days_of_week.split(',') %}{{ day_names.get(d.strip(), d.strip()) }}{% if
-                            not loop.last %}/{% endif %}{% endfor %}
-                            {% endif %}
-                            · {% if task.enabled %}<span class="text-emerald-500">已启用</span>{% else %}<span
-                                class="text-slate-400">已禁用</span>{% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <form method="POST" action="{{ url_for('main.toggle_schedule', id=task.id) }}" class="inline">
-                        <button type="submit"
-                            class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs {{ 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' if task.enabled else 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' }} hover:opacity-80 transition">
-                            {{ '禁用' if task.enabled else '启用' }}
-                        </button>
-                    </form>
-                    <form method="POST" action="{{ url_for('main.delete_schedule', id=task.id) }}" class="inline"
-                        onsubmit="return confirm('确认删除？')">
-                        <button type="submit"
-                            class="rounded-lg border border-red-200 dark:border-red-700 px-3 py-1.5 text-xs text-red-600 bg-red-50 dark:bg-red-900/20 hover:opacity-80 transition">
-                            删除
-                        </button>
-                    </form>
-                </div>
+        <a href="/instance/{{ .instance.ID }}" class="text-sm text-gray-500 hover:text-blue-600">返回实例</a>
+    </div>
+
+    <!-- Add task -->
+    <form method="POST" action="/instance/{{ .instance.ID }}/schedules" class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
+        <h2 class="font-semibold mb-4">添加定时任务</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">操作</label>
+                <select name="action" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    <option value="start">启动</option>
+                    <option value="stop">停止</option>
+                </select>
             </div>
-            {% endfor %}
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">小时 (0-23)</label>
+                <input type="number" name="hour" min="0" max="23" value="9" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">分钟 (0-59)</label>
+                <input type="number" name="minute" min="0" max="59" value="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">星期 (* = 每天)</label>
+                <input type="text" name="days_of_week" value="*" placeholder="1,2,3,4,5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
         </div>
+        <button type="submit" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm">添加</button>
+    </form>
+
+    <!-- Existing tasks -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500">操作</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500">时间</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500">星期</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500">状态</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-500">管理</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {{ range .schedules }}
+                <tr>
+                    <td class="px-4 py-3">
+                        {{ if eq .Action "start" }}<span class="text-green-600">启动</span>{{ else }}<span class="text-red-500">停止</span>{{ end }}
+                    </td>
+                    <td class="px-4 py-3 font-mono">{{ printf "%02d:%02d" .Hour .Minute }}</td>
+                    <td class="px-4 py-3 text-gray-500">{{ .DaysOfWeek }}</td>
+                    <td class="px-4 py-3">
+                        {{ if .Enabled }}<span class="text-green-600 text-xs">启用</span>{{ else }}<span class="text-gray-400 text-xs">禁用</span>{{ end }}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <form method="POST" action="/schedule/{{ .ID }}/toggle" class="inline"><button class="text-xs text-blue-600 hover:underline">{{ if .Enabled }}禁用{{ else }}启用{{ end }}</button></form>
+                        <form method="POST" action="/schedule/{{ .ID }}/delete" class="inline ml-2"><button class="text-xs text-red-500 hover:underline">删除</button></form>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">暂无定时任务</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
     </div>
-    {% else %}
-    <div
-        class="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-        <p class="text-3xl mb-2">⏰</p>
-        <p class="text-slate-400">暂无定时任务，使用上面的表单添加。</p>
-    </div>
-    {% endif %}
 </div>
-{% endblock %}
+{{ end }}
+
+{{ template "base" . }}

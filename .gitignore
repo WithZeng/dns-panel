@@ -1,29 +1,39 @@
-# Environment & secrets
+# Binaries
+dns-panel
+dns-panel.exe
+*.exe~
+
+# Data
+data/
+*.db
+
+# Environment
 .env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
 service_account.json
 
-# Python
+# Debug
+__debug_bin*
+
+# Third party
+komari-*/
+
+# Python leftovers
 __pycache__/
-*.py[cod]
-*.pyo
+*.pyc
 .venv/
 venv/
-*.egg-info/
-dist/
-build/
-
-# Flask instance (DB, credentials)
 instance/
-
-# Logs
-*.log
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Docker
-.docker/
-
-# Third-party / vendored (not part of this project)
-komari-1.1.7/

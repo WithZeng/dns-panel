@@ -1,20 +1,41 @@
-{% extends 'base.html' %}
+{{ define "title" }}登录 - DNS Panel{{ end }}
 
-{% block content %}
-<div class="mx-auto w-full max-w-sm mt-16">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
-    <h1 class="text-2xl font-bold text-slate-800 dark:text-white text-center">登录</h1>
-    <form method="POST" class="mt-6 space-y-4">
-      <div>
-        <label for="username" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">用户名</label>
-        <input id="username" name="username" type="text" required autofocus class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-      </div>
-      <div>
-        <label for="password" class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">密码</label>
-        <input id="password" name="password" type="password" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
-      </div>
-      <button type="submit" class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">登录</button>
-    </form>
-  </div>
+{{ define "navbar" }}{{ end }}
+
+{{ define "content" }}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div class="w-full max-w-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">DNS Panel</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">ECS 流量监控管理面板</p>
+            </div>
+
+            {{ if .error }}
+            <div class="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg px-4 py-3 mb-4">
+                {{ .error }}
+            </div>
+            {{ end }}
+
+            <form method="POST" action="/login" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">用户名</label>
+                    <input type="text" id="username" name="username" required autofocus
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">密码</label>
+                    <input type="password" id="password" name="password" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+                    登录
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
-{% endblock %}
+{{ end }}
+
+{{ template "base" . }}

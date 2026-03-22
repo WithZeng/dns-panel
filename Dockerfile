@@ -1,24 +1,25 @@
-FROM python:3.11-slim
+FROM golang:1.22-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
+RUN apk add --no-cache gcc musl-dev
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libc6-dev \
-    iputils-ping \
-    gh \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
+RUN CGO_ENABLED=1 go build -o dns-panel -ldflags="-s -w" .
 
-RUN mkdir -p /app/instance
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+COPY --from=builder /build/dns-panel .
+COPY --from=builder /build/templates ./templates
+COPY --from=builder /build/static ./static
+
+RUN mkdir -p /app/data
 
 EXPOSE 5000
 
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
+CMD ["./dns-panel"]

@@ -1,272 +1,86 @@
-# DNS Panel — 阿里云 ECS 流量监控 & DNS 故障转移面板
+# DNS Panel (Go)
 
-> 一站式管理阿里云 ECS 实例流量、定时开关机、Cloudflare DNS 故障自动切换，支持 Docker 一键部署。
+轻量级 ECS 流量监控与 DNS 故障转移面板，使用 Go 重写，替代原 Python/Flask 版本。
 
----
+## 特性
 
-## 功能概览
+- **ECS 流量监控** — 阿里云 CDT 流量自动采集，支持月流量/终身流量两种策略
+- **自动启停** — 流量超限自动停机，低于阈值自动恢复
+- **告警通知** — 企业微信 / 钉钉 / Telegram Webhook 推送
+- **DNS 故障转移** — 基于 Cloudflare API 的自动 DNS 切换
+- **探针系统** — WebSocket 长连接实时上报服务器状态
+- **安全组管理** — 在线查看/添加/删除阿里云安全组规则
+- **定时任务** — 自定义 ECS 启停时间表
+- **数据导出** — CSV 导出实例数据
 
-| 模块 | 说明 |
-|------|------|
-| **流量监控** | 5 分钟轮询阿里云 API，按月/生命周期两种计量模式统计流量，超限自动停机 |
-| **Dashboard** | 实例状态总览、流量占比图表、固定静态布局（不支持拖拽） |
-| **定时任务** | 按星期/小时/分钟维度定时开关 ECS 实例 |
-| **DNS 故障转移** | 结合 Cloudflare DNS，通过 Ping/端口探测自动切换 A/AAAA 记录 |
-| **探针/Checker** | 可在国内/国外部署独立探测节点，WebSocket 实时上报 |
-| **通知告警** | 支持企业微信、钉钉、Telegram Webhook；含每日流量报告 |
-| **安全组管理** | 在线查看/编辑阿里云安全组规则，一键开启 IPv6 |
-| **AK/SK 加密** | Fernet 对称加密存储阿里云密钥 |
-| **自动备份** | 每日凌晨本地备份 SQLite，可选 Google Drive 远程备份 |
+## 快速部署
 
----
-
-## 项目文件结构
-
-> **仅以下为本项目代码**，`komari-1.1.7/` 为第三方无关项目，已在 `.gitignore` 中排除。
-
-```
-dns-panel/
-│
-├── app.py                  # Flask 主入口，调度器、数据库初始化、定时任务注册
-├── models.py               # SQLAlchemy 数据模型（User / EcsInstance / DnsFailover …）
-├── routes.py               # Web 路由（登录、Dashboard、实例管理、安全组、日志…）
-├── probe_routes.py         # 探针 & DNS 故障转移路由（WebSocket、Checker API）
-├── monitor.py              # 阿里云 ECS API 封装（流量查询、开/关/释放、安全组操作）
-├── cloudflare_manager.py   # Cloudflare DNS API 封装（CRUD、Upsert）
-├── notifier.py             # 告警通知（企业微信 / 钉钉 / Telegram）
-├── crypto_utils.py         # AK/SK Fernet 加解密
-├── backup_utils.py         # Google Drive 远程备份
-├── gunicorn.conf.py        # Gunicorn 生产配置（gevent worker）
-├── requirements.txt        # Python 依赖
-│
-├── templates/              # Jinja2 HTML 模板
-│   ├── base.html           #   公共布局
-│   ├── login.html          #   登录页
-│   ├── dashboard.html      #   Dashboard 总览
-│   ├── instance_detail.html#   实例详情
-│   ├── dns_failover.html   #   DNS 故障转移配置
-│   ├── probe_servers.html  #   探针节点管理
-│   ├── schedules.html      #   定时任务
-│   ├── security_group.html #   安全组管理
-│   ├── alert_config.html   #   告警配置
-│   ├── logs.html           #   操作日志
-│   └── ...                 #   其他页面
-│
-├── agent/                  # 远程探针 Agent
-│   ├── agent.py            #   Agent 主程序
-│   ├── port_checker.py     #   端口探测服务
-│   ├── install.sh          #   Agent 安装脚本
-│   ├── install_checker.sh  #   Checker 安装脚本
-│   ├── install_checker_cn.sh   # 国内加速安装脚本
-│   └── install_checker_global.sh # 国际线路安装脚本
-│
-├── tests/                  # 单元测试
-│   ├── test_auth_force_password_change.py
-│   └── test_dns_failover_api.py
-│
-├── tools/                  # 辅助工具
-│   ├── check_text_encoding.py
-│   └── security_audit.sh
-│
-├── Dockerfile              # Docker 镜像定义
-├── docker-compose.yml      # Docker Compose 编排
-├── install.sh              # 远程一键部署/更新引导脚本（curl 直接调用）
-├── panel.sh                # Linux 统一管理脚本（deploy/update/restart/stop/…）
-├── panel.ps1               # Windows 统一管理脚本
-├── README-Docker.md        # Docker 部署详细文档
-├── .gitignore              # Git 忽略规则
-└── .env                    # 环境变量（不入库）
-```
-
----
-
-## 快速开始
-
-### 前置条件
-
-- Docker 20+ & Docker Compose
-- 阿里云 AccessKey（需 ECS 读写权限）
-- *(可选)* Cloudflare API Token（DNS 故障转移功能）
-
-### 一键部署（推荐）
-
-服务器上执行一条命令即可部署，无需手动 clone：
+### Docker (推荐)
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh)
-```
-
-更新已有部署：
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
-```
-
-其他子命令（restart / stop / status / logs / backup）同理：
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) restart
-```
-
-> 新安装默认目录仍为 `/opt/dns-panel`；远程更新脚本会优先自动识别已有安装目录并原地升级（如 `/root/dns-panel`、当前项目目录），也可通过 `INSTALL_DIR=/your/path` 强制指定。
-
-<details>
-<summary>手动 clone 部署（备选）</summary>
-
-**Linux：**
-```bash
+# 克隆仓库
 git clone https://github.com/WithZeng/dns-panel.git
 cd dns-panel
-bash panel.sh deploy
+git checkout go-rewrite
+
+# 创建环境变量文件
+cp .env.example .env
+
+# 启动
+docker-compose up -d
 ```
 
-**Windows：**
-```powershell
-git clone https://github.com/WithZeng/dns-panel.git
-cd dns-panel
-.\panel.ps1 deploy
-```
-</details>
-
-脚本自动完成：环境检查 → 生成 `.env` → 放行防火墙（IPv4+IPv6）→ 构建容器 → 健康检查。
-
-### 默认访问
-
-```
-http://<服务器IP>:5000
-```
-
-首次登录凭据见 `instance/initial_admin_credentials.txt`，登录后会**强制修改密码**。
-
----
-
-## 一键更新
+### 编译运行
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/WithZeng/dns-panel/main/install.sh) update
+# 需要 Go 1.21+
+go build -o dns-panel .
+./dns-panel
 ```
 
-或在项目目录内直接执行：
+首次启动后查看 `data/initial_admin_credentials.txt` 获取默认管理员密码。
 
-```bash
-bash panel.sh update
-```
+## 配置
 
-流程：备份 DB → `git pull` → `docker compose build --no-cache` → 重启 → 健康检查。
-
-可选参数：`--skip-backup` / `--skip-pull`（Linux），`-SkipBackup` / `-SkipPull`（Windows）。
-
----
-
-## 环境变量
-
-在 `.env` 中配置（首次部署自动生成）：
-
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `SECRET_KEY` | Flask Session 密钥 | 自动生成 |
-| `ENCRYPT_KEY` | AK/SK 加密密钥 | 自动生成 |
-| `PANEL_PORT` | 面板对外端口 | `5000` |
-| `PUBLIC_PANEL_URL` | 反代/NAT 场景的外网地址 | *(空)* |
-| `TZ` | 时区 | `Asia/Shanghai` |
-| `DNS_FAILOVER_TEST_MODE` | 故障检测模式（`panel_local` / `checker`） | `panel_local` |
-| `DNS_PANEL_DISABLE_SCHEDULER` | 强制禁用定时任务（测试用） | `0` |
-| `DNS_PANEL_ROLE` | 进程角色（`web`/`scheduler`/`all`），仅 `scheduler` 或 `all` 运行调度器 | `all` |
-
----
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `PANEL_PORT` | 5000 | 监听端口 |
+| `SECRET_KEY` | 自动生成 | Session 密钥 |
+| `ENCRYPT_KEY` | 自动生成 | AES 加密密钥 |
+| `DNS_PANEL_DB_PATH` | data/panel.db | SQLite 数据库路径 |
+| `DNS_PANEL_ROLE` | all | 角色: all / web / scheduler |
 
 ## 技术栈
 
-- **后端**：Python 3.11 / Flask / SQLAlchemy / APScheduler / gevent
-- **前端**：Jinja2 + Bootstrap（服务端渲染）
-- **数据库**：SQLite（通过 Volume 持久化至 `instance/`）
-- **容器**：Docker + Gunicorn（gevent worker）
-- **云 API**：阿里云 ECS SDK / Cloudflare REST API
+- **后端**: Go + Gin + GORM + SQLite (WAL)
+- **前端**: Tailwind CSS + 原生 JS
+- **加密**: AES-256-GCM + bcrypt
+- **调度**: robfig/cron
+- **API**: 阿里云 OpenAPI (自实现签名) + Cloudflare v4
 
----
+## 项目结构
 
-## 常用运维
-
-```bash
-bash panel.sh status      # 容器状态
-bash panel.sh logs        # 实时日志
-bash panel.sh restart     # 重启容器
-bash panel.sh stop        # 停止服务
-bash panel.sh backup      # 手动备份数据库
-bash panel.sh restore     # 一键恢复到最新备份
-bash panel.sh help        # 查看所有命令
 ```
-
-### 数据备份与恢复
-
-数据库文件位于 `instance/ecs_monitor.db`，每次执行 `update` 命令前会自动备份到 `instance/backups/`。
-
-```bash
-# 手动备份
-bash panel.sh backup
-
-# 一键恢复到最新备份（会先备份当前数据库再恢复）
-bash panel.sh restore
-
-# 指定某个备份恢复
-bash panel.sh restore instance/backups/ecs_monitor_20260223_120000.db
-
-# 查看所有备份
-ls -lh instance/backups/
+├── main.go                    # 入口 + 路由
+├── internal/
+│   ├── config/                # 配置加载
+│   ├── crypto/                # AES-256-GCM 加密
+│   ├── database/              # GORM + SQLite
+│   ├── models/                # 数据模型
+│   ├── middleware/             # 认证/限流/日志
+│   ├── handler/               # HTTP 处理器
+│   └── service/
+│       ├── aliyun/            # 阿里云 API 客户端
+│       ├── cloudflare.go      # Cloudflare DNS
+│       ├── monitor.go         # ECS 监控逻辑
+│       ├── notifier.go        # 通知推送
+│       └── scheduler.go       # 定时调度
+├── templates/                 # HTML 模板
+├── static/                    # 静态资源
+├── Dockerfile
+└── docker-compose.yml
 ```
-
-### 重置管理员密码
-
-```bash
-# 方法 1：查看初始密码（仅首次部署未改密码时有效）
-cat instance/initial_admin_credentials.txt
-
-# 方法 2：进容器重置密码（特殊字符用脚本方式避免 shell 转义问题）
-cat > /tmp/reset_pw.py << 'EOF'
-from app import app, db
-from models import User
-from werkzeug.security import generate_password_hash
-with app.app_context():
-    u = User.query.filter_by(username='admin').first()
-    u.password_hash = generate_password_hash('你的新密码')
-    u.force_password_change = False
-    db.session.commit()
-    print('密码已重置')
-EOF
-docker cp /tmp/reset_pw.py dns-panel:/app/reset_pw.py
-docker exec dns-panel python /app/reset_pw.py
-docker exec dns-panel rm /app/reset_pw.py
-rm /tmp/reset_pw.py
-```
-
-更多细节请参阅 [README-Docker.md](README-Docker.md)。
-
----
-
-## 探针部署（可选）
-
-国内机器：
-```bash
-curl -fsSL http://<面板IP>:5000/agent/install_checker_cn.sh -o /tmp/install_checker_cn.sh \
-  && PANEL_BASE_URL=http://<面板IP>:5000 bash /tmp/install_checker_cn.sh
-```
-
-国外机器：
-```bash
-curl -fsSL http://<面板IP>:5000/agent/install_checker_global.sh -o /tmp/install_checker_global.sh \
-  && PANEL_BASE_URL=http://<面板IP>:5000 bash /tmp/install_checker_global.sh
-```
-
----
 
 ## License
 
-Private project — all rights reserved.
-
-
-## 备份/导入增强（vNext）
-
-- 备份 zip 现在会尽量包含 `instance/encrypt.key`（若存在），用于跨环境恢复 AK/SK。
-- CSV 导出新增字段：`ak_format`、`is_encrypted`。
-- CSV 导入支持密文迁移（`ak_format=fernet_encrypted`）与原有明文导入。
-- 建议上线前参考 `docs/DEPLOY_CHECKLIST.md`。
+MIT

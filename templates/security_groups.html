@@ -1,0 +1,131 @@
+{{ define "title" }}安全组 - {{ .instance.Name }}{{ end }}
+{{ define "content" }}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold">安全组规则</h1>
+            <p class="text-sm text-gray-500 mt-1">{{ .instance.Name }} ({{ .instance.InstanceID }})</p>
+        </div>
+        <a href="/instance/{{ .instance.ID }}" class="text-sm text-gray-500 hover:text-blue-600">返回实例</a>
+    </div>
+
+    {{ if .error }}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-red-600 dark:text-red-300 text-sm">{{ .error }}</div>
+    {{ end }}
+
+    {{ range .groups }}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="font-semibold text-sm">安全组: <span class="font-mono text-blue-600">{{ .ID }}</span></h2>
+            <button onclick="showAddRule('{{ .ID }}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg">添加规则</button>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">协议</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">端口</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">来源</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">策略</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">描述</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {{ range .Rules }}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <td class="px-4 py-2 font-mono text-xs">{{ .IpProtocol }}</td>
+                    <td class="px-4 py-2 font-mono text-xs">{{ .PortRange }}</td>
+                    <td class="px-4 py-2 font-mono text-xs">{{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else }}{{ .Ipv6SourceCidr }}{{ end }}</td>
+                    <td class="px-4 py-2">
+                        {{ if eq .Policy "Accept" }}<span class="text-green-600 text-xs">允许</span>{{ else }}<span class="text-red-500 text-xs">拒绝</span>{{ end }}
+                    </td>
+                    <td class="px-4 py-2 text-gray-400 text-xs">{{ .Description }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <button onclick="revokeRule('{{ .IpProtocol }}', '{{ .PortRange }}', '{{ if .SourceCidrIp }}{{ .SourceCidrIp }}{{ else }}{{ .Ipv6SourceCidr }}{{ end }}', '{{ .Policy }}')"
+                            class="text-red-500 hover:text-red-700 text-xs">删除</button>
+                    </td>
+                </tr>
+                {{ else }}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400 text-xs">无入站规则</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+    {{ end }}
+</div>
+
+<!-- Add rule modal -->
+<div id="add-rule-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+        <h3 class="font-semibold mb-4">添加安全组规则</h3>
+        <input type="hidden" id="rule-sg-id">
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs text-gray-500">协议</label>
+                <select id="rule-protocol" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    <option value="tcp">TCP</option>
+                    <option value="udp">UDP</option>
+                    <option value="icmp">ICMP</option>
+                    <option value="all">ALL</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">端口范围</label>
+                <input id="rule-port" type="text" value="80/80" placeholder="80/80 or 1/65535" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">来源 CIDR</label>
+                <input id="rule-cidr" type="text" value="0.0.0.0/0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">描述</label>
+                <input id="rule-desc" type="text" placeholder="可选" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+        </div>
+        <div class="flex gap-3 mt-4">
+            <button onclick="submitAddRule()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">添加</button>
+            <button onclick="document.getElementById('add-rule-modal').classList.add('hidden')" class="text-gray-500 px-4 py-2 text-sm">取消</button>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+const instanceId = {{ .instance.ID }};
+function showAddRule(sgId) {
+    document.getElementById('rule-sg-id').value = sgId;
+    document.getElementById('add-rule-modal').classList.remove('hidden');
+}
+async function submitAddRule() {
+    const sgId = document.getElementById('rule-sg-id').value;
+    const resp = await fetch('/api/instance/' + instanceId + '/sg/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sg_id: sgId,
+            protocol: document.getElementById('rule-protocol').value,
+            port_range: document.getElementById('rule-port').value,
+            source_cidr: document.getElementById('rule-cidr').value,
+            description: document.getElementById('rule-desc').value,
+            policy: 'accept',
+        }),
+    });
+    const data = await resp.json();
+    if (data.success) { location.reload(); } else { showToast(data.message, 'error'); }
+}
+async function revokeRule(protocol, portRange, cidr, policy) {
+    if (!confirm('确定删除此规则？')) return;
+    const sgId = document.querySelector('[class*="font-mono text-blue-600"]')?.textContent;
+    const resp = await fetch('/api/instance/' + instanceId + '/sg/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sg_id: sgId, protocol, port_range: portRange, source_cidr: cidr, policy: policy.toLowerCase() }),
+    });
+    const data = await resp.json();
+    if (data.success) { location.reload(); } else { showToast(data.message, 'error'); }
+}
+</script>
+{{ end }}
+
+{{ template "base" . }}
