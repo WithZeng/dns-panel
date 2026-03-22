@@ -15,7 +15,12 @@ type BillingQueryError struct {
 	RawError  string
 }
 
-func (e *BillingQueryError) Error() string { return e.Msg }
+func (e *BillingQueryError) Error() string {
+	if e.RawError != "" && e.RawError != e.Msg {
+		return fmt.Sprintf("%s（%s）", e.Msg, e.RawError)
+	}
+	return e.Msg
+}
 
 func classifyBillingError(err error) *BillingQueryError {
 	raw := strings.ToLower(err.Error())
