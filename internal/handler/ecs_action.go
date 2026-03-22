@@ -67,13 +67,13 @@ func ECSTrafficBilling(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var inst models.EcsInstance
 	if err := database.DB.First(&inst, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"success": false})
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
 		return
 	}
 
 	client, err := getClientFromInstance(&inst)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("凭据解密失败：%s", err.Error())})
 		return
 	}
 
@@ -83,7 +83,27 @@ func ECSTrafficBilling(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "billing": billing})
+	months := make([]gin.H, 0)
+	if billing.Months != nil {
+		for _, m := range billing.Months {
+			months = append(months, gin.H{
+				"month":        m.Month,
+				"traffic":      m.Traffic,
+				"amount":       m.Amount,
+				"traffic_unit": m.TrafficUnit,
+				"currency":     m.Currency,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"months":        months,
+		"total_traffic": billing.TotalTraffic,
+		"total_amount":  billing.TotalAmount,
+		"currency":      billing.Currency,
+		"scope":         billing.Scope,
+	})
 }
 
 func SecurityGroupsPage(c *gin.Context) {

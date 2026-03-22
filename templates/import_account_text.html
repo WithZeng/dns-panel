@@ -13,11 +13,18 @@
         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">支持中英文标签，自动忽略无关行；同一账号重复导入会覆盖更新。</p>
       </div>
 
-      <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-        <input type="checkbox" name="scan_all_regions" value="1" checked
-          class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-        扫描账号下全部可用区域（含香港与海外区域）
-      </label>
+      <div class="space-y-2">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <input type="checkbox" name="scan_all_regions" value="1" checked
+            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          扫描账号下全部可用区域（含香港与海外区域）
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <input type="checkbox" name="stop_on_first" value="1"
+            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          发现实例后停止扫描剩余区域（适用于单区域账号，加快导入速度）
+        </label>
+      </div>
 
       <button type="submit" id="import-submit-btn"
         class="w-full bg-slate-900 dark:bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-lg shadow-slate-900/10">

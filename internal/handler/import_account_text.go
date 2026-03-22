@@ -62,6 +62,7 @@ func ImportAccountTextPost(c *gin.Context) {
 	}
 
 	scanAll := c.PostForm("scan_all_regions") == "1"
+	stopOnFirst := c.PostForm("stop_on_first") == "1"
 
 	jobID := fmt.Sprintf("imp-%d", time.Now().UnixNano()%1000000000)
 	job := models.ImportJob{
@@ -72,7 +73,7 @@ func ImportAccountTextPost(c *gin.Context) {
 	}
 	database.DB.Create(&job)
 
-	go runAccountImport(jobID, rawText, scanAll)
+	go runAccountImport(jobID, rawText, scanAll, stopOnFirst)
 
 	c.HTML(http.StatusOK, "import_account_text.html", gin.H{
 		"username": c.GetString("username"),
@@ -202,7 +203,7 @@ func slugifyAccount(s string) string {
 	return s
 }
 
-func runAccountImport(jobID, rawText string, scanAll bool) {
+func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool) {
 	updateJob := func(step, message string, progress int) {
 		database.DB.Model(&models.ImportJob{}).Where("id = ?", jobID).Updates(map[string]interface{}{
 			"step": step, "message": message, "progress": progress, "updated_at": time.Now(),
@@ -281,6 +282,7 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 			mu        sync.Mutex
 			wg        sync.WaitGroup
 			completed int64
+			found     int64
 			total     = int64(len(regions))
 			sem       = make(chan struct{}, workers)
 		)
@@ -289,6 +291,9 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 			for {
 				done := atomic.LoadInt64(&completed)
 				if done >= total {
+					return
+				}
+				if stopOnFirst && atomic.LoadInt64(&found) > 0 {
 					return
 				}
 				pct := 30 + int(float64(done)/float64(total)*50)
@@ -304,11 +309,19 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 		}()
 
 		for _, region := range regions {
+			if stopOnFirst && atomic.LoadInt64(&found) > 0 {
+				break
+			}
 			wg.Add(1)
 			sem <- struct{}{}
 			go func(r string) {
 				defer wg.Done()
 				defer func() { <-sem }()
+
+				if stopOnFirst && atomic.LoadInt64(&found) > 0 {
+					atomic.AddInt64(&completed, 1)
+					return
+				}
 
 				client := aliyun.NewClient(ak, sk, r)
 				instances, err := aliyun.DescribeInstances(client)
@@ -324,6 +337,10 @@ func runAccountImport(jobID, rawText string, scanAll bool) {
 						InstanceID: inst.InstanceID, Name: inst.Name,
 						RegionID: inst.RegionID, Status: inst.Status, PublicIP: inst.PublicIP,
 					})
+				}
+
+				if len(batch) > 0 {
+					atomic.AddInt64(&found, int64(len(batch)))
 				}
 
 				mu.Lock()

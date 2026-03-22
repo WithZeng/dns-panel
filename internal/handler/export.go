@@ -161,13 +161,13 @@ func APICDTThreeMonths(c *gin.Context) {
 	inst := instances[0]
 	client, err := getClientFromInstance(&inst)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("凭据解密失败：%s", err.Error())})
 		return
 	}
 
 	billing, err := aliyun.GetCDTThreeMonthBilling(client, instanceIDParam, inst.RegionID)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("查询 CDT 账单失败：%s", err.Error())})
 		return
 	}
 
