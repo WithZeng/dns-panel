@@ -78,7 +78,7 @@
     {{ if eq .instance.TrafficStrategy "life" }}
     <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">♾️ 生命周期流量</span>
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">📦 周期已用流量</span>
         {{ if gt .instance.LifeTotalLimit 0.0 }}
         <span class="text-sm font-semibold {{ if gt (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 90.0 }}text-red-600 dark:text-red-400{{ else }}text-emerald-600 dark:text-emerald-400{{ end }}">{{ printf "%.1f" (min (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 100.0) }}%</span>
         {{ end }}
@@ -88,7 +88,7 @@
         <div class="h-full rounded-full transition-all duration-500 {{ if gt (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-emerald-500 to-teal-600{{ end }}" style="width: {{ printf "%.1f" (min (mul (div .instance.TotalTrafficSum .instance.LifeTotalLimit) 100.0) 100.0) }}%;"></div>
       </div>
       <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
-        <div><div class="text-xs text-slate-500 dark:text-slate-400">已用</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.TotalTrafficSum }} GB</div></div>
+        <div><div class="text-xs text-slate-500 dark:text-slate-400">周期已用</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.TotalTrafficSum }} GB</div></div>
         <div><div class="text-xs text-slate-500 dark:text-slate-400">配额</div><div class="font-semibold text-slate-900 dark:text-white">{{ printf "%.2f" .instance.LifeTotalLimit }} GB</div></div>
         <div><div class="text-xs text-slate-500 dark:text-slate-400">剩余</div><div class="font-semibold {{ if le (sub .instance.LifeTotalLimit .instance.TotalTrafficSum) 0.0 }}text-red-600 dark:text-red-400{{ else }}text-slate-900 dark:text-white{{ end }}">{{ printf "%.2f" (sub .instance.LifeTotalLimit .instance.TotalTrafficSum) }} GB</div></div>
       </div>
@@ -273,10 +273,17 @@ fetch('/api/traffic_history/' + instanceId)
   var scope = document.getElementById('instanceCdtScope');
   var errBox = document.getElementById('instanceCdtError');
 
+  function showCdtError(msg) {
+    if (errBox) { errBox.textContent = msg; errBox.classList.remove('hidden'); }
+    if (totalTraffic) totalTraffic.textContent = '-';
+    if (totalAmount) totalAmount.textContent = '-';
+    if (scope) scope.textContent = '查询失败';
+  }
+
   fetch('/api/instance/' + instanceId + '/billing')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.success) throw new Error(data.message || 'CDT 加载失败');
+      if (!data.success) { showCdtError(data.message || '查询 CDT 账单失败'); return; }
       var months = Array.isArray(data.months) ? data.months : [];
       tbody.innerHTML = '';
       months.forEach(function(row) {
@@ -294,12 +301,7 @@ fetch('/api/traffic_history/' + instanceId)
       totalAmount.textContent = Number(data.total_amount || 0).toFixed(4) + ' ' + (data.currency || 'CNY');
       scope.textContent = data.scope === 'instance' ? '实例级' : '账号级';
     })
-    .catch(function(err) {
-      if (errBox) { errBox.textContent = (err && err.message) || 'CDT 加载失败'; errBox.classList.remove('hidden'); }
-      totalTraffic.textContent = '-';
-      totalAmount.textContent = '-';
-      scope.textContent = '加载失败';
-    });
+    .catch(function(err) { showCdtError(err && err.message ? err.message : '网络请求失败'); });
 })();
 
 // Forecast

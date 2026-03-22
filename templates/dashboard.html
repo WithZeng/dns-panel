@@ -146,7 +146,7 @@
         {{ if eq .TrafficStrategy "life" }}
         <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">♾️ 生命周期流量</span>
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">📦 周期已用</span>
             {{ if gt .LifeTotalLimit 0.0 }}
             <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ printf "%.1f" .TotalTrafficSum }} / {{ printf "%.0f" .LifeTotalLimit }} GB</span>
             {{ else }}
@@ -158,7 +158,7 @@
             <div class="h-full rounded-full {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 90.0 }}bg-gradient-to-r from-red-500 to-red-600{{ else }}bg-gradient-to-r from-emerald-500 to-teal-600{{ end }} transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
           </div>
           <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
-            <span>已用 {{ printf "%.2f" .TotalTrafficSum }} GB</span>
+            <span>周期已用 {{ printf "%.2f" .TotalTrafficSum }} GB</span>
             <span>配额 {{ printf "%.2f" .LifeTotalLimit }} GB</span>
           </div>
           {{ end }}
@@ -444,9 +444,9 @@ function batchAction(action) {
   var errorBox = document.getElementById('cdtBillingError');
 
   function renderError(msg) {
-    if (errorBox) { errorBox.textContent = msg || 'CDT 计费数据加载失败'; errorBox.classList.remove('hidden'); }
+    if (errorBox) { errorBox.textContent = msg || '查询 CDT 账单数据失败'; errorBox.classList.remove('hidden'); }
     if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="py-3 text-slate-400">暂无数据</td></tr>';
-    if (scopeBadge) scopeBadge.textContent = '加载失败';
+    if (scopeBadge) scopeBadge.textContent = '查询失败';
     if (totalTraffic) totalTraffic.textContent = '-';
     if (totalAmount) totalAmount.textContent = '-';
   }
@@ -454,7 +454,7 @@ function batchAction(action) {
   fetch('/api/billing/cdt/three_months')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.success) throw new Error(data.message || 'CDT 计费数据加载失败');
+      if (!data.success) { renderError(data.message || '查询 CDT 账单数据失败'); return; }
       if (errorBox) errorBox.classList.add('hidden');
       var months = data.months || [];
       var currency = data.currency || 'CNY';
@@ -480,7 +480,7 @@ function batchAction(action) {
       if (totalTraffic) totalTraffic.textContent = Number(data.total_traffic || 0).toFixed(2) + ' GB';
       if (totalAmount) totalAmount.textContent = Number(data.total_amount || 0).toFixed(2) + ' ' + currency;
     })
-    .catch(function(err) { renderError((err && err.message) || ''); });
+    .catch(function(err) { renderError(err && err.message ? err.message : '网络请求失败，请检查连接'); });
 })();
 
 // Region Traffic Chart
