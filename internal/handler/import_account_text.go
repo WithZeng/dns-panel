@@ -22,13 +22,11 @@ import (
 )
 
 var allAliyunRegions = []string{
-	"cn-beijing", "cn-zhangjiakou", "cn-huhehaote", "cn-wulanchabu",
-	"cn-hangzhou", "cn-shanghai", "cn-nanjing", "cn-fuzhou",
-	"cn-shenzhen", "cn-heyuan", "cn-guangzhou", "cn-chengdu",
-	"cn-hongkong",
-	"ap-southeast-1", "ap-southeast-2", "ap-southeast-3", "ap-southeast-5",
-	"ap-southeast-6", "ap-southeast-7", "ap-northeast-1", "ap-northeast-2",
-	"ap-south-1",
+	"cn-hongkong", "ap-southeast-1", "cn-hangzhou", "cn-shanghai", "cn-shenzhen",
+	"cn-beijing", "cn-guangzhou", "cn-chengdu", "cn-heyuan", "cn-nanjing",
+	"ap-southeast-2", "ap-southeast-3", "ap-southeast-5", "ap-northeast-1",
+	"cn-zhangjiakou", "cn-huhehaote", "cn-wulanchabu", "cn-fuzhou",
+	"ap-southeast-6", "ap-southeast-7", "ap-northeast-2", "ap-south-1",
 	"us-east-1", "us-west-1", "eu-west-1", "eu-central-1",
 	"me-east-1", "me-central-1",
 }
@@ -329,39 +327,38 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 			})
 		}
 	} else {
-		const workers = 10
+		const workers = 20
 		var (
-			mu        sync.Mutex
-			wg        sync.WaitGroup
-			completed int64
-			found     int64
-			total     = int64(len(regions))
-			sem       = make(chan struct{}, workers)
+			mu         sync.Mutex
+			wg         sync.WaitGroup
+			completed  int64
+			found      int64
+			authFailed int64
+			total      = int64(len(regions))
+			sem        = make(chan struct{}, workers)
 		)
+
+		shouldStop := func() bool {
+			if atomic.LoadInt64(&authFailed) > 0 {
+				return true
+			}
+			return stopOnFirst && atomic.LoadInt64(&found) > 0
+		}
 
 		go func() {
 			for {
 				done := atomic.LoadInt64(&completed)
-				if done >= total {
-					return
-				}
-				if stopOnFirst && atomic.LoadInt64(&found) > 0 {
+				if done >= total || shouldStop() {
 					return
 				}
 				pct := 30 + int(float64(done)/float64(total)*50)
-				mu.Lock()
-				lastRegion := ""
-				if int(done) < len(regions) {
-					lastRegion = regions[done]
-				}
-				mu.Unlock()
-				updateJob("扫描实例", fmt.Sprintf("并行扫描区域 (%d/%d) %s...", done, total, lastRegion), pct)
+				updateJob("扫描实例", fmt.Sprintf("并行扫描区域 (%d/%d)...", done, total), pct)
 				time.Sleep(300 * time.Millisecond)
 			}
 		}()
 
 		for _, region := range regions {
-			if stopOnFirst && atomic.LoadInt64(&found) > 0 {
+			if shouldStop() {
 				break
 			}
 			wg.Add(1)
@@ -370,7 +367,7 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 				defer wg.Done()
 				defer func() { <-sem }()
 
-				if stopOnFirst && atomic.LoadInt64(&found) > 0 {
+				if shouldStop() {
 					atomic.AddInt64(&completed, 1)
 					return
 				}
@@ -378,6 +375,15 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 				client := aliyun.NewClient(ak, sk, r)
 				instances, err := aliyun.DescribeInstances(client)
 				if err != nil {
+					if apiErr, ok := err.(*aliyun.APIError); ok {
+						code := strings.ToLower(apiErr.Code)
+						if strings.Contains(code, "invalidaccesskey") || strings.Contains(code, "signaturedoesnotmatch") {
+							log.Printf("[import] auth failed at region %s: %s", r, apiErr.Code)
+							atomic.StoreInt64(&authFailed, 1)
+							atomic.AddInt64(&completed, 1)
+							return
+						}
+					}
 					log.Printf("[import] region %s scan failed: %v", r, err)
 					atomic.AddInt64(&completed, 1)
 					return
@@ -402,6 +408,11 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 			}(region)
 		}
 		wg.Wait()
+
+		if atomic.LoadInt64(&authFailed) > 0 && len(allDiscovered) == 0 {
+			failJob("AK/SK 凭据无效（InvalidAccessKeyId / SignatureDoesNotMatch），请检查后重试", "auth_failed")
+			return
+		}
 	}
 
 	updateJob("入库", "正在导入实例数据...", 85)

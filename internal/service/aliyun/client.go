@@ -28,7 +28,7 @@ func NewClient(ak, sk, region string) *Client {
 		AccessKeyID:     ak,
 		AccessKeySecret: sk,
 		RegionID:        region,
-		httpClient:      &http.Client{Timeout: 30 * time.Second},
+		httpClient:      &http.Client{Timeout: 8 * time.Second},
 	}
 }
 
