@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
+	"github.com/WithZeng/dns-panel/internal/service"
 	"github.com/WithZeng/dns-panel/internal/service/aliyun"
 	"github.com/gin-gonic/gin"
 )
@@ -400,11 +402,54 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool) {
 		}
 	}
 
+	syncTarget := ""
+	githubRepo := strings.TrimSpace(os.Getenv("GITHUB_SYNC_REPO"))
+	if githubRepo != "" {
+		updateJob("同步GitHub", "正在同步到 GitHub 私有仓库...", 90)
+
+		var ghInstances []service.GitHubSyncInstance
+		for _, d := range allDiscovered {
+			ghInstances = append(ghInstances, service.GitHubSyncInstance{
+				InstanceID: d.InstanceID,
+				Name:       d.Name,
+				RegionID:   d.RegionID,
+				Status:     d.Status,
+				PublicIP:   d.PublicIP,
+				PrivateIP:  d.PrivateIP,
+			})
+		}
+
+		identifier := parsed["login_name"]
+		if identifier == "" {
+			identifier = accountSlug
+		}
+
+		payload := &service.GitHubSyncPayload{
+			AccountSlug:       accountSlug,
+			AccountIdentifier: identifier,
+			LoginName:         parsed["login_name"],
+			Remark:            parsed["remark"],
+			AccessKeyID:       ak,
+			AccessKeySecret:   sk,
+			Region:            parsed["region_id"],
+			Instances:         ghInstances,
+		}
+
+		ok, info := service.SyncAccountToGitHub(githubRepo, payload)
+		if ok {
+			syncTarget = info
+			log.Printf("[import] GitHub sync success: %s", info)
+		} else {
+			log.Printf("[import] GitHub sync failed: %s", info)
+		}
+	}
+
 	result := map[string]interface{}{
 		"account_slug":     accountSlug,
 		"discovered_count": len(allDiscovered),
 		"imported_count":   imported,
 		"updated_count":    updated,
+		"sync_target":      syncTarget,
 		"instances":        allDiscovered,
 	}
 	doneJob(result)

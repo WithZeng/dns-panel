@@ -59,6 +59,11 @@
         <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">新增：<span class="font-semibold">{{ index $r "imported_count" }}</span></div>
         <div class="rounded-lg border border-slate-200 dark:border-slate-600 p-3">更新：<span class="font-semibold">{{ index $r "updated_count" }}</span></div>
       </div>
+      {{ if index $r "sync_target" }}
+      <div class="rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+        已同步到 GitHub：<a href="https://github.com/{{ index $r "sync_target" }}" target="_blank" class="underline font-mono text-xs">{{ index $r "sync_target" }}</a>
+      </div>
+      {{ end }}
     </div>
     {{ end }}
 
