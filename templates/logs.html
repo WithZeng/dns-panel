@@ -1,30 +1,30 @@
-{{ define "title" }}操作日志 - DNS Panel{{ end }}
+{{ define "title" }}操作日志 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-xl font-bold">操作日志</h1>
-    <span class="text-sm text-gray-500">共 {{ .total }} 条</span>
+    <span class="text-sm text-slate-500">共 {{ .total }} 条</span>
 </div>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
     <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-700/50">
+        <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">时间</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">操作</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">详情</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">操作人</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">时间</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">操作</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">详情</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">操作人</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             {{ range .logs }}
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td class="px-4 py-3 text-gray-400 whitespace-nowrap">{{ .Timestamp.Format "2006-01-02 15:04:05" }}</td>
-                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700">{{ .Action }}</span></td>
-                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ .Detail }}</td>
-                <td class="px-4 py-3 text-gray-400">{{ .Operator }}</td>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                <td class="px-4 py-3 text-slate-400 whitespace-nowrap">{{ .Timestamp.Format "2006-01-02 15:04:05" }}</td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ .Action }}</span></td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ .Detail }}</td>
+                <td class="px-4 py-3 text-slate-400">{{ .Operator }}</td>
             </tr>
             {{ else }}
-            <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">暂无日志</td></tr>
+            <tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">暂无日志</td></tr>
             {{ end }}
         </tbody>
     </table>
@@ -32,9 +32,9 @@
 
 {{ if gt .totalPages 1 }}
 <div class="flex justify-center gap-2 mt-6">
-    {{ if gt .page 1 }}<a href="?page={{ add .page -1 }}" class="px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-800 shadow hover:bg-gray-50">上一页</a>{{ end }}
-    <span class="px-3 py-1.5 text-sm text-gray-500">{{ .page }} / {{ .totalPages }}</span>
-    {{ if lt .page .totalPages }}<a href="?page={{ add .page 1 }}" class="px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-800 shadow hover:bg-gray-50">下一页</a>{{ end }}
+    {{ if gt .page 1 }}<a href="?page={{ add .page -1 }}" class="px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-slate-800 shadow hover:bg-slate-50">上一页</a>{{ end }}
+    <span class="px-3 py-1.5 text-sm text-slate-500">{{ .page }} / {{ .totalPages }}</span>
+    {{ if lt .page .totalPages }}<a href="?page={{ add .page 1 }}" class="px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-slate-800 shadow hover:bg-slate-50">下一页</a>{{ end }}
 </div>
 {{ end }}
 {{ end }}

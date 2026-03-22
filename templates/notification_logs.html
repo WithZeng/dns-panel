@@ -1,27 +1,27 @@
-{{ define "title" }}通知日志 - DNS Panel{{ end }}
+{{ define "title" }}通知日志 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-xl font-bold">通知日志</h1>
-    <span class="text-sm text-gray-500">共 {{ .total }} 条</span>
+    <span class="text-sm text-slate-500">共 {{ .total }} 条</span>
 </div>
 
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
     <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-700/50">
+        <thead class="bg-slate-50 dark:bg-slate-700/50">
             <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">时间</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">类型</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">实例</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">结果</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-500">消息</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">时间</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">类型</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">实例</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">结果</th>
+                <th class="px-4 py-3 text-left font-medium text-slate-500">消息</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             {{ range .logs }}
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td class="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{{ .Timestamp.Format "01-02 15:04" }}</td>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                <td class="px-4 py-3 text-slate-400 whitespace-nowrap text-xs">{{ .Timestamp.Format "01-02 15:04" }}</td>
                 <td class="px-4 py-3"><span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{{ .NotifyType }}</span></td>
-                <td class="px-4 py-3 text-gray-500">{{ .InstanceName }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ .InstanceName }}</td>
                 <td class="px-4 py-3">
                     {{ if .Success }}
                     <span class="text-green-600 text-xs">成功</span>
@@ -29,10 +29,10 @@
                     <span class="text-red-500 text-xs">失败</span>
                     {{ end }}
                 </td>
-                <td class="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs max-w-xs truncate">{{ .Message }}</td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs max-w-xs truncate">{{ .Message }}</td>
             </tr>
             {{ else }}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">暂无通知记录</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">暂无通知记录</td></tr>
             {{ end }}
         </tbody>
     </table>

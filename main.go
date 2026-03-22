@@ -48,11 +48,25 @@ func main() {
 
 	r.SetFuncMap(template.FuncMap{
 		"add": func(a, b int) int { return a + b },
-		"div": func(a, b int64) int64 {
+		"sub": func(a, b float64) float64 {
+			r := a - b
+			if r < 0 {
+				return 0
+			}
+			return r
+		},
+		"mul": func(a, b float64) float64 { return a * b },
+		"div": func(a, b float64) float64 {
 			if b == 0 {
 				return 0
 			}
 			return a / b
+		},
+		"min": func(a, b float64) float64 {
+			if a < b {
+				return a
+			}
+			return b
 		},
 		"lower":    strings.ToLower,
 		"contains": strings.Contains,

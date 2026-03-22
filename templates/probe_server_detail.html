@@ -1,4 +1,4 @@
-{{ define "title" }}{{ .probe.Name }} - DNS Panel{{ end }}
+{{ define "title" }}{{ .probe.Name }} - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="max-w-3xl mx-auto">
     <div class="flex items-center justify-between mb-6">
@@ -8,42 +8,42 @@
                 {{ if .probe.IsOnline }}
                 <span class="text-xs text-green-600 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span>在线</span>
                 {{ else }}
-                <span class="text-xs text-gray-400 flex items-center gap-1"><span class="w-2 h-2 bg-gray-300 rounded-full"></span>离线</span>
+                <span class="text-xs text-slate-400 flex items-center gap-1"><span class="w-2 h-2 bg-slate-300 rounded-full"></span>离线</span>
                 {{ end }}
-                {{ if .probe.Tag }}<span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ .probe.Tag }}</span>{{ end }}
+                {{ if .probe.Tag }}<span class="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{{ .probe.Tag }}</span>{{ end }}
             </div>
         </div>
-        <a href="/probe/servers" class="text-sm text-gray-500 hover:text-blue-600">返回列表</a>
+        <a href="/probe/servers" class="text-sm text-slate-500 hover:text-blue-600">返回列表</a>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div class="text-xs text-gray-500">IPv4</div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+            <div class="text-xs text-slate-500">IPv4</div>
             <div class="text-sm font-mono mt-1">{{ if .probe.IPv4 }}{{ .probe.IPv4 }}{{ else }}-{{ end }}</div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div class="text-xs text-gray-500">CPU</div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+            <div class="text-xs text-slate-500">CPU</div>
             <div class="text-sm mt-1">{{ if .probe.CPUName }}{{ .probe.CPUName }} ({{ .probe.CPUCores }}核){{ else }}-{{ end }}</div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div class="text-xs text-gray-500">OS</div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+            <div class="text-xs text-slate-500">OS</div>
             <div class="text-sm mt-1">{{ if .probe.OSInfo }}{{ .probe.OSInfo }}{{ else }}-{{ end }}</div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div class="text-xs text-gray-500">架构</div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+            <div class="text-xs text-slate-500">架构</div>
             <div class="text-sm mt-1">{{ if .probe.Arch }}{{ .probe.Arch }}{{ else }}-{{ end }}</div>
         </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
         <h2 class="font-semibold mb-4">系统信息</h2>
         <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-gray-500">IPv6</span><span class="font-mono text-xs">{{ if .probe.IPv6 }}{{ .probe.IPv6 }}{{ else }}-{{ end }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">虚拟化</span><span>{{ if .probe.Virtualization }}{{ .probe.Virtualization }}{{ else }}-{{ end }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">内存</span><span>{{ if .probe.MemTotal }}{{ div .probe.MemTotal 1048576 }} MB{{ else }}-{{ end }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">Swap</span><span>{{ if .probe.SwapTotal }}{{ div .probe.SwapTotal 1048576 }} MB{{ else }}-{{ end }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">磁盘</span><span>{{ if .probe.DiskTotal }}{{ div .probe.DiskTotal 1073741824 }} GB{{ else }}-{{ end }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">类型</span><span>{{ .probe.ServerType }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">IPv6</span><span class="font-mono text-xs">{{ if .probe.IPv6 }}{{ .probe.IPv6 }}{{ else }}-{{ end }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">虚拟化</span><span>{{ if .probe.Virtualization }}{{ .probe.Virtualization }}{{ else }}-{{ end }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">内存</span><span>{{ if .probe.MemTotal }}{{ div .probe.MemTotal 1048576 }} MB{{ else }}-{{ end }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Swap</span><span>{{ if .probe.SwapTotal }}{{ div .probe.SwapTotal 1048576 }} MB{{ else }}-{{ end }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">磁盘</span><span>{{ if .probe.DiskTotal }}{{ div .probe.DiskTotal 1073741824 }} GB{{ else }}-{{ end }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">类型</span><span>{{ .probe.ServerType }}</span></div>
         </div>
     </div>
 </div>

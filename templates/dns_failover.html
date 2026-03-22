@@ -1,26 +1,26 @@
-{{ define "title" }}DNS 故障转移 - DNS Panel{{ end }}
+{{ define "title" }}DNS 故障转移 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="max-w-4xl mx-auto">
     <h1 class="text-xl font-bold mb-6">DNS 故障转移</h1>
 
     <!-- Cloudflare Config -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 mb-6">
         <h2 class="font-semibold mb-4">Cloudflare 配置</h2>
         <form method="POST" action="/dns_failover/cf_config" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">API Token</label>
+                <label class="text-xs text-slate-500 mb-1 block">API Token</label>
                 <input type="password" name="api_token" value="{{ if .cf_config.APIToken }}********{{ end }}" placeholder="Cloudflare API Token"
-                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
             </div>
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">Zone ID</label>
+                <label class="text-xs text-slate-500 mb-1 block">Zone ID</label>
                 <input type="text" name="zone_id" value="{{ .cf_config.ZoneID }}" placeholder="zone_id"
-                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
             </div>
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">域名</label>
+                <label class="text-xs text-slate-500 mb-1 block">域名</label>
                 <input type="text" name="domain" value="{{ .cf_config.Domain }}" placeholder="example.com"
-                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
             </div>
             <div class="sm:col-span-3">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">保存 Cloudflare 配置</button>
@@ -29,23 +29,23 @@
     </div>
 
     <!-- Add rule -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-6 mb-6">
         <h2 class="font-semibold mb-4">添加故障转移规则</h2>
         <form method="POST" action="/dns_failover/rules" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">域名</label>
+                <label class="text-xs text-slate-500 mb-1 block">域名</label>
                 <input type="text" name="domain" required placeholder="sub.example.com"
-                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
             </div>
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">主服务器</label>
-                <select name="primary_server_id" required class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+                <label class="text-xs text-slate-500 mb-1 block">主服务器</label>
+                <select name="primary_server_id" required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm">
                     {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
                 </select>
             </div>
             <div>
-                <label class="text-xs text-gray-500 mb-1 block">备用服务器</label>
-                <select name="backup_server_ids[]" multiple class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm h-20">
+                <label class="text-xs text-slate-500 mb-1 block">备用服务器</label>
+                <select name="backup_server_ids[]" multiple class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm h-20">
                     {{ range .probes }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
                 </select>
             </div>
@@ -56,23 +56,23 @@
     </div>
 
     <!-- Existing rules -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow overflow-hidden">
         <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
+            <thead class="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500">域名</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500">主节点</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500">状态</th>
-                    <th class="px-4 py-3 text-right font-medium text-gray-500">操作</th>
+                    <th class="px-4 py-3 text-left font-medium text-slate-500">域名</th>
+                    <th class="px-4 py-3 text-left font-medium text-slate-500">主节点</th>
+                    <th class="px-4 py-3 text-left font-medium text-slate-500">状态</th>
+                    <th class="px-4 py-3 text-right font-medium text-slate-500">操作</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                 {{ range .rules }}
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td class="px-4 py-3 font-mono text-sm">{{ .Domain }}</td>
-                    <td class="px-4 py-3 text-gray-500">ID: {{ .PrimaryServerID }}</td>
+                    <td class="px-4 py-3 text-slate-500">ID: {{ .PrimaryServerID }}</td>
                     <td class="px-4 py-3">
-                        {{ if .Enabled }}<span class="text-green-600 text-xs">启用</span>{{ else }}<span class="text-gray-400 text-xs">禁用</span>{{ end }}
+                        {{ if .Enabled }}<span class="text-green-600 text-xs">启用</span>{{ else }}<span class="text-slate-400 text-xs">禁用</span>{{ end }}
                     </td>
                     <td class="px-4 py-3 text-right space-x-2">
                         <button onclick="testSwitch({{ .ID }})" class="text-xs text-blue-600 hover:underline">测试切换</button>
@@ -81,7 +81,7 @@
                     </td>
                 </tr>
                 {{ else }}
-                <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">暂无规则</td></tr>
+                <tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">暂无规则</td></tr>
                 {{ end }}
             </tbody>
         </table>

@@ -1,121 +1,181 @@
-{{ define "title" }}仪表盘 - DNS Panel{{ end }}
+{{ define "title" }}仪表盘 - ECS Monitor{{ end }}
 {{ define "content" }}
-<!-- Stats -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-        <div class="text-xs text-gray-500 dark:text-gray-400">实例总数</div>
-        <div class="text-2xl font-bold mt-1">{{ .total }}</div>
+<!-- Hero Section -->
+<section class="mb-5 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-gradient-to-r from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">控制台总览</h1>
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">核心指标、实例状态与区域流量统一视图</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-        <div class="text-xs text-gray-500 dark:text-gray-400">在线</div>
-        <div class="text-2xl font-bold mt-1 text-green-600">{{ .online }}</div>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-        <div class="text-xs text-gray-500 dark:text-gray-400">已停止</div>
-        <div class="text-2xl font-bold mt-1 text-red-500">{{ .stopped }}</div>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-        <div class="text-xs text-gray-500 dark:text-gray-400">本月总流量</div>
-        <div class="text-2xl font-bold mt-1">{{ printf "%.2f" .totalTraffic }} GB</div>
-    </div>
+  </div>
+</section>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="text-xs text-slate-500 dark:text-slate-400">实例总数</div>
+    <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1" id="s_total">{{ .total }}</div>
+  </div>
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="text-xs text-slate-500 dark:text-slate-400">在线</div>
+    <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1" id="s_online">{{ .online }}</div>
+  </div>
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="text-xs text-slate-500 dark:text-slate-400">已停机</div>
+    <div class="text-2xl font-bold text-slate-500 dark:text-slate-400 mt-1" id="s_stopped">{{ .stopped }}</div>
+  </div>
+  <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 shadow-sm">
+    <div class="text-xs text-slate-500 dark:text-slate-400">本月总流量</div>
+    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1" id="s_traffic">{{ printf "%.1f" .totalTraffic }} <span class="text-sm font-normal">GB</span></div>
+  </div>
 </div>
 
-<!-- Actions -->
-<div class="flex items-center justify-between mb-4">
-    <h2 class="text-lg font-semibold">ECS 实例</h2>
-    <a href="/instance/add" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-        + 添加实例
-    </a>
+<!-- Action Bar -->
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">实例仪表盘</h2>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自动刷新 <span id="countdown" class="font-mono text-blue-600 dark:text-blue-400">30</span>s</p>
+  </div>
+  <div class="flex flex-wrap gap-2 items-center">
+    <a href="/api/check_all" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">全部检查</a>
+    <a href="/api/export_csv" class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition min-h-[44px]">导出 CSV</a>
+    <a href="/instance/add" class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-4 py-2 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition min-h-[44px]">添加实例</a>
+  </div>
 </div>
 
-<!-- Instance list -->
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">名称</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">状态</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">IP</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">流量策略</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">已用 / 限额</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">标签</th>
-                    <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">操作</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                {{ range .instances }}
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                    <td class="px-4 py-3">
-                        <a href="/instance/{{ .ID }}" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">{{ .Name }}</a>
-                    </td>
-                    <td class="px-4 py-3">
-                        {{ if or (eq .Status "Running") (eq .Status "Starting") }}
-                        <span class="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-                            <span class="w-2 h-2 bg-green-500 rounded-full"></span>{{ .Status }}
-                        </span>
-                        {{ else if eq .Status "Stopped" }}
-                        <span class="inline-flex items-center gap-1 text-red-500">
-                            <span class="w-2 h-2 bg-red-500 rounded-full"></span>Stopped
-                        </span>
-                        {{ else }}
-                        <span class="text-gray-400">{{ .Status }}</span>
-                        {{ end }}
-                    </td>
-                    <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ .PublicIP }}</td>
-                    <td class="px-4 py-3">
-                        {{ if eq .TrafficStrategy "life" }}
-                        <span class="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">终身</span>
-                        {{ else }}
-                        <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">月付</span>
-                        {{ end }}
-                    </td>
-                    <td class="px-4 py-3 text-xs">
-                        {{ if eq .TrafficStrategy "life" }}
-                            {{ printf "%.1f" .TotalTrafficSum }} / {{ printf "%.0f" .LifeTotalLimit }} GB
-                        {{ else }}
-                            {{ printf "%.1f" .CurrentMonthTraffic }} / {{ printf "%.0f" .MonthlyLimit }} GB
-                        {{ end }}
-                    </td>
-                    <td class="px-4 py-3">
-                        {{ if .Tag }}
-                        <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ .Tag }}</span>
-                        {{ end }}
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <a href="/instance/edit/{{ .ID }}" class="text-xs text-gray-500 hover:text-blue-600">编辑</a>
-                    </td>
-                </tr>
-                {{ else }}
-                <tr>
-                    <td colspan="7" class="px-4 py-8 text-center text-gray-400">暂无实例，点击上方按钮添加</td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-    </div>
+<!-- Batch Operations -->
+<div class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-3 shadow-sm mb-6">
+  <span class="text-sm text-slate-600 dark:text-slate-400 font-medium">批量操作:</span>
+  <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+    <span class="text-sm text-slate-600 dark:text-slate-300">全选</span>
+  </label>
+  <span id="selectedCount" class="hidden rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all">已选 0</span>
+  <button type="button" onclick="batchAction('check')" class="inline-flex items-center rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition min-h-[44px]">🔍 检查</button>
+  <button type="button" onclick="batchAction('start')" class="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition min-h-[44px]">▶ 启动</button>
+  <button type="button" onclick="if(confirm('确定要批量停止吗？'))batchAction('stop')" class="inline-flex items-center rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition min-h-[44px]">⏸ 停止</button>
 </div>
+
+<!-- Instance Cards -->
+{{ if .instances }}
+<div id="instanceGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+  {{ range .instances }}
+  <section data-id="{{ .ID }}" class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-card transition-shadow overflow-hidden">
+    <div class="p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <input type="checkbox" class="instance-checkbox w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0" data-instance-id="{{ .ID }}">
+          <div class="min-w-0">
+            <a href="/instance/{{ .ID }}" class="text-base font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition truncate block">{{ .Name }}</a>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate" data-field="meta_line">
+              {{ .InstanceID }} · {{ .RegionID }}
+              {{ if .PublicIP }}<span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]">{{ .PublicIP }}</span>{{ end }}
+              {{ if .Tag }}<span class="inline-block ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">{{ .Tag }}</span>{{ end }}
+            </p>
+          </div>
+        </div>
+        {{ if or (eq .Status "Running") (eq .Status "Starting") }}
+        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 shrink-0">
+          <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>在线
+        </span>
+        {{ else }}
+        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 shrink-0">
+          <span class="h-2 w-2 rounded-full bg-slate-400"></span>{{ if .Status }}{{ .Status }}{{ else }}停止{{ end }}
+        </span>
+        {{ end }}
+      </div>
+
+      <!-- Traffic -->
+      <div class="mt-4 space-y-3">
+        {{ if eq .TrafficStrategy "life" }}
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">♾️ 生命周期流量</span>
+            {{ if gt .LifeTotalLimit 0.0 }}
+            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ printf "%.1f" .TotalTrafficSum }} / {{ printf "%.0f" .LifeTotalLimit }} GB</span>
+            {{ else }}
+            <span class="text-xs text-slate-400">未设限额</span>
+            {{ end }}
+          </div>
+          {{ if gt .LifeTotalLimit 0.0 }}
+          <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+          </div>
+          {{ end }}
+        </div>
+        {{ else }}
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">📅 月度流量</span>
+            {{ if gt .MonthlyLimit 0.0 }}
+            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">{{ printf "%.1f" .CurrentMonthTraffic }} / {{ printf "%.0f" .MonthlyLimit }} GB</span>
+            {{ else }}
+            <span class="text-xs text-slate-400">未设限额</span>
+            {{ end }}
+          </div>
+          {{ if gt .MonthlyLimit 0.0 }}
+          <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
+          </div>
+          {{ end }}
+        </div>
+        {{ end }}
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-4 flex items-center gap-2 flex-wrap">
+        <a href="/instance/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">详情</a>
+        <a href="/instance/edit/{{ .ID }}" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">编辑</a>
+        <a href="/instance/{{ .ID }}/schedules" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">⏰ 定时</a>
+        <a href="/instance/{{ .ID }}/security_groups" class="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">🔒 安全组</a>
+      </div>
+    </div>
+  </section>
+  {{ end }}
+</div>
+{{ else }}
+<div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm text-center py-16">
+  <p class="text-3xl mb-3">📡</p>
+  <p class="text-slate-500 dark:text-slate-400 mb-4">暂无实例</p>
+  <a href="/instance/add" class="inline-flex items-center rounded-xl bg-slate-900 dark:bg-blue-600 px-5 py-2.5 text-sm text-white hover:bg-slate-800 dark:hover:bg-blue-700 transition">添加第一个实例</a>
+</div>
+{{ end }}
 {{ end }}
 
 {{ define "scripts" }}
 <script>
-    // Auto-refresh every 30s
-    let poller;
-    function startPolling() {
-        poller = setInterval(async () => {
-            if (document.hidden) return;
-            try {
-                const resp = await fetch('/api/instances');
-                if (!resp.ok) return;
-                // For now just reload; will upgrade to DOM patch later
-            } catch(e) {}
-        }, 30000);
-    }
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && poller) clearInterval(poller);
-        else if (!document.hidden) startPolling();
-    });
-    startPolling();
+(function () {
+  const countdownEl = document.getElementById('countdown');
+  let seconds = 30;
+  setInterval(() => {
+    if (document.hidden) return;
+    seconds--;
+    if (seconds <= 0) { seconds = 30; location.reload(); }
+    if (countdownEl) countdownEl.textContent = seconds;
+  }, 1000);
+
+  const selectAll = document.getElementById('selectAll');
+  const countBadge = document.getElementById('selectedCount');
+  const checkboxes = () => document.querySelectorAll('.instance-checkbox');
+  function updateCount() {
+    const checked = document.querySelectorAll('.instance-checkbox:checked');
+    const n = checked.length, total = checkboxes().length;
+    if (n > 0) { countBadge.textContent = '已选 ' + n + '/' + total; countBadge.classList.remove('hidden'); }
+    else { countBadge.classList.add('hidden'); }
+    if (selectAll) { selectAll.checked = n === total && total > 0; selectAll.indeterminate = n > 0 && n < total; }
+  }
+  if (selectAll) selectAll.addEventListener('change', () => { checkboxes().forEach(cb => { cb.checked = selectAll.checked; }); updateCount(); });
+  document.addEventListener('change', e => { if (e.target.classList.contains('instance-checkbox')) updateCount(); });
+})();
+
+function batchAction(action) {
+  const checked = document.querySelectorAll('.instance-checkbox:checked');
+  if (checked.length === 0) { alert('请先勾选至少一个实例'); return; }
+  const ids = [...checked].map(cb => cb.dataset.instanceId);
+  fetch('/api/batch', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action: action, ids: ids}) })
+    .then(r => r.json()).then(d => { showToast(d.message || '操作完成', d.success ? 'success' : 'error'); setTimeout(() => location.reload(), 1500); })
+    .catch(() => showToast('操作失败', 'error'));
+}
 </script>
 {{ end }}
 

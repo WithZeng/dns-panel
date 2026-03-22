@@ -1,4 +1,4 @@
-{{ define "title" }}探针服务器 - DNS Panel{{ end }}
+{{ define "title" }}探针服务器 - ECS Monitor{{ end }}
 {{ define "content" }}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-xl font-bold">探针服务器</h1>
@@ -7,34 +7,34 @@
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {{ range .probes }}
-    <a href="/probe/server/{{ .ID }}" class="bg-white dark:bg-gray-800 rounded-xl shadow p-5 hover:shadow-md transition-shadow block">
+    <a href="/probe/server/{{ .ID }}" class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 hover:shadow-md transition-shadow block">
         <div class="flex items-center justify-between mb-3">
             <span class="font-medium">{{ .Name }}</span>
             {{ if .IsOnline }}
             <span class="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
             {{ else }}
-            <span class="w-2.5 h-2.5 bg-gray-300 rounded-full"></span>
+            <span class="w-2.5 h-2.5 bg-slate-300 rounded-full"></span>
             {{ end }}
         </div>
-        <div class="text-xs text-gray-500 space-y-1">
+        <div class="text-xs text-slate-500 space-y-1">
             {{ if .IPv4 }}<div>IPv4: <span class="font-mono">{{ .IPv4 }}</span></div>{{ end }}
             {{ if .OSInfo }}<div>OS: {{ .OSInfo }}</div>{{ end }}
-            {{ if .Tag }}<div>标签: <span class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ .Tag }}</span></div>{{ end }}
+            {{ if .Tag }}<div>标签: <span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ .Tag }}</span></div>{{ end }}
         </div>
     </a>
     {{ else }}
-    <div class="col-span-full text-center py-12 text-gray-400">暂无探针服务器</div>
+    <div class="col-span-full text-center py-12 text-slate-400">暂无探针服务器</div>
     {{ end }}
 </div>
 
 <!-- Add modal -->
 <div id="add-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 w-full max-w-sm">
         <h3 class="font-semibold mb-4">添加探针服务器</h3>
-        <input id="probe-name" type="text" placeholder="名称" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm mb-4">
+        <input id="probe-name" type="text" placeholder="名称" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm mb-4">
         <div class="flex gap-3">
             <button onclick="createProbe()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">创建</button>
-            <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-gray-500 px-4 py-2 text-sm">取消</button>
+            <button onclick="document.getElementById('add-modal').classList.add('hidden')" class="text-slate-500 px-4 py-2 text-sm">取消</button>
         </div>
     </div>
 </div>
