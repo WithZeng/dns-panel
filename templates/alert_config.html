@@ -1,0 +1,72 @@
+{{ define "title" }}告警配置 - ECS Monitor{{ end }}
+{{ define "content" }}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">告警通知配置</h1>
+
+  <form method="POST" action="/alert_config" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 space-y-5">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">通知类型</label>
+      <select name="notify_type" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+        <option value="wechat" {{ if eq .config.NotifyType "wechat" }}selected{{ end }}>企业微信</option>
+        <option value="dingtalk" {{ if eq .config.NotifyType "dingtalk" }}selected{{ end }}>钉钉</option>
+        <option value="telegram" {{ if eq .config.NotifyType "telegram" }}selected{{ end }}>Telegram</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Webhook 地址</label>
+      <input type="url" name="webhook_url" value="{{ .config.WebhookURL }}" placeholder="https://..."
+        class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="inline-flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="enabled" {{ if .config.Enabled }}checked{{ end }}
+          class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+        <span class="text-sm text-slate-700 dark:text-slate-300">启用通知</span>
+      </label>
+    </div>
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+        class="bg-slate-900 dark:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors text-sm">
+        保存配置
+      </button>
+      <button type="button" id="testBtn" onclick="testNotification()"
+        class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+        🔔 发送测试通知
+      </button>
+    </div>
+  </form>
+
+  <div id="testResult" class="hidden mt-4 rounded-xl border px-4 py-3 text-sm"></div>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+async function testNotification() {
+  const btn = document.getElementById('testBtn');
+  const result = document.getElementById('testResult');
+  btn.disabled = true;
+  btn.textContent = '发送中...';
+  try {
+    const resp = await fetch('/api/test_notification', { method: 'POST' });
+    const data = await resp.json();
+    result.classList.remove('hidden');
+    if (data.success) {
+      result.className = 'mt-4 rounded-xl border px-4 py-3 text-sm bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700';
+      result.textContent = data.message;
+    } else {
+      result.className = 'mt-4 rounded-xl border px-4 py-3 text-sm bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700';
+      result.textContent = data.message;
+    }
+  } catch(e) {
+    result.classList.remove('hidden');
+    result.className = 'mt-4 rounded-xl border px-4 py-3 text-sm bg-red-50 text-red-700 border-red-200';
+    result.textContent = '请求失败';
+  }
+  btn.disabled = false;
+  btn.textContent = '🔔 发送测试通知';
+}
+</script>
+{{ end }}
+
+{{ template "base" . }}

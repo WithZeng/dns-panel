@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,7 +18,51 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/render"
 )
+
+type multiRenderer struct {
+	templates map[string]*template.Template
+}
+
+func (r *multiRenderer) Instance(name string, data interface{}) render.Render {
+	t, ok := r.templates[name]
+	if !ok {
+		log.Printf("[WARN] template %q not found, available: %v", name, r.list())
+		return render.HTML{Template: template.Must(template.New("").Parse("template not found: " + name)), Data: data}
+	}
+	return render.HTML{Template: t, Name: "base", Data: data}
+}
+
+func (r *multiRenderer) list() []string {
+	keys := make([]string, 0, len(r.templates))
+	for k := range r.templates {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func loadTemplates(funcMap template.FuncMap) *multiRenderer {
+	r := &multiRenderer{templates: make(map[string]*template.Template)}
+	base := "templates/base.html"
+	pages, err := filepath.Glob("templates/*.html")
+	if err != nil {
+		log.Fatalf("Failed to glob templates: %v", err)
+	}
+	for _, page := range pages {
+		name := filepath.Base(page)
+		if name == "base.html" {
+			continue
+		}
+		t, err := template.New("").Funcs(funcMap).ParseFiles(base, page)
+		if err != nil {
+			log.Fatalf("Failed to parse template %s: %v", name, err)
+		}
+		r.templates[name] = t
+		log.Printf("Loaded template: %s", name)
+	}
+	return r
+}
 
 func main() {
 	cfg := config.Load()
@@ -46,14 +92,14 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLogger())
 
-	r.SetFuncMap(template.FuncMap{
+	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b float64) float64 {
-			r := a - b
-			if r < 0 {
+			v := a - b
+			if v < 0 {
 				return 0
 			}
-			return r
+			return v
 		},
 		"mul": func(a, b float64) float64 { return a * b },
 		"div": func(a, b float64) float64 {
@@ -71,19 +117,19 @@ func main() {
 		"lower":    strings.ToLower,
 		"contains": strings.Contains,
 		"now":      func() time.Time { return time.Now() },
-	})
+	}
+
+	r.HTMLRender = loadTemplates(funcMap)
+	r.Static("/static", "./static")
 
 	store := cookie.NewStore([]byte(cfg.SecretKey))
 	store.Options(sessions.Options{
 		Path:     "/",
 		MaxAge:   1800,
 		HttpOnly: true,
-		SameSite: 2,
+		SameSite: http.SameSiteLaxMode,
 	})
 	r.Use(sessions.Sessions("session", store))
-
-	r.LoadHTMLGlob("templates/*")
-	r.Static("/static", "./static")
 
 	// ─── Public routes ──────────────────────────────────────────
 	r.GET("/", func(c *gin.Context) { c.Redirect(302, "/dashboard") })
@@ -171,7 +217,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
-	log.Printf("DNS Panel (Go) starting on %s", addr)
+	log.Printf("ECS Monitor (Go) starting on %s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
