@@ -87,7 +87,7 @@ func (c *Client) DoAction(domain, version, action string, params map[string]stri
 	if codeRaw, ok := result["Code"]; ok {
 		var code string
 		json.Unmarshal(codeRaw, &code)
-		if code != "" {
+		if code != "" && !strings.EqualFold(code, "Success") && !strings.EqualFold(code, "0") {
 			var msg, reqID string
 			if m, ok := result["Message"]; ok {
 				json.Unmarshal(m, &msg)
