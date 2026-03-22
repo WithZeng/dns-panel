@@ -175,8 +175,22 @@ func main() {
 		auth.POST("/alert_config", handler.AlertConfigPost)
 		auth.POST("/api/test_notification", handler.TestNotification)
 
-		// Export
+		// Export & backup
 		auth.GET("/export_csv", handler.ExportCSV)
+		auth.GET("/download_backup", handler.DownloadBackup)
+
+		// Discover & import
+		auth.GET("/discover", handler.DiscoverPage)
+		auth.POST("/discover", handler.DiscoverPost)
+		auth.GET("/import_csv", handler.ImportCSVPage)
+		auth.POST("/import_csv", handler.ImportCSVPost)
+
+		// Batch & check all
+		auth.POST("/api/batch", handler.BatchAction)
+		auth.GET("/api/check_all", handler.CheckAll)
+		auth.GET("/api/dashboard_probe_overview", handler.DashboardProbeOverview)
+		auth.GET("/api/region_traffic", handler.APIRegionTraffic)
+		auth.GET("/api/traffic_forecast/:id", handler.APITrafficForecast)
 
 		// Probe servers
 		auth.GET("/probe/servers", handler.ProbeServersPage)

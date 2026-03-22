@@ -1,0 +1,72 @@
+{{ define "title" }}发现实例 - ECS Monitor{{ end }}
+{{ define "content" }}
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">发现 ECS 实例</h1>
+
+  {{ if .error }}
+  <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-6">{{ .error }}</div>
+  {{ end }}
+
+  <form method="POST" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 space-y-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Access Key ID</label>
+        <input type="text" name="access_key_id" value="{{ .ak }}" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Access Key Secret</label>
+        <input type="password" name="access_key_secret" value="{{ .sk }}" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">默认区域</label>
+        <input type="text" name="region_id" value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      </div>
+    </div>
+    <button type="submit" class="bg-slate-900 dark:bg-blue-600 text-white font-medium px-6 py-2.5 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors text-sm">🔍 扫描实例</button>
+  </form>
+
+  {{ if .discovered }}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-white">发现 {{ len .discovered }} 个实例</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-700/50 text-left text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="px-4 py-3 font-medium">名称</th>
+            <th class="px-4 py-3 font-medium">Instance ID</th>
+            <th class="px-4 py-3 font-medium">区域</th>
+            <th class="px-4 py-3 font-medium">状态</th>
+            <th class="px-4 py-3 font-medium">IP</th>
+            <th class="px-4 py-3 font-medium text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          {{ range .discovered }}
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+            <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ .Name }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ .InstanceID }}</td>
+            <td class="px-4 py-3 text-slate-500">{{ .RegionID }}</td>
+            <td class="px-4 py-3">
+              {{ if eq .Status "Running" }}<span class="text-emerald-600">Running</span>
+              {{ else }}<span class="text-slate-400">{{ .Status }}</span>{{ end }}
+            </td>
+            <td class="px-4 py-3 font-mono text-xs">{{ .PublicIP }}</td>
+            <td class="px-4 py-3 text-right">
+              {{ if .Added }}
+              <span class="text-xs text-slate-400">已添加</span>
+              {{ else }}
+              <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="text-xs text-blue-600 hover:text-blue-800">+ 添加</a>
+              {{ end }}
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+{{ template "base" . }}

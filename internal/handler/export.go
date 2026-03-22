@@ -3,7 +3,10 @@ package handler
 import (
 	"encoding/csv"
 	"fmt"
+	"math"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/WithZeng/dns-panel/internal/database"
@@ -49,4 +52,129 @@ func APITrafficHistory(c *gin.Context) {
 		data[i] = l.TrafficGB
 	}
 	c.JSON(http.StatusOK, gin.H{"labels": labels, "data": data})
+}
+
+func DownloadBackup(c *gin.Context) {
+	dbPath := os.Getenv("DNS_PANEL_DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/panel.db"
+	}
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "数据库文件不存在"})
+		return
+	}
+	c.FileAttachment(dbPath, "panel_backup.db")
+}
+
+func APITrafficForecast(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"has_forecast": false})
+		return
+	}
+
+	var logs []models.TrafficLog
+	database.DB.Where("instance_id = ?", id).Order("timestamp asc").Find(&logs)
+
+	if len(logs) < 2 {
+		c.JSON(http.StatusOK, gin.H{"has_forecast": false, "message": "历史数据不足，至少需要 2 条记录"})
+		return
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -7)
+	var recent []models.TrafficLog
+	for _, l := range logs {
+		if l.Timestamp.After(cutoff) {
+			recent = append(recent, l)
+		}
+	}
+	if len(recent) < 2 {
+		start := len(logs) - 10
+		if start < 0 {
+			start = 0
+		}
+		recent = logs[start:]
+	}
+
+	first := recent[0]
+	last := recent[len(recent)-1]
+	hours := last.Timestamp.Sub(first.Timestamp).Hours()
+	if hours < 1 {
+		hours = 1
+	}
+	diff := last.TrafficGB - first.TrafficGB
+	if diff <= 0 {
+		c.JSON(http.StatusOK, gin.H{"has_forecast": false, "message": "流量无增长趋势，无法预测"})
+		return
+	}
+
+	gbPerDay := (diff / hours) * 24
+
+	var remain float64
+	if inst.TrafficStrategy == "life" {
+		remain = inst.LifeTotalLimit - inst.TotalTrafficSum
+	} else {
+		remain = inst.MonthlyLimit - inst.CurrentMonthTraffic
+	}
+	if remain < 0 {
+		remain = 0
+	}
+
+	if remain <= 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"has_forecast": true, "exhausted": true,
+			"message": "流量已用尽", "daily_rate": math.Round(gbPerDay*100) / 100,
+		})
+		return
+	}
+
+	daysRemaining := remain / gbPerDay
+	exhaustDate := time.Now().AddDate(0, 0, int(daysRemaining)).Format("2006-01-02")
+
+	c.JSON(http.StatusOK, gin.H{
+		"has_forecast":   true,
+		"exhausted":      false,
+		"daily_rate":     math.Round(gbPerDay*100) / 100,
+		"days_remaining": math.Round(daysRemaining*10) / 10,
+		"exhaust_date":   exhaustDate,
+		"message":        fmt.Sprintf("按当前速率（%.2f GB/天），预计 %s 用尽配额", gbPerDay, exhaustDate),
+	})
+}
+
+func APIRegionTraffic(c *gin.Context) {
+	var instances []models.EcsInstance
+	database.DB.Find(&instances)
+
+	type regionInfo struct {
+		Region string  `json:"region"`
+		Used   float64 `json:"used"`
+		Limit  float64 `json:"limit"`
+		Count  int     `json:"count"`
+	}
+	regionMap := map[string]*regionInfo{}
+
+	for _, inst := range instances {
+		ri, ok := regionMap[inst.RegionID]
+		if !ok {
+			ri = &regionInfo{Region: inst.RegionID}
+			regionMap[inst.RegionID] = ri
+		}
+		ri.Count++
+		if inst.TrafficStrategy == "life" {
+			ri.Used += inst.TotalTrafficSum
+			ri.Limit += inst.LifeTotalLimit
+		} else {
+			ri.Used += inst.CurrentMonthTraffic
+			ri.Limit += inst.MonthlyLimit
+		}
+	}
+
+	result := make([]regionInfo, 0, len(regionMap))
+	for _, ri := range regionMap {
+		ri.Used = math.Round(ri.Used*100) / 100
+		ri.Limit = math.Round(ri.Limit*100) / 100
+		result = append(result, *ri)
+	}
+	c.JSON(http.StatusOK, result)
 }

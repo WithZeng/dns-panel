@@ -14,6 +14,63 @@ type ECSInfo struct {
 	IPv6Addr  string `json:"ipv6_addr"`
 }
 
+type InstanceBasicInfo struct {
+	InstanceID string `json:"instance_id"`
+	Name       string `json:"name"`
+	RegionID   string `json:"region_id"`
+	Status     string `json:"status"`
+	PublicIP   string `json:"public_ip"`
+}
+
+func DescribeInstances(c *Client) ([]InstanceBasicInfo, error) {
+	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
+	data, err := c.DoAction(domain, "2014-05-26", "DescribeInstances", map[string]string{
+		"PageSize": "100",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp struct {
+		Instances struct {
+			Instance []struct {
+				InstanceId   string `json:"InstanceId"`
+				InstanceName string `json:"InstanceName"`
+				RegionId     string `json:"RegionId"`
+				Status       string `json:"Status"`
+				PublicIP     struct {
+					IpAddress []string `json:"IpAddress"`
+				} `json:"PublicIpAddress"`
+				EipAddress struct {
+					IpAddress string `json:"IpAddress"`
+				} `json:"EipAddress"`
+			} `json:"Instance"`
+		} `json:"Instances"`
+	}
+
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("parse DescribeInstances: %w", err)
+	}
+
+	var result []InstanceBasicInfo
+	for _, inst := range resp.Instances.Instance {
+		ip := ""
+		if len(inst.PublicIP.IpAddress) > 0 {
+			ip = inst.PublicIP.IpAddress[0]
+		} else if inst.EipAddress.IpAddress != "" {
+			ip = inst.EipAddress.IpAddress
+		}
+		result = append(result, InstanceBasicInfo{
+			InstanceID: inst.InstanceId,
+			Name:       inst.InstanceName,
+			RegionID:   inst.RegionId,
+			Status:     inst.Status,
+			PublicIP:   ip,
+		})
+	}
+	return result, nil
+}
+
 func ECSStart(c *Client, instanceID string) (bool, string) {
 	domain := fmt.Sprintf("ecs.%s.aliyuncs.com", c.RegionID)
 	_, err := c.DoAction(domain, "2014-05-26", "StartInstance", map[string]string{
