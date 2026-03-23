@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -15,7 +16,10 @@ import (
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/WithZeng/dns-panel/internal/service/aliyun"
+	"github.com/glebarez/sqlite"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func ExportCSV(c *gin.Context) {
@@ -124,6 +128,77 @@ func DownloadBackup(c *gin.Context) {
 			keyEntry.Write(keyData)
 		}
 	}
+}
+
+func DownloadBackupPlaintext(c *gin.Context) {
+	dbPath := os.Getenv("DNS_PANEL_DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/panel.db"
+	}
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "数据库文件不存在"})
+		return
+	}
+
+	tmpFile, err := os.CreateTemp("", "panel_plaintext_*.db")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "创建临时文件失败"})
+		return
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	srcFile, err := os.Open(dbPath)
+	if err != nil {
+		tmpFile.Close()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "读取数据库失败"})
+		return
+	}
+	if _, err := io.Copy(tmpFile, srcFile); err != nil {
+		srcFile.Close()
+		tmpFile.Close()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "复制数据库失败"})
+		return
+	}
+	srcFile.Close()
+	tmpFile.Close()
+
+	tmpDB, err := gorm.Open(sqlite.Open(tmpPath+"?_journal_mode=DELETE&_busy_timeout=5000"), &gorm.Config{
+		Logger: logger.Discard,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "打开临时数据库失败"})
+		return
+	}
+
+	var instances []models.EcsInstance
+	tmpDB.Find(&instances)
+	for _, inst := range instances {
+		if inst.AccessKeyID == "" {
+			continue
+		}
+		ak, errAK := crypto.Decrypt(inst.AccessKeyID)
+		sk, errSK := crypto.Decrypt(inst.AccessKeySK)
+		if errAK != nil || errSK != nil {
+			continue
+		}
+		tmpDB.Model(&models.EcsInstance{}).Where("id = ?", inst.ID).Updates(map[string]interface{}{
+			"access_key_id":     ak,
+			"access_key_secret": sk,
+			"is_encrypted":      false,
+		})
+	}
+
+	sqlDB, _ := tmpDB.DB()
+	tmpDB.Exec("VACUUM")
+	sqlDB.Close()
+
+	timestamp := time.Now().Format("20060102_1504")
+	filename := fmt.Sprintf("panel_plaintext_%s.db", timestamp)
+
+	c.Header("Content-Type", "application/x-sqlite3")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.File(tmpPath)
 }
 
 func APITrafficHistory(c *gin.Context) {

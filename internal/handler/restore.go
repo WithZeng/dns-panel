@@ -16,6 +16,12 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+func RestorePage(c *gin.Context) {
+	c.HTML(http.StatusOK, "restore.html", gin.H{
+		"username": c.GetString("username"),
+	})
+}
+
 func RestoreDBPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "restore_db.html", gin.H{
 		"username": c.GetString("username"),

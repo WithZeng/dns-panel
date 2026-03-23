@@ -183,6 +183,7 @@ func main() {
 		// Export & backup
 		auth.GET("/export_csv", handler.ExportCSV)
 		auth.GET("/download_backup", handler.DownloadBackup)
+		auth.GET("/download_backup_plaintext", handler.DownloadBackupPlaintext)
 
 		// Discover & import
 		auth.GET("/discover", handler.DiscoverPage)
@@ -240,6 +241,9 @@ func main() {
 		// DB Restore
 		auth.GET("/restore_db", handler.RestoreDBPage)
 		auth.POST("/restore_db", handler.RestoreDBPost)
+
+		// Unified restore page
+		auth.GET("/restore", handler.RestorePage)
 
 		// API
 		auth.GET("/api/instances", handler.APIInstances)

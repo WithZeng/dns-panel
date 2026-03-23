@@ -8,93 +8,220 @@
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
       刷新列表
     </button>
-    <a href="/alert_config" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      设置
-    </a>
+    <div class="relative" id="backupDropdownWrap">
+      <button type="button" onclick="toggleBackupMenu(event)" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        备份
+        <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </button>
+      <div id="backupDropdownMenu" class="absolute right-0 top-[calc(100%+6px)] w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl shadow-black/8 dark:shadow-black/30 py-1.5 opacity-0 scale-95 origin-top-right pointer-events-none transition-all duration-200 ease-out z-50">
+        <p class="px-3 pb-1 pt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">导出数据</p>
+        <a href="/export_csv" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+          <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          <div>
+            <div class="font-medium text-xs">导出 CSV</div>
+            <div class="text-[10px] text-gray-400 dark:text-gray-500">实例列表 · 明文凭据</div>
+          </div>
+        </a>
+        <a href="/download_backup_plaintext" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+          <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+          <div>
+            <div class="font-medium text-xs">导出数据库</div>
+            <div class="text-[10px] text-gray-400 dark:text-gray-500">SQLite · 明文凭据 · 可直接导入</div>
+          </div>
+        </a>
+        <div class="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+        <a href="/download_backup" class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+          <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+          <div>
+            <div class="font-medium text-xs">原始备份 (ZIP)</div>
+            <div class="text-[10px] text-gray-400 dark:text-gray-500">数据库 + 加密密钥</div>
+          </div>
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 <!-- Search / Filter Area -->
-<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-3">
-  <div class="flex flex-wrap items-end gap-3">
-    <!-- Search box -->
-    <div class="shrink-0">
-      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">实例搜索（支持多行/空格分隔）</label>
-      <div class="flex">
-        <textarea id="searchInput" rows="2" placeholder="实例ID / IP，支持多行/空格分隔" class="w-44 px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-l-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" oninput="filterTable()"></textarea>
-        <button onclick="filterTable()" class="px-2.5 bg-indigo-600 text-white rounded-r-lg hover:bg-indigo-700 transition">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-        </button>
+<style>
+  .filter-input { height: 36px; transition: all 0.2s ease; }
+  .filter-input:focus { border-color: rgb(99 102 241 / 0.5); box-shadow: 0 0 0 3px rgb(99 102 241 / 0.08); }
+  .filter-input::placeholder { color: rgb(156 163 175); }
+  .dark .filter-input::placeholder { color: rgb(107 114 128); }
+  .filter-reset { transition: all 0.2s ease; }
+  .filter-reset:hover { background: rgb(239 68 68 / 0.08); color: rgb(239 68 68); border-color: rgb(239 68 68 / 0.3); }
+  .filter-reset:hover svg { transform: rotate(90deg); }
+  .filter-reset svg { transition: transform 0.3s cubic-bezier(.4,0,.2,1); }
+  @keyframes batchMenuItemIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #batchOpsMenu.is-open > div:nth-child(2) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.03s; }
+  #batchOpsMenu.is-open > div:nth-child(3) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.055s; }
+  #batchOpsMenu.is-open > div:nth-child(4) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.08s; }
+  #batchOpsMenu.is-open > div:nth-child(6) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.11s; }
+  #batchOpsMenu.is-open > div:nth-child(7) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.135s; }
+  #batchOpsMenu.is-open > div:nth-child(8) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.16s; }
+  #batchOpsMenu.is-open > div:nth-child(9) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.185s; }
+</style>
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3.5 mb-3">
+  <div class="flex flex-wrap items-center gap-2">
+    <!-- Search -->
+    <div class="relative flex-1 min-w-[180px] max-w-[280px]">
+      <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+      <input id="searchInput" type="text" placeholder="搜索 ID / IP / 备注" class="filter-input w-full pl-8 pr-3 text-xs border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 outline-none" oninput="filterTable()">
+    </div>
+
+    <!-- Divider -->
+    <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+
+    <!-- Region dropdown -->
+    <div class="relative" id="regionDropdown">
+      <input type="hidden" id="regionFilter" value="">
+      <button type="button" id="regionDropdownBtn" onclick="toggleRegionDropdown()" class="filter-input flex items-center gap-1.5 px-3 pr-7 text-xs border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-indigo-400 dark:hover:border-indigo-500 outline-none relative">
+        <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
+        <span id="regionDropdownLabel">全部地域</span>
+        <svg class="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 transition-transform duration-200" id="regionDropdownArrow" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </button>
+      <div id="regionDropdownMenu" class="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[200px] max-h-[280px] overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg shadow-black/8 dark:shadow-black/30 opacity-0 scale-95 origin-top pointer-events-none transition-all duration-200 ease-out">
+        <div class="p-1.5" id="regionDropdownList">
+          <button type="button" onclick="selectRegion('','全部地域')" class="region-opt w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2" data-value="">
+            <svg class="w-3.5 h-3.5 text-indigo-500 shrink-0 region-check" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+            <span>全部地域</span>
+          </button>
+        </div>
       </div>
     </div>
-    <!-- Region filter -->
-    <div class="shrink-0">
-      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">地域筛选</label>
-      <select id="regionFilter" class="h-[34px] px-2.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-        <option value="">全部地域</option>
-      </select>
-    </div>
+
     <!-- Tag filter -->
-    <div class="shrink-0">
-      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">备注筛选</label>
-      <div class="flex">
-        <input id="tagFilter" type="text" placeholder="输入备注关键词" class="w-32 h-[34px] px-2.5 text-xs border border-gray-300 dark:border-gray-600 rounded-l-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-1 focus:ring-indigo-500" oninput="filterTable()">
-        <button onclick="filterTable()" class="px-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/></svg>
-        </button>
+    <div class="relative">
+      <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/></svg>
+      <input id="tagFilter" type="text" placeholder="备注筛选" class="filter-input w-28 pl-8 pr-3 text-xs border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 outline-none" oninput="filterTable()">
+    </div>
+
+    <!-- Date range (custom calendar) -->
+    <input type="hidden" id="dateStart" value="">
+    <input type="hidden" id="dateEnd" value="">
+    <div class="relative" id="dateRangePicker">
+      <button type="button" onclick="toggleDatePicker()" class="filter-input flex items-center gap-1.5 px-3 text-xs border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-indigo-400 dark:hover:border-indigo-500 outline-none">
+        <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        <span id="dateRangeLabel">选择日期</span>
+        <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" id="datePickerArrow" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </button>
+      <div id="datePickerPanel" class="absolute right-0 top-[calc(100%+6px)] z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-4 opacity-0 scale-95 origin-top-right pointer-events-none transition-all duration-200 ease-out select-none" style="width:280px">
+        <!-- Calendar header -->
+        <div class="flex items-center justify-between mb-3">
+          <button type="button" onclick="calNav(-1)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+          </button>
+          <span id="calMonthLabel" class="text-sm font-semibold text-gray-800 dark:text-gray-200"></span>
+          <button type="button" onclick="calNav(1)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </button>
+        </div>
+        <!-- Weekday headers -->
+        <div class="grid grid-cols-7 mb-1">
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">日</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">一</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">二</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">三</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">四</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">五</span>
+          <span class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">六</span>
+        </div>
+        <!-- Days grid -->
+        <div id="calDaysGrid" class="grid grid-cols-7 gap-0.5"></div>
+        <!-- Range display + clear -->
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <span id="calRangeText" class="text-[11px] text-gray-400 dark:text-gray-500">点击选择起止日期</span>
+          <button type="button" onclick="clearDateRange()" class="text-[11px] text-red-400 hover:text-red-500 transition">清除</button>
+        </div>
       </div>
     </div>
-    <!-- Date range -->
-    <div class="shrink-0">
-      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">按创建时间筛选</label>
-      <div class="flex items-center gap-1">
-        <input id="dateStart" type="date" class="h-[34px] px-2 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-        <span class="text-gray-400 text-xs">—</span>
-        <input id="dateEnd" type="date" class="h-[34px] px-2 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" onchange="filterTable()">
-      </div>
-    </div>
+
     <!-- Reset -->
-    <button onclick="resetFilters()" class="h-[34px] px-3 text-xs border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">x 重置</button>
+    <button onclick="resetFilters()" class="filter-reset filter-input flex items-center gap-1 px-3 text-xs border border-gray-200 dark:border-gray-700 rounded-xl text-gray-400 dark:text-gray-500" title="重置筛选">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      <span>重置</span>
+    </button>
   </div>
-  <!-- Status row -->
-  <div class="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800">
-    <span class="text-xs text-gray-500 dark:text-gray-400">状态</span>
-    <button onclick="setStatusFilter('')" class="status-chip px-3 py-0.5 text-xs rounded-full border transition" data-status="">全部</button>
-    <button onclick="setStatusFilter('Running')" class="status-chip px-3 py-0.5 text-xs rounded-full border transition" data-status="Running">运行中</button>
-    <button onclick="setStatusFilter('Stopped')" class="status-chip px-3 py-0.5 text-xs rounded-full border transition" data-status="Stopped">已停止</button>
-    <button onclick="setStatusFilter('Starting')" class="status-chip px-3 py-0.5 text-xs rounded-full border transition" data-status="Starting">启动中</button>
-    <button onclick="setStatusFilter('Stopping')" class="status-chip px-3 py-0.5 text-xs rounded-full border transition" data-status="Stopping">停止中</button>
+
+  <!-- Status chips -->
+  <div class="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800/60">
+    <svg class="w-3.5 h-3.5 text-gray-400 shrink-0 mr-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"/></svg>
+    <button onclick="setStatusFilter('')" class="status-chip px-3 py-1 text-[11px] rounded-full border transition-all duration-200" data-status="">全部</button>
+    <button onclick="setStatusFilter('Running')" class="status-chip px-3 py-1 text-[11px] rounded-full border transition-all duration-200" data-status="Running">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>运行中
+    </button>
+    <button onclick="setStatusFilter('Stopped')" class="status-chip px-3 py-1 text-[11px] rounded-full border transition-all duration-200" data-status="Stopped">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1"></span>已停止
+    </button>
+    <button onclick="setStatusFilter('Starting')" class="status-chip px-3 py-1 text-[11px] rounded-full border transition-all duration-200" data-status="Starting">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mr-1"></span>启动中
+    </button>
+    <button onclick="setStatusFilter('Stopping')" class="status-chip px-3 py-1 text-[11px] rounded-full border transition-all duration-200" data-status="Stopping">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1"></span>停止中
+    </button>
   </div>
 </div>
 
 <!-- Instance Table -->
+<style>
+  .tbl-th { padding: 10px 10px; text-align: left; font-weight: 500; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+  .tbl-td { padding: 10px 10px; font-size: 12px; vertical-align: middle; }
+  .tbl-row { transition: background 0.15s ease; }
+  .tbl-row:hover { background: rgb(249 250 251); }
+  .dark .tbl-row:hover { background: rgb(17 24 39 / 0.4); }
+</style>
 <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden mb-14">
   <div class="overflow-x-auto">
-    <table class="w-full text-xs" id="instanceTable">
+    <table class="w-full" id="instanceTable">
       <thead>
-        <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 text-[11px]">
-          <th class="w-8 px-2 py-2"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
-          <th class="px-2 py-2 text-left font-medium">#</th>
-          <th class="px-2 py-2 text-left font-medium">地域</th>
-          <th class="px-2 py-2 text-left font-medium">状态</th>
-          <th class="px-2 py-2 text-left font-medium">实例 ID / 备注</th>
-          <th class="px-2 py-2 text-left font-medium">公网 / 内网 IP</th>
-          <th class="px-2 py-2 text-center font-medium" title="带宽">
-            <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
-            <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12M12 16.5V3"/></svg>
+        <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500">
+          <th class="tbl-th w-10 text-center"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" class="rounded"></th>
+          <th class="tbl-th w-8 text-center">#</th>
+          <th class="tbl-th">
+            <span class="inline-flex items-center gap-1">
+              <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+              地域
+            </span>
           </th>
-          <th class="px-2 py-2 text-left font-medium">创建时间</th>
-          <th class="px-2 py-2 text-left font-medium">到期时间</th>
-          <th class="px-2 py-2 text-left font-medium">配置</th>
-          <th class="px-2 py-2 text-left font-medium">总流量</th>
-          <th class="px-2 py-2 text-left font-medium">已用流量%</th>
-          <th class="px-2 py-2 text-left font-medium">价格</th>
-          <th class="px-2 py-2 text-right font-medium">操作</th>
+          <th class="tbl-th">状态</th>
+          <th class="tbl-th">
+            <span class="inline-flex items-center gap-1">
+              <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7"/></svg>
+              实例
+            </span>
+          </th>
+          <th class="tbl-th">
+            <span class="inline-flex items-center gap-1">
+              <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3"/></svg>
+              IP
+            </span>
+          </th>
+          <th class="tbl-th text-center" title="带宽">
+            <span class="inline-flex items-center gap-0.5">
+              <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-3L16.5 18m0 0L12 13.5m4.5 4.5V4.5"/></svg>
+              带宽
+            </span>
+          </th>
+          <th class="tbl-th">创建</th>
+          <th class="tbl-th">到期</th>
+          <th class="tbl-th">
+            <span class="inline-flex items-center gap-1">
+              <svg class="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25z"/></svg>
+              配置
+            </span>
+          </th>
+          <th class="tbl-th">流量</th>
+          <th class="tbl-th">用量</th>
+          <th class="tbl-th">价格</th>
+          <th class="tbl-th text-right">操作</th>
         </tr>
       </thead>
       <tbody id="instanceBody">
         {{ range $i, $inst := .instances }}
-        <tr class="instance-row border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/80 dark:hover:bg-gray-800/20 transition"
+        <tr class="instance-row tbl-row border-b border-gray-50 dark:border-gray-800/40"
             data-id="{{ $inst.ID }}"
             data-instance-id="{{ $inst.InstanceID }}"
             data-region="{{ $inst.RegionID }}"
@@ -103,51 +230,49 @@
             data-name="{{ $inst.Name }}"
             data-ip="{{ $inst.PublicIP }} {{ $inst.PrivateIP }}"
             data-creation="{{ $inst.CreationTime }}">
-          <td class="px-2 py-2"><input type="checkbox" class="row-check rounded" value="{{ $inst.ID }}" onchange="updateBatchBar()"></td>
-          <td class="px-2 py-2 text-gray-400">{{ add $i 1 }}</td>
-          <td class="px-2 py-2 text-gray-600 dark:text-gray-400">{{ $inst.RegionID }}</td>
-          <td class="px-2 py-2">
+          <td class="tbl-td text-center"><input type="checkbox" class="row-check rounded" value="{{ $inst.ID }}" onchange="updateBatchBar()"></td>
+          <td class="tbl-td text-center text-[11px] text-gray-300 dark:text-gray-600 font-mono">{{ add $i 1 }}</td>
+          <td class="tbl-td">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] font-mono text-gray-500 dark:text-gray-400">{{ $inst.RegionID }}</span>
+          </td>
+          <td class="tbl-td">
             {{ if eq $inst.Status "Running" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>运行中
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>运行
               </span>
             {{ else if eq $inst.Status "Stopped" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>已停止
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>停止
               </span>
             {{ else if eq $inst.Status "Starting" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-500 dark:text-blue-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>启动中
               </span>
             {{ else if eq $inst.Status "Stopping" }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>停止中
               </span>
             {{ else }}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">{{ $inst.Status }}</span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500">{{ $inst.Status }}</span>
             {{ end }}
           </td>
-          <td class="px-2 py-2">
-            <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              {{ $inst.InstanceID }}
-              {{ if ne $inst.CredentialStatus "ok" }}<span class="text-red-500" title="{{ $inst.CredentialError }}">⚠</span>{{ end }}
+          <td class="tbl-td">
+            <a href="/instance/{{ $inst.ID }}" class="text-[12px] font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{{ $inst.Name }}</a>
+            <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+              {{ $inst.InstanceID }}{{ if ne $inst.CredentialStatus "ok" }}<span class="text-red-500" title="{{ $inst.CredentialError }}">⚠</span>{{ end }}
             </div>
-            <a href="/instance/{{ $inst.ID }}" class="text-xs text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 transition">
-              <svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5"/></svg>
-              {{ $inst.Name }}
-            </a>
           </td>
-          <td class="px-2 py-2 font-mono">
-            <div class="text-xs text-gray-800 dark:text-gray-200">{{ if $inst.PublicIP }}{{ $inst.PublicIP }}{{ else }}<span class="text-gray-300 dark:text-gray-600">-</span>{{ end }}</div>
-            <div class="text-[11px] text-gray-400">{{ if $inst.PrivateIP }}{{ $inst.PrivateIP }}{{ else }}-{{ end }}</div>
+          <td class="tbl-td font-mono">
+            <div class="text-[12px] text-gray-700 dark:text-gray-300">{{ if $inst.PublicIP }}{{ $inst.PublicIP }}{{ else }}<span class="text-gray-300 dark:text-gray-600">—</span>{{ end }}</div>
+            <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{{ if $inst.PrivateIP }}{{ $inst.PrivateIP }}{{ else }}—{{ end }}</div>
           </td>
-          <td class="px-2 py-2 text-center text-gray-600 dark:text-gray-400">
-            {{ if $inst.Bandwidth }}{{ $inst.Bandwidth }}M{{ else }}-{{ end }}
+          <td class="tbl-td text-center">
+            {{ if $inst.Bandwidth }}<span class="text-[11px] font-medium text-gray-600 dark:text-gray-400">{{ $inst.Bandwidth }}M</span>{{ else }}<span class="text-gray-300 dark:text-gray-600">—</span>{{ end }}
           </td>
-          <td class="px-2 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.CreationTime }}{{ $inst.CreationTime }}{{ else }}-{{ end }}</td>
-          <td class="px-2 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.ExpiredTime }}{{ $inst.ExpiredTime }}{{ else }}-{{ end }}</td>
-          <td class="px-2 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-            {{ if $inst.CPU }}{{ $inst.CPU }}C/{{ $inst.Memory }}G{{ else }}-{{ end }}
+          <td class="tbl-td text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.CreationTime }}{{ $inst.CreationTime }}{{ else }}—{{ end }}</td>
+          <td class="tbl-td text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ if $inst.ExpiredTime }}{{ $inst.ExpiredTime }}{{ else }}—{{ end }}</td>
+          <td class="tbl-td whitespace-nowrap">
+            {{ if $inst.CPU }}<span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">{{ $inst.CPU }}C · {{ $inst.Memory }}G</span>{{ else }}<span class="text-gray-300 dark:text-gray-600">—</span>{{ end }}
           </td>
           <td class="px-2 py-2 text-gray-600 dark:text-gray-400">
             {{ if eq $inst.TrafficStrategy "life" }}
@@ -194,33 +319,82 @@
     </table>
   </div>
   {{ if eq .total 0 }}
-  <div class="py-16 text-center text-gray-400 dark:text-gray-500">
-    <p class="text-lg mb-2">暂无实例</p>
-    <a href="/instance/add" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">添加第一个实例</a>
+  <div class="px-6 py-20 sm:py-24 flex flex-col items-center justify-center">
+    <div class="relative mb-6">
+      <div class="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 via-indigo-400/15 to-transparent dark:from-emerald-500/10 dark:via-indigo-500/10 blur-xl scale-150"></div>
+      <div class="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-indigo-50 dark:from-emerald-500/10 dark:to-indigo-500/10 border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
+        <svg class="w-10 h-10 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="1.25" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7"/>
+        </svg>
+      </div>
+    </div>
+    <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white tracking-tight">还没有实例</h3>
+    <p class="mt-2 max-w-sm text-center text-sm text-gray-500 dark:text-gray-400 leading-relaxed">从侧栏使用「发现」或「账号导入」拉取实例后，将在此集中展示与管理。</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center">
+      <a href="/discover" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-emerald-600/20 transition hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/25 active:scale-[0.98]">
+        <svg class="w-4 h-4 opacity-90" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+        扫描发现实例
+      </a>
+    </div>
+    <p class="mt-6 text-xs text-gray-400 dark:text-gray-500">批量入库请用侧栏「账号导入」</p>
   </div>
   {{ end }}
 </div>
 
 <!-- Bottom Action Bar (always visible) -->
-<div id="bottomBar" class="fixed bottom-0 left-0 right-0 lg:left-64 z-20 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_8px_rgba(0,0,0,.06)] transition-[left] duration-[350ms]">
-  <div class="flex items-center justify-between px-4 py-2">
-    <!-- Left: info + refresh -->
-    <div class="flex items-center gap-3">
-      <span class="text-xs text-gray-400 dark:text-gray-500">信息提示</span>
-      <button onclick="refreshAll()" class="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
-        ↻ 刷新
-      </button>
+<div id="bottomBar" class="fixed bottom-0 left-0 right-0 lg:left-56 z-20 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-2px_8px_rgba(0,0,0,.06)] transition-[left] duration-[350ms]">
+  <div class="flex items-center justify-between py-2 px-4 sm:px-6">
+    <!-- Left: selection info -->
+    <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+      <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      已选 <span class="bottom-info-count font-semibold text-gray-800 dark:text-gray-200 tabular-nums">0</span> 台实例
     </div>
-    <!-- Right: batch actions -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-xs text-gray-400 dark:text-gray-500 mr-1">批量操作</span>
-      <button onclick="batchAction('start')" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">▶ 批量开机</button>
-      <button onclick="batchAction('stop')" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">■ 批量关机</button>
-      <button onclick="batchAction('reboot')" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">↻ 批量重启</button>
-      <button onclick="batchAction('reset_system_batch')" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">↻ 批量重置系统</button>
-      <button onclick="showBatchPasswordModal()" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量改密</button>
-      <button onclick="showBatchRenameModal()" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">批量备注</button>
-      <button onclick="showBatchPortModal()" class="px-2 py-1 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">♥ 批量开放端口</button>
+    <!-- Right: batch ops (single dropdown) -->
+    <div class="relative z-30" id="batchOpsWrap">
+      <button type="button" id="batchOpsBtn" onclick="toggleBatchOpsMenu(event)" class="flex items-center gap-2 pl-3 pr-2.5 py-1.5 text-xs font-medium rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-200">
+        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+        批量操作
+        <svg id="batchOpsArrow" class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ease-out" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
+      </button>
+      <div id="batchOpsMenu" class="absolute right-0 bottom-[calc(100%+8px)] w-[220px] rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl shadow-black/10 dark:shadow-black/40 py-1.5 opacity-0 scale-95 origin-bottom-right pointer-events-none transition-all duration-200 ease-out">
+        <p class="px-3 pb-1 pt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">已选实例</p>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();batchAction('start')" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px]">▶</span>批量开机
+          </button>
+        </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();batchAction('stop')" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px]">■</span>批量关机
+          </button>
+        </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();batchAction('reboot')" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px]">↻</span>批量重启
+          </button>
+        </div>
+        <div class="h-px bg-gray-100 dark:bg-gray-800 my-1 mx-2"></div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();batchAction('reset_system_batch')" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-amber-700 dark:text-amber-400 rounded-lg mx-1 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 text-[10px]">↻</span>批量重置系统
+          </button>
+        </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();showBatchPasswordModal()" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 text-[10px]">✏</span>批量改密
+          </button>
+        </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();showBatchRenameModal()" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 text-[10px]">✎</span>批量备注
+          </button>
+        </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();showBatchPortModal()" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-500 text-[10px]">♥</span>批量开放端口
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -314,8 +488,14 @@ function getSelectedIds() {
   return ids;
 }
 
-function toggleSelectAll() {
-  var checked = document.getElementById('selectAll').checked;
+function toggleSelectAll(forceState) {
+  var cb = document.getElementById('selectAll');
+  if (typeof forceState === 'boolean') {
+    cb.checked = forceState;
+  } else {
+    cb.checked = !cb.checked;
+  }
+  var checked = cb.checked;
   document.querySelectorAll('.row-check').forEach(function(el) {
     var row = el.closest('tr');
     if (row && !row.classList.contains('hidden')) el.checked = checked;
@@ -333,10 +513,11 @@ function setStatusFilter(status) {
   currentStatusFilter = status;
   document.querySelectorAll('.status-chip').forEach(function(btn) {
     var s = btn.dataset.status;
+    var inner = btn.innerHTML;
     if (s === status) {
-      btn.className = 'status-chip px-3 py-0.5 text-xs rounded-full border border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition';
+      btn.className = 'status-chip px-3 py-1 text-[11px] rounded-full border border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-indigo-500/10 transition-all duration-200';
     } else {
-      btn.className = 'status-chip px-3 py-0.5 text-xs rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition';
+      btn.className = 'status-chip px-3 py-1 text-[11px] rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200';
     }
   });
   filterTable();
@@ -372,23 +553,198 @@ function filterTable() {
 
 function resetFilters() {
   document.getElementById('searchInput').value = '';
-  document.getElementById('regionFilter').value = '';
+  selectRegion('', '全部地域');
   document.getElementById('tagFilter').value = '';
-  document.getElementById('dateStart').value = '';
-  document.getElementById('dateEnd').value = '';
+  clearDateRange();
   setStatusFilter('');
 }
 
 function populateRegionFilter() {
   var regions = {};
   document.querySelectorAll('.instance-row').forEach(function(row) { regions[row.dataset.region] = true; });
-  var sel = document.getElementById('regionFilter');
+  var list = document.getElementById('regionDropdownList');
   Object.keys(regions).sort().forEach(function(r) {
-    var opt = document.createElement('option');
-    opt.value = r; opt.textContent = r;
-    sel.appendChild(opt);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'region-opt w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-gray-700 dark:text-gray-300 transition-colors flex items-center gap-2';
+    btn.dataset.value = r;
+    btn.onclick = function() { selectRegion(r, r); };
+    btn.innerHTML = '<svg class="w-3.5 h-3.5 text-indigo-500 shrink-0 region-check opacity-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg><span>' + r + '</span>';
+    list.appendChild(btn);
   });
 }
+
+function toggleRegionDropdown() {
+  var menu = document.getElementById('regionDropdownMenu');
+  var arrow = document.getElementById('regionDropdownArrow');
+  var isOpen = !menu.classList.contains('pointer-events-none');
+  if (isOpen) { closeRegionDropdown(); } else {
+    menu.classList.remove('opacity-0','scale-95','pointer-events-none');
+    menu.classList.add('opacity-100','scale-100');
+    arrow.style.transform = 'translateY(-50%) rotate(180deg)';
+  }
+}
+
+function closeRegionDropdown() {
+  var menu = document.getElementById('regionDropdownMenu');
+  var arrow = document.getElementById('regionDropdownArrow');
+  menu.classList.add('opacity-0','scale-95','pointer-events-none');
+  menu.classList.remove('opacity-100','scale-100');
+  arrow.style.transform = 'translateY(-50%)';
+}
+
+function selectRegion(value, label) {
+  document.getElementById('regionFilter').value = value;
+  document.getElementById('regionDropdownLabel').textContent = label;
+  document.querySelectorAll('.region-opt .region-check').forEach(function(svg) {
+    svg.classList.toggle('opacity-0', svg.closest('.region-opt').dataset.value !== value);
+  });
+  closeRegionDropdown();
+  filterTable();
+}
+
+function toggleBatchOpsMenu(ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  var m = document.getElementById('batchOpsMenu');
+  var a = document.getElementById('batchOpsArrow');
+  if (!m || !a) return;
+  if (!m.classList.contains('pointer-events-none')) { closeBatchOpsMenu(); return; }
+  m.classList.remove('opacity-0','scale-95','pointer-events-none');
+  m.classList.add('opacity-100','scale-100','is-open');
+  a.style.transform = 'rotate(180deg)';
+}
+
+function closeBatchOpsMenu() {
+  var m = document.getElementById('batchOpsMenu');
+  var a = document.getElementById('batchOpsArrow');
+  if (!m) return;
+  m.classList.add('opacity-0','scale-95','pointer-events-none');
+  m.classList.remove('opacity-100','scale-100','is-open');
+  if (a) a.style.transform = '';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#regionDropdown')) closeRegionDropdown();
+  if (!e.target.closest('#dateRangePicker')) closeDatePicker();
+  if (!e.target.closest('#batchOpsWrap')) closeBatchOpsMenu();
+});
+
+/* --- Custom Calendar Picker --- */
+var calYear, calMonth, calStartDate = null, calEndDate = null, calSelecting = 'start';
+
+function toggleDatePicker() {
+  var p = document.getElementById('datePickerPanel');
+  if (!p.classList.contains('pointer-events-none')) { closeDatePicker(); return; }
+  var now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth();
+  renderCalendar();
+  p.classList.remove('opacity-0','scale-95','pointer-events-none');
+  p.classList.add('opacity-100','scale-100');
+  document.getElementById('datePickerArrow').style.transform = 'rotate(180deg)';
+}
+
+function closeDatePicker() {
+  var p = document.getElementById('datePickerPanel');
+  p.classList.add('opacity-0','scale-95','pointer-events-none');
+  p.classList.remove('opacity-100','scale-100');
+  document.getElementById('datePickerArrow').style.transform = '';
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function fmtDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function fmtShort(d) { return pad2(d.getMonth()+1) + '/' + pad2(d.getDate()); }
+
+function renderCalendar() {
+  var months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calMonthLabel').textContent = calYear + '年 ' + months[calMonth];
+  var grid = document.getElementById('calDaysGrid');
+  grid.innerHTML = '';
+  var firstDay = new Date(calYear, calMonth, 1).getDay();
+  var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  var today = fmtDate(new Date());
+
+  for (var i = 0; i < firstDay; i++) {
+    var empty = document.createElement('div');
+    empty.className = 'h-8';
+    grid.appendChild(empty);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dt = new Date(calYear, calMonth, d);
+    var ds = fmtDate(dt);
+    var cell = document.createElement('button');
+    cell.type = 'button';
+    cell.textContent = d;
+    cell.dataset.date = ds;
+
+    var isStart = calStartDate && ds === fmtDate(calStartDate);
+    var isEnd = calEndDate && ds === fmtDate(calEndDate);
+    var inRange = calStartDate && calEndDate && dt >= calStartDate && dt <= calEndDate;
+    var isToday = ds === today;
+
+    var cls = 'h-8 w-full text-[11px] rounded-lg transition-all duration-150 ';
+    if (isStart || isEnd) {
+      cls += 'bg-indigo-500 text-white font-semibold shadow-sm shadow-indigo-500/30';
+    } else if (inRange) {
+      cls += 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400';
+    } else if (isToday) {
+      cls += 'border border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-500/10';
+    } else {
+      cls += 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700';
+    }
+    cell.className = cls;
+    cell.onclick = (function(date, dateStr) { return function() { pickDate(date, dateStr); }; })(dt, ds);
+    grid.appendChild(cell);
+  }
+}
+
+function pickDate(dt, ds) {
+  if (calSelecting === 'start' || (calStartDate && dt < calStartDate)) {
+    calStartDate = dt; calEndDate = null; calSelecting = 'end';
+  } else {
+    calEndDate = dt; calSelecting = 'start';
+  }
+  document.getElementById('dateStart').value = calStartDate ? fmtDate(calStartDate) : '';
+  document.getElementById('dateEnd').value = calEndDate ? fmtDate(calEndDate) : '';
+  updateDateLabel();
+  renderCalendar();
+  if (calStartDate && calEndDate) {
+    setTimeout(function() { closeDatePicker(); filterTable(); }, 300);
+  }
+}
+
+function updateDateLabel() {
+  var label = document.getElementById('dateRangeLabel');
+  var text = document.getElementById('calRangeText');
+  if (calStartDate && calEndDate) {
+    label.textContent = fmtShort(calStartDate) + ' → ' + fmtShort(calEndDate);
+    text.textContent = fmtDate(calStartDate) + ' 至 ' + fmtDate(calEndDate);
+  } else if (calStartDate) {
+    label.textContent = fmtShort(calStartDate) + ' → ?';
+    text.textContent = '已选起始，请选结束日期';
+  } else {
+    label.textContent = '选择日期';
+    text.textContent = '点击选择起止日期';
+  }
+}
+
+function clearDateRange() {
+  calStartDate = null; calEndDate = null; calSelecting = 'start';
+  document.getElementById('dateStart').value = '';
+  document.getElementById('dateEnd').value = '';
+  updateDateLabel();
+  if (document.getElementById('calDaysGrid').children.length > 0) renderCalendar();
+  filterTable();
+}
+
 populateRegionFilter();
 setStatusFilter('');
 
@@ -577,6 +933,27 @@ function refreshAll() {
   var obs = new MutationObserver(update);
   if (sidebar) obs.observe(sidebar, {attributes: true, attributeFilter: ['class']});
 })();
+
+function toggleBackupMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('backupDropdownMenu');
+  if (!menu) return;
+  var open = !menu.classList.contains('pointer-events-none');
+  if (open) { closeBackupMenu(); } else {
+    menu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+    menu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+  }
+}
+function closeBackupMenu() {
+  var menu = document.getElementById('backupDropdownMenu');
+  if (!menu) return;
+  menu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+  menu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('backupDropdownWrap');
+  if (wrap && !wrap.contains(e.target)) closeBackupMenu();
+});
 
 function showToast(msg, type) {
   var container = document.getElementById('toast-container');
