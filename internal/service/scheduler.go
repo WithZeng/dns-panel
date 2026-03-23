@@ -76,7 +76,7 @@ func MonthlyTrafficReset() {
 
 func DailyReport() {
 	var alertCfg models.AlertConfig
-	if err := database.DB.First(&alertCfg).Error; err != nil || !alertCfg.Enabled || alertCfg.WebhookURL == "" {
+	if err := database.DB.First(&alertCfg).Error; err != nil || !alertCfg.Enabled {
 		return
 	}
 
@@ -120,7 +120,7 @@ func DailyReport() {
 		msg += fmt.Sprintf("%s %s: %.2f/%.0f GB (%.0f%%)\n", emoji, inst.Name, used, limit, pct)
 	}
 
-	SendAlert(alertCfg.NotifyType, alertCfg.WebhookURL, msg, "daily_report")
+	SendAlert(msg, "daily_report")
 }
 
 func DataRetentionCleanup(days int) {

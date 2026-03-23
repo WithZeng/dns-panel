@@ -73,9 +73,8 @@ func ECSRefreshStatus(c *gin.Context) {
 	if info.ImageID != "" {
 		inst.ImageID = info.ImageID
 	}
-	if info.Bandwidth > 0 {
-		inst.Bandwidth = info.Bandwidth
-	}
+	inst.Bandwidth = info.Bandwidth
+	inst.BandwidthType = info.BandwidthType
 	if info.ExpiredTime != "" {
 		inst.ExpiredTime = info.ExpiredTime
 	}

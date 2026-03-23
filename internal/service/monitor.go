@@ -121,6 +121,8 @@ func CheckAndManageInstance(instanceID uint) error {
 		if ecsInfo.IPv6Addr != "" {
 			inst.IPv6Addr = ecsInfo.IPv6Addr
 		}
+		inst.Bandwidth = ecsInfo.Bandwidth
+		inst.BandwidthType = ecsInfo.BandwidthType
 	}
 
 	autoStartStopLogic(client, &inst)
@@ -173,10 +175,6 @@ func autoStartStopLogic(client *aliyun.Client, inst *models.EcsInstance) {
 }
 
 func checkAlerts(inst *models.EcsInstance, previousAPIGB, currentAPIGB float64) {
-	var alertCfg models.AlertConfig
-	if err := database.DB.First(&alertCfg).Error; err != nil || !alertCfg.Enabled || alertCfg.WebhookURL == "" {
-		return
-	}
 
 	var limit, alertTraffic float64
 	if inst.TrafficStrategy == "life" {
@@ -198,7 +196,7 @@ func checkAlerts(inst *models.EcsInstance, previousAPIGB, currentAPIGB float64) 
 			if canSendAlert(inst.Name, 3600) {
 				msg := fmt.Sprintf("[%s] 流量告警\n已用: %.2f GB / 上限: %.0f GB (%.1f%%)\n状态: %s",
 					inst.Name, alertTraffic, limit, usagePct, inst.Status)
-				SendAlert(alertCfg.NotifyType, alertCfg.WebhookURL, msg, inst.Name)
+				SendAlert(msg, inst.Name)
 			}
 		}
 	}
@@ -209,7 +207,7 @@ func checkAlerts(inst *models.EcsInstance, previousAPIGB, currentAPIGB float64) 
 			if canSendAlert(inst.Name, 1800) {
 				msg := fmt.Sprintf("[%s] 流量异常\nAPI读数从 %.2f GB 增至 %.2f GB (+%.1f%%)\n本月累计: %.2f GB\n状态: %s",
 					inst.Name, previousAPIGB, currentAPIGB, increasePct, inst.CurrentMonthTraffic, inst.Status)
-				SendAlert(alertCfg.NotifyType, alertCfg.WebhookURL, msg, inst.Name)
+				SendAlert(msg, inst.Name)
 			}
 		}
 	}

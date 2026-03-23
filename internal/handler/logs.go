@@ -49,11 +49,18 @@ func NotificationLogs(c *gin.Context) {
 
 	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
 
+	var cfg models.AlertConfig
+	database.DB.FirstOrCreate(&cfg)
+
+	tab := c.DefaultQuery("tab", "logs")
+
 	c.HTML(http.StatusOK, "notification_logs.html", gin.H{
 		"logs":       logs,
 		"page":       page,
 		"totalPages": totalPages,
 		"total":      total,
+		"config":     cfg,
+		"tab":        tab,
 		"username":   c.GetString("username"),
 	})
 }

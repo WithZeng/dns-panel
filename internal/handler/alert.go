@@ -12,9 +12,10 @@ import (
 func AlertConfigPage(c *gin.Context) {
 	var cfg models.AlertConfig
 	database.DB.FirstOrCreate(&cfg)
-	c.HTML(http.StatusOK, "alert_config.html", gin.H{
+	c.HTML(http.StatusOK, "notification_logs.html", gin.H{
 		"config":   cfg,
 		"username": c.GetString("username"),
+		"tab":      "settings",
 	})
 }
 
@@ -22,25 +23,20 @@ func AlertConfigPost(c *gin.Context) {
 	var cfg models.AlertConfig
 	database.DB.FirstOrCreate(&cfg)
 
-	cfg.NotifyType = c.PostForm("notify_type")
-	cfg.WebhookURL = c.PostForm("webhook_url")
+	cfg.NotifyType = "telegram"
+	cfg.TGBotToken = c.PostForm("tg_bot_token")
+	cfg.TGChatID = c.PostForm("tg_chat_id")
 	cfg.Enabled = c.PostForm("enabled") == "on"
 	database.DB.Save(&cfg)
 
-	c.Redirect(http.StatusFound, "/alert_config")
+	c.Redirect(http.StatusFound, "/notification_logs?tab=settings")
 }
 
 func TestNotification(c *gin.Context) {
-	var cfg models.AlertConfig
-	if err := database.DB.First(&cfg).Error; err != nil || cfg.WebhookURL == "" {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "请先配置 Webhook 地址"})
-		return
-	}
-
-	ok := service.SendAlert(cfg.NotifyType, cfg.WebhookURL, "DNS Panel 测试通知 - 如果你看到这条消息，说明通知配置正确。", "test")
+	ok := service.SendAlert("CloudPanel 测试通知 ✅\n如果你看到这条消息，说明 Telegram Bot 配置正确。", "test")
 	if ok {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "测试通知发送成功"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "发送失败，请检查 Webhook 地址"})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "发送失败，请检查 Bot Token 和 Chat ID"})
 	}
 }

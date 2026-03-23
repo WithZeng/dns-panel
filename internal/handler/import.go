@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -14,27 +15,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ImportCSVPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "import_csv.html", gin.H{"username": c.GetString("username")})
-}
-
 func ImportCSVPost(c *gin.Context) {
-	username := c.GetString("username")
+	redirectTo := c.PostForm("redirect")
+
+	if redirectTo == "" {
+		redirectTo = "/restore"
+	}
+
+	renderOrRedirect := func(flash, errMsg string) {
+		sep := "?"
+		if strings.Contains(redirectTo, "?") {
+			sep = "&"
+		}
+		if errMsg != "" {
+			c.Redirect(http.StatusFound, redirectTo+sep+"error="+url.QueryEscape(errMsg))
+		} else {
+			c.Redirect(http.StatusFound, redirectTo+sep+"flash="+url.QueryEscape(flash))
+		}
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil || !strings.HasSuffix(strings.ToLower(file.Filename), ".csv") {
-		c.HTML(http.StatusOK, "import_csv.html", gin.H{
-			"error":    "请上传 CSV 文件",
-			"username": username,
-		})
+		renderOrRedirect("", "请上传 CSV 文件")
 		return
 	}
 
 	f, err := file.Open()
 	if err != nil {
-		c.HTML(http.StatusOK, "import_csv.html", gin.H{
-			"error":    "文件打开失败",
-			"username": username,
-		})
+		renderOrRedirect("", "文件打开失败")
 		return
 	}
 	defer f.Close()
@@ -42,10 +50,7 @@ func ImportCSVPost(c *gin.Context) {
 	reader := csv.NewReader(f)
 	headers, err := reader.Read()
 	if err != nil {
-		c.HTML(http.StatusOK, "import_csv.html", gin.H{
-			"error":    "CSV 格式错误",
-			"username": username,
-		})
+		renderOrRedirect("", "CSV 格式错误")
 		return
 	}
 
@@ -213,8 +218,5 @@ func ImportCSVPost(c *gin.Context) {
 	}
 
 	msg := fmt.Sprintf("导入完成：新增 %d，更新 %d，跳过 %d", imported, updated, skipped)
-	c.HTML(http.StatusOK, "import_csv.html", gin.H{
-		"flash":    msg,
-		"username": username,
-	})
+	renderOrRedirect(msg, "")
 }

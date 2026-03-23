@@ -5,7 +5,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
@@ -17,9 +19,14 @@ import (
 )
 
 func RestorePage(c *gin.Context) {
-	c.HTML(http.StatusOK, "restore.html", gin.H{
-		"username": c.GetString("username"),
-	})
+	data := gin.H{"username": c.GetString("username")}
+	if f := c.Query("flash"); f != "" {
+		data["flash"] = f
+	}
+	if e := c.Query("error"); e != "" {
+		data["error"] = e
+	}
+	c.HTML(http.StatusOK, "restore.html", data)
 }
 
 func RestoreDBPage(c *gin.Context) {
@@ -32,10 +39,34 @@ func RestoreDBPost(c *gin.Context) {
 	username := c.GetString("username")
 	fernetKey := c.PostForm("fernet_key")
 	skipCreds := c.PostForm("skip_credentials") == "1"
+	redirectTo := c.PostForm("redirect")
+
+	renderOrRedirect := func(flash, errMsg string) {
+		if redirectTo != "" {
+			sep := "?"
+			if strings.Contains(redirectTo, "?") {
+				sep = "&"
+			}
+			if errMsg != "" {
+				c.Redirect(http.StatusFound, redirectTo+sep+"error="+url.QueryEscape(errMsg))
+			} else {
+				c.Redirect(http.StatusFound, redirectTo+sep+"flash="+url.QueryEscape(flash))
+			}
+			return
+		}
+		data := gin.H{"username": username}
+		if errMsg != "" {
+			data["error"] = errMsg
+		}
+		if flash != "" {
+			data["flash"] = flash
+		}
+		c.HTML(http.StatusOK, "restore_db.html", data)
+	}
 
 	file, _, err := c.Request.FormFile("db_file")
 	if err != nil {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "请选择数据库文件"})
+		renderOrRedirect("", "请选择数据库文件")
 		return
 	}
 	defer file.Close()
@@ -43,7 +74,7 @@ func RestoreDBPost(c *gin.Context) {
 	tmpPath := os.TempDir() + "/dns_panel_restore.db"
 	out, err := os.Create(tmpPath)
 	if err != nil {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "创建临时文件失败"})
+		renderOrRedirect("", "创建临时文件失败")
 		return
 	}
 	written, _ := io.Copy(out, file)
@@ -51,7 +82,7 @@ func RestoreDBPost(c *gin.Context) {
 	defer os.Remove(tmpPath)
 
 	if written < 100 {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "文件过小，不是有效的数据库"})
+		renderOrRedirect("", "文件过小，不是有效的数据库")
 		return
 	}
 
@@ -62,7 +93,7 @@ func RestoreDBPost(c *gin.Context) {
 		f.Close()
 	}
 	if string(header[:13]) != "SQLite format" {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "无效的 SQLite 数据库文件"})
+		renderOrRedirect("", "无效的 SQLite 数据库文件")
 		return
 	}
 
@@ -70,7 +101,7 @@ func RestoreDBPost(c *gin.Context) {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "无法打开上传的数据库：" + err.Error()})
+		renderOrRedirect("", "无法打开上传的数据库："+err.Error())
 		return
 	}
 	sqlDB, _ := srcDB.DB()
@@ -104,12 +135,12 @@ func RestoreDBPost(c *gin.Context) {
 
 	var srcInstances []srcInstance
 	if err := srcDB.Table("ecs_instance").Find(&srcInstances).Error; err != nil {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "读取实例数据失败：" + err.Error()})
+		renderOrRedirect("", "读取实例数据失败："+err.Error())
 		return
 	}
 
 	if len(srcInstances) == 0 {
-		c.HTML(http.StatusOK, "restore_db.html", gin.H{"username": username, "error": "上传的数据库中没有实例数据"})
+		renderOrRedirect("", "上传的数据库中没有实例数据")
 		return
 	}
 
@@ -122,6 +153,10 @@ func RestoreDBPost(c *gin.Context) {
 	}
 
 	if hasFernet && fernetKey == "" && !skipCreds {
+		if redirectTo != "" {
+			renderOrRedirect("", "数据库包含加密凭据，请使用原始恢复页面并提供 Fernet 密钥")
+			return
+		}
 		c.HTML(http.StatusOK, "restore_db.html", gin.H{
 			"username":       username,
 			"need_fernet":    true,
@@ -241,8 +276,5 @@ func RestoreDBPost(c *gin.Context) {
 		msg += fmt.Sprintf(" 其中 %d 个实例凭据转换失败（密钥可能不正确），需要手动重新填写 AK/SK。", credErrors)
 	}
 
-	c.HTML(http.StatusOK, "restore_db.html", gin.H{
-		"username": username,
-		"flash":    msg,
-	})
+	renderOrRedirect(msg, "")
 }

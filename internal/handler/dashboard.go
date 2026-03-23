@@ -93,6 +93,7 @@ func APIInstances(c *gin.Context) {
 		CPU               int     `json:"cpu"`
 		Memory            int     `json:"memory"`
 		Bandwidth         int     `json:"bandwidth"`
+		BandwidthType     string  `json:"bandwidth_type"`
 		OSType            string  `json:"os_type"`
 		CreationTime      string  `json:"creation_time"`
 		ExpiredTime       string  `json:"expired_time"`
@@ -119,7 +120,7 @@ func APIInstances(c *gin.Context) {
 			CurrentMonthTraffic: inst.CurrentMonthTraffic, MonthlyLimit: inst.MonthlyLimit,
 			TotalTrafficSum: inst.TotalTrafficSum, LifeTotalLimit: inst.LifeTotalLimit,
 			CredentialStatus: inst.CredentialStatus, CredentialError: inst.CredentialError,
-			CPU: inst.CPU, Memory: inst.Memory, Bandwidth: inst.Bandwidth,
+			CPU: inst.CPU, Memory: inst.Memory, Bandwidth: inst.Bandwidth, BandwidthType: inst.BandwidthType,
 			OSType: inst.OSType, CreationTime: inst.CreationTime, ExpiredTime: inst.ExpiredTime,
 		}
 		if !inst.LastChecked.IsZero() {

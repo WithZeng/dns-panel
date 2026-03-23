@@ -8,18 +8,19 @@ import (
 )
 
 type ECSInfo struct {
-	Status       string `json:"status"`
-	PublicIP     string `json:"public_ip"`
-	PrivateIP    string `json:"private_ip"`
-	IPv6Addr     string `json:"ipv6_addr"`
-	CPU          int    `json:"cpu"`
-	Memory       int    `json:"memory"`
-	OSType       string `json:"os_type"`
-	OSName       string `json:"os_name"`
-	ImageID      string `json:"image_id"`
-	Bandwidth    int    `json:"bandwidth"`
-	ExpiredTime  string `json:"expired_time"`
-	CreationTime string `json:"creation_time"`
+	Status        string `json:"status"`
+	PublicIP      string `json:"public_ip"`
+	PrivateIP     string `json:"private_ip"`
+	IPv6Addr      string `json:"ipv6_addr"`
+	CPU           int    `json:"cpu"`
+	Memory        int    `json:"memory"`
+	OSType        string `json:"os_type"`
+	OSName        string `json:"os_name"`
+	ImageID       string `json:"image_id"`
+	Bandwidth     int    `json:"bandwidth"`
+	BandwidthType string `json:"bandwidth_type"`
+	ExpiredTime   string `json:"expired_time"`
+	CreationTime  string `json:"creation_time"`
 }
 
 type InstanceBasicInfo struct {
@@ -255,7 +256,10 @@ func GetECSInfo(c *Client, instanceID string) (*ECSInfo, error) {
 					IpAddress []string `json:"IpAddress"`
 				} `json:"PublicIpAddress"`
 				EipAddress struct {
-					IpAddress string `json:"IpAddress"`
+					IpAddress          string `json:"IpAddress"`
+					Bandwidth          int    `json:"Bandwidth"`
+					InternetChargeType string `json:"InternetChargeType"`
+					IsBandwidthPackage bool   `json:"IsBandwidthPackage"`
 				} `json:"EipAddress"`
 				VpcAttributes struct {
 					PrivateIP struct {
@@ -287,16 +291,31 @@ func GetECSInfo(c *Client, instanceID string) (*ECSInfo, error) {
 	}
 
 	inst := resp.Instances.Instance[0]
+
+	bw := inst.InternetMaxBandwidthOut
+	bwType := ""
+	if inst.EipAddress.IpAddress != "" {
+		if inst.EipAddress.IsBandwidthPackage {
+			bwType = "shared"
+		} else {
+			bwType = "eip"
+		}
+		if inst.EipAddress.Bandwidth > 0 {
+			bw = inst.EipAddress.Bandwidth
+		}
+	}
+
 	info := &ECSInfo{
-		Status:       inst.Status,
-		CPU:          inst.Cpu,
-		Memory:       inst.Memory / 1024,
-		OSType:       strings.ToLower(inst.OSType),
-		OSName:       inst.OSName,
-		ImageID:      inst.ImageId,
-		Bandwidth:    inst.InternetMaxBandwidthOut,
-		CreationTime: inst.CreationTime,
-		ExpiredTime:  inst.ExpiredTime,
+		Status:        inst.Status,
+		CPU:           inst.Cpu,
+		Memory:        inst.Memory / 1024,
+		OSType:        strings.ToLower(inst.OSType),
+		OSName:        inst.OSName,
+		ImageID:       inst.ImageId,
+		Bandwidth:     bw,
+		BandwidthType: bwType,
+		CreationTime:  inst.CreationTime,
+		ExpiredTime:   inst.ExpiredTime,
 	}
 
 	publicIPs := inst.PublicIP.IpAddress

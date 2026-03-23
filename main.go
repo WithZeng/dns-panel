@@ -124,6 +124,44 @@ func main() {
 		"lower":    strings.ToLower,
 		"contains": strings.Contains,
 		"now":      func() time.Time { return time.Now() },
+		"regionName": func(id string) string {
+			m := map[string]string{
+				"cn-qingdao":            "青岛",
+				"cn-beijing":            "北京",
+				"cn-zhangjiakou":        "张家口",
+				"cn-huhehaote":          "呼和浩特",
+				"cn-wulanchabu":         "乌兰察布",
+				"cn-hangzhou":           "杭州",
+				"cn-shanghai":           "上海",
+				"cn-nanjing":            "南京",
+				"cn-fuzhou":             "福州",
+				"cn-shenzhen":           "深圳",
+				"cn-guangzhou":          "广州",
+				"cn-heyuan":             "河源",
+				"cn-chengdu":            "成都",
+				"cn-wuhan-lr":           "武汉",
+				"cn-hongkong":           "香港",
+				"ap-southeast-1":        "新加坡",
+				"ap-southeast-2":        "悉尼",
+				"ap-southeast-3":        "吉隆坡",
+				"ap-southeast-5":        "雅加达",
+				"ap-southeast-6":        "马尼拉",
+				"ap-southeast-7":        "曼谷",
+				"ap-south-1":            "孟买",
+				"ap-northeast-1":        "东京",
+				"ap-northeast-2":        "首尔",
+				"us-west-1":             "硅谷",
+				"us-east-1":             "弗吉尼亚",
+				"eu-west-1":             "伦敦",
+				"eu-central-1":          "法兰克福",
+				"me-east-1":             "迪拜",
+				"me-central-1":          "利雅得",
+			}
+			if name, ok := m[id]; ok {
+				return name
+			}
+			return id
+		},
 	}
 
 	r.HTMLRender = loadTemplates(funcMap)
@@ -175,8 +213,8 @@ func main() {
 		auth.GET("/logs", handler.OperationLogs)
 		auth.GET("/notification_logs", handler.NotificationLogs)
 
-		// Alert config
-		auth.GET("/alert_config", handler.AlertConfigPage)
+		// Notification settings
+		auth.GET("/alert_config", func(c *gin.Context) { c.Redirect(302, "/notification_logs?tab=settings") })
 		auth.POST("/alert_config", handler.AlertConfigPost)
 		auth.POST("/api/test_notification", handler.TestNotification)
 
@@ -188,7 +226,6 @@ func main() {
 		// Discover & import
 		auth.GET("/discover", handler.DiscoverPage)
 		auth.POST("/discover", handler.DiscoverPost)
-		auth.GET("/import_csv", handler.ImportCSVPage)
 		auth.POST("/import_csv", handler.ImportCSVPost)
 		auth.GET("/import_account_text", handler.ImportAccountTextPage)
 		auth.POST("/import_account_text", handler.ImportAccountTextPost)

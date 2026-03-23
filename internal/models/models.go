@@ -51,8 +51,9 @@ type EcsInstance struct {
 	OSType       string `gorm:"size:20;default:''" json:"os_type"`
 	OSName       string `gorm:"size:200;default:''" json:"os_name"`
 	ImageID      string `gorm:"size:200;default:''" json:"image_id"`
-	Bandwidth    int    `gorm:"default:0" json:"bandwidth"`
-	ExpiredTime  string `gorm:"size:50;default:''" json:"expired_time"`
+	Bandwidth     int    `gorm:"default:0" json:"bandwidth"`
+	BandwidthType string `gorm:"size:20;default:''" json:"bandwidth_type"`
+	ExpiredTime   string `gorm:"size:50;default:''" json:"expired_time"`
 	CreationTime string `gorm:"size:50;default:''" json:"creation_time"`
 
 	AutoStopEnabled  bool `gorm:"default:false" json:"auto_stop_enabled"`
@@ -91,8 +92,10 @@ type OperationLog struct {
 
 type AlertConfig struct {
 	ID         uint   `gorm:"primaryKey" json:"id"`
-	NotifyType string `gorm:"size:50;default:wechat" json:"notify_type"`
+	NotifyType string `gorm:"size:50;default:telegram" json:"notify_type"`
 	WebhookURL string `gorm:"size:500;default:''" json:"webhook_url"`
+	TGBotToken string `gorm:"size:200;default:''" json:"tg_bot_token"`
+	TGChatID   string `gorm:"size:100;default:''" json:"tg_chat_id"`
 	Enabled    bool   `gorm:"default:false" json:"enabled"`
 }
 

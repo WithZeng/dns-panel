@@ -185,12 +185,8 @@
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span class="nav-label">日志</span>
               </a>
-              <a href="/alert_config" data-tip="告警配置" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
+              <a href="/notification_logs" data-tip="通知" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
-                <span class="nav-label">告警</span>
-              </a>
-              <a href="/notification_logs" data-tip="通知记录" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
-                <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                 <span class="nav-label">通知</span>
               </a>
               <a href="/restore" data-tip="数据恢复" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
@@ -205,7 +201,7 @@
 
     <div class="border-t border-gray-200 dark:border-white/[.08] p-2 space-y-1.5 shrink-0 bg-gray-50/50 dark:bg-black/20">
       <div class="sidebar-version flex flex-wrap items-center gap-x-2 gap-y-0.5 px-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-        <span class="tabular-nums">v0.4.0</span>
+        <span class="tabular-nums">v5.0</span>
         <span class="text-gray-300 dark:text-gray-600">·</span>
         <a href="https://github.com/WithZeng/dns-panel" target="_blank" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition">GitHub</a>
         <button type="button" onclick="checkForUpdate()" class="hover:text-gray-600 dark:hover:text-gray-300 transition">更新</button>
@@ -245,7 +241,7 @@
       </button>
     </header>
 
-    <main id="pageMain" class="flex-1 px-4 sm:px-6 lg:px-8 py-5">
+    <main id="pageMain" class="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 py-5">
       {{ if .flash }}
       <div class="mb-4" id="flashStack">
         <div class="rounded-xl border px-4 py-2.5 text-sm bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20">{{ .flash }}</div>
