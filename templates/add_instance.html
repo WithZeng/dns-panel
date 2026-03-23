@@ -1,14 +1,14 @@
-{{ define "title" }}添加实例 - ECS Monitor{{ end }}
+{{ define "title" }}添加实例 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">添加新实例</h1>
       <p class="mt-1 text-gray-500 dark:text-gray-400 text-sm">请输入阿里云 ECS 的访问凭证和监控策略。</p>
     </div>
 
     {{ if .error }}
-    <div class="rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 mb-4">{{ .error }}</div>
+    <div class="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 mb-4">{{ .error }}</div>
     {{ end }}
 
     <form method="POST" action="/instance/add" class="space-y-4">

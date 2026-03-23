@@ -1,11 +1,11 @@
-{{ define "title" }}{{ .instance.Name }} - ECS Monitor{{ end }}
+{{ define "title" }}{{ .instance.Name }} - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="mb-6">
   <a href="/dashboard" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">&larr; 返回仪表盘</a>
 </div>
 
 <!-- Instance Header -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ .instance.Name }}</h1>
@@ -35,7 +35,7 @@
   </div>
 
   <!-- IPv6 Status -->
-  <div id="ipv6StatusBox" class="mt-5 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-4">
+  <div id="ipv6StatusBox" class="mt-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-4">
     <div class="text-sm font-medium text-gray-700 dark:text-gray-300">IPv6 状态</div>
     <div id="ipv6StatusContent" class="mt-2 text-sm">
       {{ if .instance.IPv6Addr }}
@@ -48,7 +48,7 @@
   </div>
 
   <!-- IPv6 Curl Command -->
-  <div class="mt-4 rounded-lg border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 p-4">
+  <div class="mt-4 rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 p-4">
     <div class="flex items-center justify-between gap-2">
       <div class="text-sm font-medium text-indigo-700 dark:text-indigo-300">🚀 curl 一键配置 IPv6（无需手动下载）</div>
       <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ipv6CurlCommand').value); this.innerText='已复制'; setTimeout(()=>this.innerText='复制命令', 1200);"
@@ -76,7 +76,7 @@
   <!-- Traffic Bars -->
   <div class="mt-6 space-y-4">
     {{ if eq .instance.TrafficStrategy "life" }}
-    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4">
+    <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4">
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">📦 周期已用流量</span>
         {{ if gt .instance.LifeTotalLimit 0.0 }}
@@ -95,7 +95,7 @@
       {{ end }}
     </div>
     {{ else }}
-    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4">
+    <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4">
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">📅 月度流量</span>
         {{ if gt .instance.MonthlyLimit 0.0 }}
@@ -118,19 +118,19 @@
 </div>
 
 <!-- Forecast Card -->
-<div id="forecastCard" class="hidden bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div id="forecastCard" class="hidden bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-2">📈 流量预测</h2>
   <p id="forecastText" class="text-sm text-gray-600 dark:text-gray-300"></p>
   <p id="forecastDetail" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
 </div>
 
 <!-- CDT Billing -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-lg font-bold text-gray-900 dark:text-white">💰 CDT 近三月计费</h2>
     <span id="instanceCdtScope" class="text-xs rounded-full px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">加载中</span>
   </div>
-  <div id="instanceCdtError" class="hidden rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-200 mb-3"></div>
+  <div id="instanceCdtError" class="hidden rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-200 mb-3"></div>
   <table class="w-full text-sm mb-3">
     <thead>
       <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-xs text-gray-500 dark:text-gray-400">
@@ -150,7 +150,7 @@
 </div>
 
 <!-- Traffic Chart -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">📊 流量趋势</h2>
   <div class="h-64">
     <canvas id="trafficChart"></canvas>
@@ -159,7 +159,7 @@
 </div>
 
 <!-- Notes -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <div class="flex items-center justify-between mb-3">
     <h2 class="text-lg font-bold text-gray-900 dark:text-white">📝 备注</h2>
     <button id="saveNotesBtn" onclick="saveNotes()"
@@ -172,7 +172,7 @@
 </div>
 
 <!-- Detail Info -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 sm:p-8 mb-6">
   <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">详细信息</h2>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
     <div class="flex justify-between border-b border-gray-100 dark:border-gray-800/50 pb-2"><span class="text-gray-500 dark:text-gray-400">流量策略</span><span class="font-medium">{{ .instance.TrafficStrategy }}</span></div>
@@ -191,7 +191,7 @@
 </div>
 
 <!-- Operation History -->
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
   <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
     <h2 class="text-lg font-bold text-gray-900 dark:text-white">操作历史</h2>
   </div>

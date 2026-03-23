@@ -1,19 +1,19 @@
-{{ define "title" }}CSV 导入 - ECS Monitor{{ end }}
+{{ define "title" }}CSV 导入 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">CSV 批量导入</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">上传 CSV 文件批量导入实例。已存在的 Instance ID 会自动更新，新实例会被创建。</p>
 
     {{ if .error }}
-    <div class="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
+    <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
     {{ end }}
     {{ if .flash }}
-    <div class="rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
+    <div class="rounded-xl border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
     {{ end }}
 
     <form method="POST" enctype="multipart/form-data" class="space-y-4">
-      <div class="rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
+      <div class="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
         <input type="file" name="file" accept=".csv" required
           class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-900 file:text-white dark:file:bg-blue-600 hover:file:bg-gray-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">支持从「导出 CSV」生成的文件直接导回</p>
@@ -24,7 +24,7 @@
       </button>
     </form>
 
-    <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-4">
+    <div class="mt-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-4">
       <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">CSV 格式说明</h2>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">首行为表头，至少需要 <code class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-200">instance_id</code> 列。导出的 CSV 可直接导入。</p>
       <div class="overflow-x-auto">

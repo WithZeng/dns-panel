@@ -1,11 +1,11 @@
-{{ define "title" }}操作日志 - ECS Monitor{{ end }}
+{{ define "title" }}操作日志 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-xl font-bold">操作日志</h1>
     <span class="text-sm text-gray-500">共 {{ .total }} 条</span>
 </div>
 
-<div class="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+<div class="bg-white dark:bg-gray-900 rounded-xl shadow overflow-hidden">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
@@ -19,7 +19,7 @@
             {{ range .logs }}
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                 <td class="px-4 py-3 text-gray-400 whitespace-nowrap">{{ .Timestamp.Format "2006-01-02 15:04:05" }}</td>
-                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-800">{{ .Action }}</span></td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800">{{ .Action }}</span></td>
                 <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ .Detail }}</td>
                 <td class="px-4 py-3 text-gray-400">{{ .Operator }}</td>
             </tr>

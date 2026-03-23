@@ -1,11 +1,11 @@
-{{ define "title" }}导入数据库 - ECS Monitor{{ end }}
+{{ define "title" }}导入数据库 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">从数据库导入实例</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">上传 SQLite 数据库文件，自动导入其中的实例信息到当前面板。</p>
 
-    <div class="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-700 dark:text-blue-300 mb-6">
+    <div class="rounded-xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-700 dark:text-blue-300 mb-6">
       <div class="font-semibold mb-1">导入说明</div>
       <ul class="list-disc list-inside space-y-1 text-xs leading-5">
         <li>仅导入实例数据（AK/SK、流量、配置等），<strong>不会更改面板密码</strong></li>
@@ -16,22 +16,22 @@
     </div>
 
     {{ if .error }}
-    <div class="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
+    <div class="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 mb-4">{{ .error }}</div>
     {{ end }}
     {{ if .flash }}
-    <div class="rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
+    <div class="rounded-xl border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-4 text-sm text-green-700 dark:text-green-300 mb-4">{{ .flash }}</div>
     {{ end }}
 
     <form method="POST" enctype="multipart/form-data">
       <div class="space-y-4">
-        <div class="rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
+        <div class="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 p-8 text-center transition hover:border-blue-400 dark:hover:border-blue-500">
           <input type="file" name="db_file" accept=".db,.sqlite,.sqlite3,.bak" required
             class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-900 file:text-white dark:file:bg-blue-600 hover:file:bg-gray-800 dark:hover:file:bg-blue-700 file:cursor-pointer file:transition">
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">支持任意 SQLite 数据库文件</p>
         </div>
 
         {{ if .need_fernet }}
-        <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
           <div class="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">检测到 Python 版加密凭据（{{ .instance_count }} 个实例）</div>
           <p class="text-xs text-amber-600 dark:text-amber-400 mb-3">请输入旧版 ENCRYPT_KEY 以转换凭据。密钥在旧面板的 <code>.env</code> 或 <code>instance/encrypt.key</code> 中。</p>
           <input type="text" name="fernet_key" placeholder="Fernet 密钥（留空则跳过凭据）"
@@ -42,7 +42,7 @@
           </label>
         </div>
         {{ else }}
-        <details class="rounded-lg border border-gray-200 dark:border-gray-700">
+        <details class="rounded-xl border border-gray-200 dark:border-gray-700">
           <summary class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition">
             从 Python 版导入？点击展开填写旧版加密密钥
           </summary>

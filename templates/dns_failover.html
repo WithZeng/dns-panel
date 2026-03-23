@@ -1,7 +1,7 @@
-{{ define "title" }}DNS 故障转移 - ECS Monitor{{ end }}
+{{ define "title" }}DNS 故障转移 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="space-y-5">
-  <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4 sm:px-6 sm:py-5">
+  <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4 sm:px-6 sm:py-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">DNS 故障转移管理</h1>
@@ -16,7 +16,7 @@
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
     <div class="xl:col-span-2 space-y-5">
       <!-- Cloudflare Config -->
-      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Cloudflare 配置</h2>
         <form method="POST" action="/dns_failover/cf_config" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="sm:col-span-2">
@@ -44,7 +44,7 @@
       </section>
 
       <!-- New Rule -->
-      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">新增规则</h2>
         <form method="POST" action="/dns_failover/rules" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -74,14 +74,14 @@
       </section>
 
       <!-- Rule List -->
-      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
         <div class="flex items-center justify-between gap-2 mb-3">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">规则列表</h2>
           <span class="text-xs text-gray-500 dark:text-gray-400">共 {{ len .rules }} 条</span>
         </div>
         <div class="space-y-3">
           {{ range .rules }}
-          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ .Domain }}</div>
@@ -112,7 +112,7 @@
             </div>
           </div>
           {{ else }}
-          <div class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">暂无规则，先创建一条用于自动故障切换。</div>
+          <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">暂无规则，先创建一条用于自动故障切换。</div>
           {{ end }}
         </div>
       </section>
@@ -120,11 +120,11 @@
 
     <!-- Right Column: Logs -->
     <div class="space-y-5">
-      <section class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">切换日志</h2>
         <div class="space-y-2 max-h-[760px] overflow-auto">
           {{ range .logs }}
-          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
             <div class="text-xs text-gray-500 dark:text-gray-400">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
             <div class="text-sm mt-1 break-words">[{{ .Action }}] {{ .Message }}</div>
           </div>
@@ -139,7 +139,7 @@
 
 <!-- Switch Modal -->
 <div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 p-4">
-  <div class="w-full max-w-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+  <div class="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">手动切换 DNS</h3>
     <p id="switchDomain" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
     <select id="switchTargetSelect" class="w-full mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">

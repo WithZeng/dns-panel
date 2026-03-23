@@ -1,7 +1,7 @@
-{{ define "title" }}账号文本导入 - ECS Monitor{{ end }}
+{{ define "title" }}账号文本导入 - CloudPanel{{ end }}
 {{ define "content" }}
 <div class="mx-auto w-full max-w-4xl">
-  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">账号文本一键导入</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">粘贴阿里云账号信息文本，自动解析 AK/SK、发现实例并入库。</p>
 
@@ -27,7 +27,7 @@
       </div>
 
       <!-- GitHub Backup -->
-      <div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
         <label class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
           <input type="checkbox" name="github_sync" value="1" id="ghSyncToggle"
             {{ if .github_repo }}checked{{ end }}
@@ -57,7 +57,7 @@
     </form>
 
     <div id="import-progress-wrap" class="mt-6 {{ if not .job_id }}hidden{{ end }}">
-      <div class="rounded-lg border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 p-4">
+      <div class="rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="text-sm font-semibold text-indigo-700 dark:text-indigo-300">导入进度</div>
@@ -69,7 +69,7 @@
           <div id="import-progress-bar" class="h-2 bg-indigo-500 rounded-full transition-all" style="width: 0%"></div>
         </div>
         <div id="import-progress-message" class="text-xs text-gray-600 dark:text-gray-300 mt-2">任务已创建，等待执行...</div>
-        <div id="import-progress-error" class="mt-3 hidden rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400 leading-5"></div>
+        <div id="import-progress-error" class="mt-3 hidden rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400 leading-5"></div>
       </div>
     </div>
 
@@ -78,13 +78,13 @@
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white">导入结果</h2>
       {{ $r := .result }}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-        <div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">账号标识：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "account_slug" }}</span></div>
-        <div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">发现实例：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "discovered_count" }}</span></div>
-        <div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">新增：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "imported_count" }}</span></div>
-        <div class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">更新：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "updated_count" }}</span></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">账号标识：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "account_slug" }}</span></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">发现实例：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "discovered_count" }}</span></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">新增：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "imported_count" }}</span></div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">更新：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "updated_count" }}</span></div>
       </div>
       {{ if index $r "sync_target" }}
-      <div class="rounded-lg border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
+      <div class="rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
         已同步到 GitHub：<a href="https://github.com/{{ index $r "sync_target" }}" target="_blank" class="underline font-mono text-xs">{{ index $r "sync_target" }}</a>
       </div>
       {{ end }}
