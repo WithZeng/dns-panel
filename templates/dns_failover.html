@@ -1,135 +1,282 @@
 {{ define "title" }}DNS 故障转移 - CloudPanel{{ end }}
 {{ define "content" }}
-<div class="space-y-5">
-  <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4 sm:px-6 sm:py-5">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">DNS 故障转移管理</h1>
-        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">自动检测并切换 DNS 记录，保证服务高可用</p>
+<style>
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .anim-in { animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-in-d1 { animation-delay: 0.06s; }
+  .anim-in-d2 { animation-delay: 0.12s; }
+  .anim-in-d3 { animation-delay: 0.18s; }
+  .anim-in-d4 { animation-delay: 0.24s; }
+
+  .csel-trigger { position: relative; cursor: pointer; user-select: none; }
+  .csel-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40; max-height: 0; opacity: 0; overflow: hidden; border-radius: 0.75rem; border: 1px solid transparent; background: white; box-shadow: 0 10px 40px -8px rgba(0,0,0,.12), 0 4px 12px -4px rgba(0,0,0,.06); transition: max-height 0.3s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease, border-color 0.2s ease; }
+  .dark .csel-menu { background: #111827; box-shadow: 0 10px 40px -8px rgba(0,0,0,.5); }
+  .csel-menu.open { max-height: 320px; opacity: 1; overflow-y: auto; border-color: rgb(229 231 235); }
+  .dark .csel-menu.open { border-color: rgb(55 65 81); }
+  .csel-menu::-webkit-scrollbar { width: 5px; }
+  .csel-menu::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 9px; }
+  .dark .csel-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); }
+  .csel-opt { padding: 8px 14px; font-size: 13px; cursor: pointer; transition: background 0.15s, color 0.15s; display: flex; align-items: center; gap: 10px; }
+  .csel-opt:hover { background: rgb(238 242 255); }
+  .dark .csel-opt:hover { background: rgb(30 27 75 / 0.4); }
+  .csel-opt.active { background: rgb(224 231 255); color: rgb(67 56 202); font-weight: 600; }
+  .dark .csel-opt.active { background: rgb(49 46 129 / 0.4); color: rgb(165 180 252); }
+
+  .srv-card { transition: all 0.2s cubic-bezier(0.22,1,0.36,1); }
+  .srv-card:hover { transform: translateY(-1px); }
+  .srv-card.selected { border-color: rgb(99 102 241); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+  .dark .srv-card.selected { border-color: rgb(129 140 248); box-shadow: 0 0 0 2px rgba(129,140,248,0.2); }
+  .srv-card .check-mark { opacity: 0; transform: scale(0.5); transition: all 0.2s; }
+  .srv-card.selected .check-mark { opacity: 1; transform: scale(1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anim-in, .anim-in-d1, .anim-in-d2, .anim-in-d3, .anim-in-d4 { animation: none; opacity: 1; transform: none; }
+    .csel-menu { transition: none; }
+    .srv-card { transition: none; }
+  }
+</style>
+<div class="space-y-6">
+  <!-- Hero header -->
+  <section class="anim-in relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-transparent dark:from-indigo-500/15 dark:via-violet-500/10"></div>
+    <div class="relative px-4 py-6 sm:px-8 sm:py-8">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-start gap-4">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 ring-4 ring-indigo-500/10 dark:ring-indigo-400/10">
+            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">DNS 故障转移管理</h1>
+            <p class="mt-1.5 max-w-xl text-sm text-gray-500 dark:text-gray-400">自动检测并切换 DNS 记录，保证服务高可用</p>
+          </div>
+        </div>
+        <a href="/checker_deploy" class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur-sm transition hover:border-indigo-200 hover:bg-indigo-50/80 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/30 hover:shadow-md min-h-[44px]">
+          <span class="text-base">🚀</span> 部署测试机
+        </a>
       </div>
-      <a href="/checker_deploy" class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition">🚀 部署测试机</a>
     </div>
   </section>
 
   <div id="pageHint" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
 
-  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-    <div class="xl:col-span-2 space-y-5">
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+    <div class="xl:col-span-2 space-y-6">
       <!-- Cloudflare Config -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Cloudflare 配置</h2>
-        <form method="POST" action="/dns_failover/cf_config" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="sm:col-span-2">
-            <label class="text-xs text-gray-500 dark:text-gray-400">API Token（留空则不修改）</label>
-            <input name="api_token" type="password" placeholder="CF 令牌" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">建议只给 Zone.DNS.Edit 权限。</p>
+      <section class="anim-in anim-in-d1 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow hover:shadow-md">
+        <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800/80 bg-gradient-to-r from-sky-500/5 to-transparent dark:from-sky-500/10 px-5 py-4">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" /></svg>
           </div>
           <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">Zone ID</label>
-            <input name="zone_id" value="{{ .cf_config.ZoneID }}" placeholder="84fffdbe84f52b455a..." class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Cloudflare 配置</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">API 与 Zone 设置</p>
           </div>
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">默认域名</label>
-            <input name="domain" value="{{ .cf_config.Domain }}" placeholder="test.example.com" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-          </div>
-          <div class="sm:col-span-2">
-            <label class="text-xs text-gray-500 dark:text-gray-400">国内测试机 IP（checker 模式）</label>
-            <input id="testerIpInput" name="tester_ip" value="{{ .cf_config.TesterIP }}" placeholder="例如：1.1.1.1" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">该机器需已部署 checker，确保面板机能访问 <code>http://测试机IP:8888/ping</code>。</p>
-          </div>
-          <div class="sm:col-span-2 flex justify-end">
-            <button type="submit" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">保存配置</button>
-          </div>
-        </form>
+        </div>
+        <div class="p-5 sm:p-6">
+          <form method="POST" action="/dns_failover/cf_config" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400">API Token（留空则不修改）</label>
+              <input name="api_token" type="password" placeholder="CF 令牌" class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+              <p class="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">建议只给 Zone.DNS.Edit 权限。</p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Zone ID</label>
+              <input name="zone_id" value="{{ .cf_config.ZoneID }}" placeholder="84fffdbe84f52b455a..." class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400">默认域名</label>
+              <input name="domain" value="{{ .cf_config.Domain }}" placeholder="test.example.com" class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400">国内测试机 IP（checker 模式）</label>
+              <input id="testerIpInput" name="tester_ip" value="{{ .cf_config.TesterIP }}" placeholder="例如：1.1.1.1" class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+              <p class="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">该机器需已部署 checker，确保面板机能访问 <code class="rounded bg-gray-100 dark:bg-gray-800 px-1 py-0.5 text-[10px]">http://测试机IP:8888/ping</code>。</p>
+            </div>
+            <div class="sm:col-span-2 flex justify-end pt-1">
+              <button type="submit" class="rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm px-5 py-2.5 text-sm font-medium min-h-[44px] transition-colors duration-200">保存配置</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- New Rule -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">新增规则</h2>
-        <form method="POST" action="/dns_failover/rules" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">域名</label>
-            <input name="domain" required class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+      <section class="anim-in anim-in-d2 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow hover:shadow-md">
+        <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800/80 bg-gradient-to-r from-violet-500/5 to-transparent dark:from-violet-500/10 px-5 py-4">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
           </div>
           <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">检查间隔（分钟）</label>
-            <input name="check_interval_minutes" type="number" value="10" min="1" class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">新增规则</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">域名、间隔与主备机</p>
           </div>
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">主用服务器</label>
-            <select name="primary_server_id" required class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
-              {{ range .instances }}<option value="{{ .ID }}">{{ .Name }} ({{ .PublicIP }})</option>{{ end }}
-            </select>
-          </div>
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">备用服务器（多选）</label>
-            <select name="backup_server_ids[]" multiple class="w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm min-h-[100px]">
-              {{ range .instances }}<option value="{{ .ID }}">{{ .Name }} ({{ .PublicIP }})</option>{{ end }}
-            </select>
-          </div>
-          <div class="sm:col-span-2 flex justify-end">
-            <button type="submit" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-4 py-2.5 text-sm min-h-[44px]">创建规则</button>
-          </div>
-        </form>
+        </div>
+        <div class="p-5 sm:p-6">
+          <form id="ruleForm" method="POST" action="/dns_failover/rules" class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">域名</label>
+                <input name="domain" required class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">检查间隔（分钟）</label>
+                <input name="check_interval_minutes" type="number" value="10" min="1" class="w-full mt-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white transition focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none">
+              </div>
+            </div>
+
+            <!-- Primary Server (custom dropdown) -->
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">主用服务器</label>
+              <div class="relative" id="primaryDropdown">
+                <div id="primaryTrigger" class="csel-trigger flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-3 pr-3 py-2.5 text-sm text-gray-900 dark:text-white shadow-sm hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200">
+                  <span id="primaryLabel" class="truncate text-gray-400">请选择主用服务器</span>
+                  <svg id="primaryChevron" class="h-4 w-4 text-gray-400 shrink-0 ml-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </div>
+                <div id="primaryMenu" class="csel-menu">
+                  {{ range .instances }}
+                  <div class="csel-opt" data-value="{{ .ID }}" data-name="{{ .Name }}" data-ip="{{ .PublicIP }}" data-region="{{ .RegionID }}" data-status="{{ .Status }}">
+                    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                      {{ if eq .Status "Running" }}<span class="relative flex h-2.5 w-2.5 shrink-0"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span></span>
+                      {{ else }}<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600"></span>{{ end }}
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium truncate">{{ .Name }}</div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">{{ if .PublicIP }}{{ .PublicIP }}{{ else }}无 IP{{ end }} · {{ regionName .RegionID }}</div>
+                      </div>
+                    </div>
+                    <svg class="csel-check h-4 w-4 text-indigo-500 opacity-0 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                  </div>
+                  {{ end }}
+                </div>
+              </div>
+              <input type="hidden" name="primary_server_id" id="primaryValue" required>
+            </div>
+
+            <!-- Backup Servers (card grid) -->
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">备用服务器（点击选择，可多选）</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="backupGrid">
+                {{ range .instances }}
+                <div class="srv-card group relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 cursor-pointer shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600" data-id="{{ .ID }}">
+                  <div class="flex items-center gap-3">
+                    {{ if eq .Status "Running" }}
+                    <span class="relative flex h-3 w-3 shrink-0">
+                      <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40"></span>
+                      <span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/40"></span>
+                    </span>
+                    {{ else }}
+                    <span class="h-3 w-3 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                    {{ end }}
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ .Name }}</div>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400">{{ if .PublicIP }}{{ .PublicIP }}{{ else }}无 IP{{ end }}</span>
+                        <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[9px] font-medium text-gray-500 dark:text-gray-400">{{ regionName .RegionID }}</span>
+                      </div>
+                    </div>
+                    <div class="check-mark flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white shrink-0 shadow-sm">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    </div>
+                  </div>
+                </div>
+                {{ end }}
+              </div>
+              <div id="backupHiddenInputs"></div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button type="submit" class="rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm px-5 py-2.5 text-sm font-medium min-h-[44px] transition-colors duration-200">创建规则</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- Rule List -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
-        <div class="flex items-center justify-between gap-2 mb-3">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">规则列表</h2>
-          <span class="text-xs text-gray-500 dark:text-gray-400">共 {{ len .rules }} 条</span>
+      <section class="anim-in anim-in-d3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow hover:shadow-md">
+        <div class="flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800/80 bg-gradient-to-r from-emerald-500/5 to-transparent dark:from-emerald-500/10 px-5 py-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 4.5h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 4.5h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">规则列表</h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400">启用、手动切换与删除</p>
+            </div>
+          </div>
+          <span class="shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-400">共 {{ len .rules }} 条</span>
         </div>
-        <div class="space-y-3">
+        <div class="p-5 sm:p-6 space-y-4">
           {{ range .rules }}
-          <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div>
-                <div class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ .Domain }}</div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <div class="group rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 p-4 shadow-sm transition duration-200 hover:border-indigo-200/80 dark:hover:border-indigo-800/60 hover:shadow-md hover:bg-white dark:hover:bg-gray-900/80">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ .Domain }}</div>
+                  {{ if .Enabled }}
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-500/20">
+                    <span class="relative flex h-2 w-2"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span></span>
+                    启用
+                  </span>
+                  {{ else }}
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-200/80 dark:bg-gray-700 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-400/20 dark:ring-gray-500/30">
+                    <span class="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500"></span>
+                    禁用
+                  </span>
+                  {{ end }}
+                </div>
+                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                   主用: {{ if .PrimaryServer.Name }}{{ .PrimaryServer.Name }}{{ else }}ID:{{ .PrimaryServerID }}{{ end }}
-                  · 当前: {{ if .CurrentActiveServer }}{{ .CurrentActiveServer.Name }}{{ else }}-{{ end }}
-                  · 间隔: {{ .CheckIntervalMinutes }}分钟
+                  <span class="mx-1 text-gray-300 dark:text-gray-600">·</span>
+                  当前: {{ if .CurrentActiveServer }}{{ .CurrentActiveServer.Name }}{{ else }}-{{ end }}
+                  <span class="mx-1 text-gray-300 dark:text-gray-600">·</span>
+                  间隔: {{ .CheckIntervalMinutes }}分钟
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2">
-                {{ if .Enabled }}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                  <span class="h-2 w-2 rounded-full bg-emerald-500"></span>启用
-                </span>
-                {{ else }}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">
-                  <span class="h-2 w-2 rounded-full bg-gray-400"></span>禁用
-                </span>
-                {{ end }}
+              <div class="flex flex-wrap items-center gap-2 md:justify-end">
                 <form method="POST" action="/dns_failover/rules/{{ .ID }}/toggle" class="inline">
-                  <button type="submit" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm min-h-[40px]">{{ if .Enabled }}禁用{{ else }}启用{{ end }}</button>
+                  <button type="button" data-id="{{ .ID }}" class="js-toggle rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm min-h-[40px] font-medium text-gray-700 dark:text-gray-200 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40 hover:shadow">{{ if .Enabled }}禁用{{ else }}启用{{ end }}</button>
                 </form>
-                <button type="button" class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm min-h-[40px] js-manual-switch" data-id="{{ .ID }}" data-domain="{{ .Domain }}">手动切换</button>
+                <button type="button" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm min-h-[40px] font-medium text-gray-700 dark:text-gray-200 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40 hover:shadow js-manual-switch" data-id="{{ .ID }}" data-domain="{{ .Domain }}">手动切换</button>
                 <form method="POST" action="/dns_failover/rules/{{ .ID }}/delete" onsubmit="return confirm('确认删除该规则？')">
-                  <button type="submit" class="rounded-lg border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 px-3 py-2 text-sm min-h-[40px]">删除</button>
+                  <button type="submit" class="rounded-xl border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 px-3 py-2 text-sm min-h-[40px] font-medium shadow-sm transition hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-400">删除</button>
                 </form>
               </div>
             </div>
           </div>
           {{ else }}
-          <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">暂无规则，先创建一条用于自动故障切换。</div>
+          <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/20 p-10 text-center text-sm text-gray-500 dark:text-gray-400">暂无规则，先创建一条用于自动故障切换。</div>
           {{ end }}
         </div>
       </section>
     </div>
 
-    <!-- Right Column: Logs -->
-    <div class="space-y-5">
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">切换日志</h2>
-        <div class="space-y-2 max-h-[760px] overflow-auto">
+    <!-- Right Column: Logs (timeline) -->
+    <div class="space-y-6">
+      <section class="anim-in anim-in-d4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow hover:shadow-md xl:sticky xl:top-4">
+        <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800/80 bg-gradient-to-r from-amber-500/5 to-transparent dark:from-amber-500/10 px-5 py-4">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">切换日志</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">时间线视图</p>
+          </div>
+        </div>
+        <div class="p-5 sm:p-6 max-h-[760px] overflow-y-auto flex flex-col">
           {{ range .logs }}
-          <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-3">
-            <div class="text-xs text-gray-500 dark:text-gray-400">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</div>
-            <div class="text-sm mt-1 break-words">[{{ .Action }}] {{ .Message }}</div>
+          <div class="relative flex gap-3 pb-8 last:pb-0 last:[&_.timeline-connector]:hidden">
+            <div class="relative flex w-7 shrink-0 flex-col items-center pt-1">
+              <div class="timeline-connector absolute top-4 bottom-0 left-1/2 w-0.5 -translate-x-1/2 bg-gradient-to-b from-indigo-200 via-indigo-200/80 to-indigo-100/50 dark:from-indigo-800 dark:via-indigo-800/80 dark:to-transparent"></div>
+              <div class="relative z-[1] flex h-3 w-3 shrink-0 rounded-full bg-indigo-500 shadow-md shadow-indigo-500/30 ring-4 ring-indigo-500/15 dark:ring-indigo-400/25"></div>
+            </div>
+            <div class="min-w-0 flex-1 -mt-0.5 pb-1">
+              <time class="text-xs font-medium text-gray-500 dark:text-gray-400 tabular-nums">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</time>
+              <div class="mt-1.5 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 px-3 py-2.5 text-sm text-gray-800 dark:text-gray-200 shadow-sm break-words">
+                <span class="font-medium text-indigo-600 dark:text-indigo-400">[{{ .Action }}]</span>
+                {{ .Message }}
+              </div>
+            </div>
           </div>
           {{ else }}
-          <div class="text-sm text-gray-500 dark:text-gray-400">暂无日志</div>
+          <div class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">暂无日志</div>
           {{ end }}
         </div>
       </section>
@@ -138,18 +285,50 @@
 </div>
 
 <!-- Switch Modal -->
-<div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/40 p-4">
-  <div class="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">手动切换 DNS</h3>
-    <p id="switchDomain" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
-    <select id="switchTargetSelect" class="w-full mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm">
+<div id="switchModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 dark:bg-gray-950/60 backdrop-blur-sm p-4 transition-opacity">
+  <div class="w-full max-w-md rounded-2xl border border-gray-200/80 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-2xl shadow-indigo-500/10 dark:shadow-black/40 backdrop-blur-xl p-6 ring-1 ring-black/5 dark:ring-white/10">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">手动切换 DNS</h3>
+    </div>
+    <p id="switchDomain" class="text-sm text-gray-500 dark:text-gray-400 mt-2 pl-[52px]"></p>
+
+    <!-- Switch modal server cards -->
+    <div id="switchServerGrid" class="mt-4 grid grid-cols-1 gap-2 max-h-[240px] overflow-y-auto">
+      {{ range .instances }}
+      <div class="srv-card rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 cursor-pointer shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600" data-id="{{ .ID }}">
+        <div class="flex items-center gap-3">
+          {{ if eq .Status "Running" }}
+          <span class="relative flex h-3 w-3 shrink-0"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40"></span><span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/40"></span></span>
+          {{ else }}
+          <span class="h-3 w-3 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+          {{ end }}
+          <div class="min-w-0 flex-1">
+            <div class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ .Name }}</div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400">{{ if .PublicIP }}{{ .PublicIP }}{{ else }}无 IP{{ end }}</span>
+              <span class="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[9px] font-medium text-gray-500 dark:text-gray-400">{{ regionName .RegionID }}</span>
+            </div>
+          </div>
+          <div class="check-mark flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white shrink-0 shadow-sm">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+
+    <select id="switchTargetSelect" class="hidden">
       {{ range .instances }}
       <option value="{{ .ID }}">{{ .Name }} ({{ if .PublicIP }}{{ .PublicIP }}{{ else }}无 IP{{ end }})</option>
       {{ end }}
     </select>
-    <div class="flex justify-end gap-2 mt-4">
-      <button id="closeSwitchModal" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm">取消</button>
-      <button id="confirmSwitch" class="rounded-lg bg-gray-900 dark:bg-blue-600 text-white px-3 py-2 text-sm">确认切换</button>
+
+    <div class="flex justify-end gap-3 mt-6">
+      <button id="closeSwitchModal" type="button" class="rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm transition hover:bg-gray-50 dark:hover:bg-gray-700">取消</button>
+      <button id="confirmSwitch" type="button" class="rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm px-4 py-2.5 text-sm font-medium transition-colors duration-200">确认切换</button>
     </div>
   </div>
 </div>
@@ -170,6 +349,99 @@
     setTimeout(function() { pageHint.classList.add('hidden'); }, 2400);
   }
 
+  // --- Primary server custom dropdown ---
+  var primaryTrigger = document.getElementById('primaryTrigger');
+  var primaryMenu = document.getElementById('primaryMenu');
+  var primaryLabel = document.getElementById('primaryLabel');
+  var primaryChevron = document.getElementById('primaryChevron');
+  var primaryValue = document.getElementById('primaryValue');
+
+  function openPrimary() {
+    primaryMenu.classList.add('open');
+    primaryChevron.style.transform = 'rotate(180deg)';
+    primaryTrigger.style.borderColor = 'rgb(99 102 241 / 0.5)';
+    primaryTrigger.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)';
+  }
+  function closePrimary() {
+    primaryMenu.classList.remove('open');
+    primaryChevron.style.transform = '';
+    primaryTrigger.style.borderColor = '';
+    primaryTrigger.style.boxShadow = '';
+  }
+
+  primaryTrigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    primaryMenu.classList.contains('open') ? closePrimary() : openPrimary();
+  });
+
+  primaryMenu.addEventListener('click', function(e) {
+    var opt = e.target.closest('.csel-opt');
+    if (!opt) return;
+    var val = opt.dataset.value;
+    primaryValue.value = val;
+    primaryLabel.textContent = opt.dataset.name + ' (' + (opt.dataset.ip || '无 IP') + ')';
+    primaryLabel.classList.remove('text-gray-400');
+    primaryMenu.querySelectorAll('.csel-opt').forEach(function(el) {
+      var isActive = el.dataset.value === val;
+      el.classList.toggle('active', isActive);
+      var ck = el.querySelector('.csel-check');
+      if (ck) ck.style.opacity = isActive ? '1' : '0';
+    });
+    closePrimary();
+  });
+
+  // --- Backup servers card grid ---
+  var backupGrid = document.getElementById('backupGrid');
+  var backupHidden = document.getElementById('backupHiddenInputs');
+  var selectedBackups = {};
+
+  backupGrid.addEventListener('click', function(e) {
+    var card = e.target.closest('.srv-card');
+    if (!card) return;
+    var id = card.dataset.id;
+    if (selectedBackups[id]) {
+      delete selectedBackups[id];
+      card.classList.remove('selected');
+    } else {
+      selectedBackups[id] = true;
+      card.classList.add('selected');
+    }
+    syncBackupInputs();
+  });
+
+  function syncBackupInputs() {
+    backupHidden.innerHTML = '';
+    Object.keys(selectedBackups).forEach(function(id) {
+      var inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'backup_server_ids[]';
+      inp.value = id;
+      backupHidden.appendChild(inp);
+    });
+  }
+
+  // --- Switch modal server cards ---
+  var switchServerGrid = document.getElementById('switchServerGrid');
+  var switchTargetSelect = document.getElementById('switchTargetSelect');
+  var switchSelectedId = null;
+
+  if (switchServerGrid) {
+    switchServerGrid.addEventListener('click', function(e) {
+      var card = e.target.closest('.srv-card');
+      if (!card) return;
+      switchSelectedId = card.dataset.id;
+      switchTargetSelect.value = switchSelectedId;
+      switchServerGrid.querySelectorAll('.srv-card').forEach(function(c) {
+        c.classList.toggle('selected', c.dataset.id === switchSelectedId);
+      });
+    });
+  }
+
+  // --- Close dropdowns on outside click ---
+  document.addEventListener('click', function(e) {
+    if (!primaryMenu.contains(e.target) && !primaryTrigger.contains(e.target)) closePrimary();
+  });
+
   // Toggle rules
   document.querySelectorAll('.js-toggle').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -183,7 +455,6 @@
   // Manual switch modal
   var switchModal = document.getElementById('switchModal');
   var switchDomain = document.getElementById('switchDomain');
-  var switchTargetSelect = document.getElementById('switchTargetSelect');
   var confirmSwitch = document.getElementById('confirmSwitch');
   var switchRuleId = null;
 
@@ -191,6 +462,8 @@
     btn.addEventListener('click', function() {
       switchRuleId = btn.dataset.id;
       switchDomain.textContent = '规则域名：' + btn.dataset.domain;
+      switchSelectedId = null;
+      if (switchServerGrid) switchServerGrid.querySelectorAll('.srv-card').forEach(function(c) { c.classList.remove('selected'); });
       switchModal.classList.remove('hidden');
       switchModal.classList.add('flex');
     });
@@ -205,11 +478,13 @@
 
   confirmSwitch.addEventListener('click', function() {
     if (!switchRuleId) return;
+    var targetId = switchSelectedId || switchTargetSelect.value;
+    if (!targetId) { showHint('error', '请选择目标服务器'); return; }
     confirmSwitch.disabled = true; confirmSwitch.textContent = '切换中...';
     fetch('/api/dns_failover/' + switchRuleId + '/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_server_id: Number(switchTargetSelect.value) })
+      body: JSON.stringify({ target_server_id: Number(targetId) })
     }).then(function(r) { return r.json(); }).then(function(data) {
       if (data.success) { showHint('success', data.message || '切换成功'); setTimeout(function() { location.reload(); }, 1200); }
       else { showHint('error', data.message || '切换失败'); }

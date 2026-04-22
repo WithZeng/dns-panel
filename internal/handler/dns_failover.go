@@ -33,6 +33,7 @@ func DNSFailoverPage(c *gin.Context) {
 		"instances": instances,
 		"logs":      logs,
 		"username":  c.GetString("username"),
+		"role":      c.GetString("role"),
 	})
 }
 

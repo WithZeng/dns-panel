@@ -3,10 +3,13 @@ package middleware
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/WithZeng/dns-panel/internal/database"
+	"github.com/WithZeng/dns-panel/internal/models"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -26,6 +29,18 @@ func AuthRequired() gin.HandlerFunc {
 		}
 		c.Set("user_id", userID)
 		c.Set("username", session.Get("username"))
+
+		var user models.User
+		role := "user"
+		if err := database.DB.Select("role").First(&user, userID).Error; err == nil && user.Role != "" {
+			role = user.Role
+		}
+		sessionRole, _ := session.Get("role").(string)
+		if sessionRole != role {
+			session.Set("role", role)
+			session.Save()
+		}
+		c.Set("role", role)
 		c.Next()
 	}
 }
@@ -97,6 +112,54 @@ func RateLimit(maxRequests int, window time.Duration) gin.HandlerFunc {
 
 		if count > maxRequests {
 			c.JSON(http.StatusTooManyRequests, gin.H{"success": false, "message": "请求过于频繁，请稍后再试"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := c.GetString("role")
+		if role != "admin" {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "权限不足"})
+			} else {
+				c.Redirect(http.StatusFound, "/dashboard")
+			}
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func InstanceAccessRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := c.GetString("role")
+		if role == "admin" {
+			c.Next()
+			return
+		}
+		idStr := c.Param("id")
+		instanceID, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "无效的实例ID"})
+			c.Abort()
+			return
+		}
+		userID, _ := c.Get("user_id")
+		var count int64
+		database.DB.Model(&models.UserInstance{}).
+			Where("user_id = ? AND instance_id = ?", userID, instanceID).
+			Count(&count)
+		if count == 0 {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "无权访问该实例"})
+			} else {
+				c.Redirect(http.StatusFound, "/dashboard")
+			}
 			c.Abort()
 			return
 		}

@@ -1,0 +1,175 @@
+{{ define "title" }}帮助 - CloudPanel{{ end }}
+{{ define "content" }}
+<div class="flex items-center gap-3 mb-6">
+  <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shadow-amber-500/25">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+  </div>
+  <div>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">帮助中心</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">功能说明与常见问题</p>
+  </div>
+</div>
+
+<div class="space-y-4">
+  <!-- Section: Instance Details -->
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden" open>
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 shrink-0">
+        <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white flex-1">查看实例详情</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <p>在仪表盘页面点击任意实例卡片即可进入实例详情页。详情页展示以下信息：</p>
+      <ul class="mt-2 space-y-1.5 ml-4 list-disc">
+        <li>实例基本信息（名称、IP 地址、区域、规格等）</li>
+        <li>实时运行状态</li>
+        <li>流量使用情况与趋势图表</li>
+        <li>告警阈值配置</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- Section: Security Groups -->
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 shrink-0">
+        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white flex-1">管理安全组规则（端口）</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <p>在实例详情页点击「安全组」按钮进入安全组管理页面，您可以：</p>
+      <ul class="mt-2 space-y-1.5 ml-4 list-disc">
+        <li><strong>添加规则</strong> — 指定端口范围、协议（TCP/UDP）和授权 IP 段来开放端口</li>
+        <li><strong>删除规则</strong> — 移除不再需要的安全组规则</li>
+        <li>常用端口快捷添加：SSH (22)、HTTP (80)、HTTPS (443) 等</li>
+      </ul>
+      <p class="mt-3 text-xs text-amber-600 dark:text-amber-400">注意：修改安全组规则会立即生效，请谨慎操作。</p>
+    </div>
+  </details>
+
+  <!-- Section: VNC -->
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-500/10 shrink-0">
+        <svg class="w-4 h-4 text-violet-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/></svg>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white flex-1">使用 VNC 远程连接</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <p>在实例详情页点击「VNC」按钮，系统将生成一个临时 VNC 连接链接并在新窗口中打开。</p>
+      <ul class="mt-2 space-y-1.5 ml-4 list-disc">
+        <li>VNC 连接链接有效期较短，过期后需重新获取</li>
+        <li>通过 VNC 可以直接操作实例的控制台，适用于 SSH 无法连接时的紧急维护</li>
+        <li>建议使用 Chrome 或 Firefox 浏览器以获得最佳体验</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- Section: Reinstall System -->
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 dark:bg-red-500/10 shrink-0">
+        <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.182"/></svg>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white flex-1">重装系统</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <p>在实例详情页点击「重装系统」按钮，选择目标镜像后确认即可开始重装。</p>
+      <ul class="mt-2 space-y-1.5 ml-4 list-disc">
+        <li>重装系统会<strong>清除实例上的所有数据</strong>，请提前备份重要文件</li>
+        <li>重装过程中实例将暂时不可用，通常需要 3-10 分钟</li>
+        <li>重装完成后需要重新设置密码才能登录</li>
+      </ul>
+      <p class="mt-3 text-xs text-red-600 dark:text-red-400">警告：此操作不可逆，请确认已备份所有重要数据。</p>
+    </div>
+  </details>
+
+  <!-- Section: Notes & Alert Threshold -->
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-500/10 shrink-0">
+        <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-white flex-1">修改备注与告警阈值</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <ul class="space-y-1.5 ml-4 list-disc">
+        <li><strong>修改备注</strong> — 在实例详情页的备注区域直接编辑，用于标记实例用途或其他说明</li>
+        <li><strong>告警阈值</strong> — 在流量设置中调整告警百分比，当流量使用达到该比例时触发告警通知</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- FAQ Section -->
+  <div class="mt-8 mb-2">
+    <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <svg class="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+      常见问题
+    </h2>
+  </div>
+
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <span class="text-sm font-medium text-gray-900 dark:text-white flex-1">为什么我无法启动或停止实例？</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      实例的启动、停止和重启操作仅限管理员执行。如果您需要进行这些操作，请联系管理员。
+    </div>
+  </details>
+
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <span class="text-sm font-medium text-gray-900 dark:text-white flex-1">为什么我看不到某些实例？</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      普通用户只能查看管理员分配给您的实例。如果您需要访问其他实例，请联系管理员进行授权。
+    </div>
+  </details>
+
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <span class="text-sm font-medium text-gray-900 dark:text-white flex-1">流量告警是如何触发的？</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      当实例的流量使用量达到设定的告警阈值百分比时，系统会通过 Telegram Bot 发送通知。您可以在实例详情页的流量设置中调整告警阈值。
+    </div>
+  </details>
+
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <span class="text-sm font-medium text-gray-900 dark:text-white flex-1">如何修改登录密码？</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      点击左下角用户头像，在弹出菜单中选择「修改密码」。输入当前密码和新密码后提交即可。新密码至少需要 6 个字符。
+    </div>
+  </details>
+
+  <details class="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <summary class="flex items-center gap-3 px-6 py-4 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+      <span class="text-sm font-medium text-gray-900 dark:text-white flex-1">VNC 连接打不开怎么办？</span>
+      <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+    </summary>
+    <div class="px-6 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800/60 pt-4">
+      <ul class="space-y-1.5 ml-4 list-disc">
+        <li>确认实例处于「运行中」状态</li>
+        <li>检查浏览器是否阻止了弹出窗口</li>
+        <li>VNC 链接有效期较短，如果超时请重新点击「VNC」按钮获取新链接</li>
+        <li>建议使用 Chrome 或 Firefox 浏览器</li>
+      </ul>
+    </div>
+  </details>
+</div>
+{{ end }}
+
+{{ template "base" . }}

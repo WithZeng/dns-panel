@@ -19,7 +19,10 @@ import (
 )
 
 func RestorePage(c *gin.Context) {
-	data := gin.H{"username": c.GetString("username")}
+	data := gin.H{
+		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
+	}
 	if f := c.Query("flash"); f != "" {
 		data["flash"] = f
 	}
@@ -32,6 +35,7 @@ func RestorePage(c *gin.Context) {
 func RestoreDBPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "restore_db.html", gin.H{
 		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
 	})
 }
 
@@ -54,7 +58,10 @@ func RestoreDBPost(c *gin.Context) {
 			}
 			return
 		}
-		data := gin.H{"username": username}
+		data := gin.H{
+			"username": username,
+			"role":     c.GetString("role"),
+		}
 		if errMsg != "" {
 			data["error"] = errMsg
 		}
@@ -130,7 +137,7 @@ func RestoreDBPost(c *gin.Context) {
 		IPv6Addr            string  `gorm:"column:ipv6_addr"`
 		AutoStopEnabled     bool    `gorm:"column:auto_stop_enabled"`
 		AutoStartEnabled    bool    `gorm:"column:auto_start_enabled"`
-		MonitorEnabled      bool    `gorm:"column:monitoring_enabled"`
+		MonitorEnabled      bool    `gorm:"column:monitor_enabled"`
 	}
 
 	var srcInstances []srcInstance
@@ -159,6 +166,7 @@ func RestoreDBPost(c *gin.Context) {
 		}
 		c.HTML(http.StatusOK, "restore_db.html", gin.H{
 			"username":       username,
+			"role":           c.GetString("role"),
 			"need_fernet":    true,
 			"instance_count": len(srcInstances),
 		})

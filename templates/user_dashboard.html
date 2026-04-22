@@ -1,0 +1,124 @@
+{{ define "title" }}我的实例 - CloudPanel{{ end }}
+{{ define "content" }}
+<div class="mb-4">
+  <h1 class="text-xl font-bold text-gray-900 dark:text-white">我的实例</h1>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">共 {{ .total }} 台实例 · 运行中 {{ .online }} · 已停止 {{ .stopped }}</p>
+</div>
+
+{{ if eq .total 0 }}
+<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-6 py-20 flex flex-col items-center justify-center">
+  <div class="relative mb-6">
+    <div class="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-indigo-50 dark:from-emerald-500/10 dark:to-indigo-500/10 border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
+      <svg class="w-10 h-10 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="1.25" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7"/>
+      </svg>
+    </div>
+  </div>
+  <h3 class="text-base font-semibold text-gray-900 dark:text-white">暂无分配的实例</h3>
+  <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">请联系管理员为您分配 ECS 实例。</p>
+</div>
+{{ else }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+  {{ range .instances }}
+  <div class="bg-white dark:bg-gray-900 border {{ if ne .CredentialStatus "ok" }}border-red-200 dark:border-red-500/20{{ else }}border-gray-200 dark:border-gray-800{{ end }} rounded-xl p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-start justify-between mb-3">
+      <div class="min-w-0 flex-1">
+        <a href="/instance/{{ .ID }}" class="text-sm font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition truncate block">{{ .Name }}</a>
+        <p class="text-[11px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 truncate">{{ .InstanceID }}</p>
+      </div>
+      {{ if ne .CredentialStatus "ok" }}
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 shrink-0 ml-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>异常
+      </span>
+      {{ else if or (eq .Status "Running") (eq .Status "Starting") }}
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>运行
+      </span>
+      {{ else if eq .Status "Stopped" }}
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 shrink-0 ml-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>停止
+      </span>
+      {{ else }}
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 shrink-0 ml-2">{{ .Status }}</span>
+      {{ end }}
+    </div>
+    {{ if ne .CredentialStatus "ok" }}
+    <div class="mb-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/15 px-3 py-2">
+      <div class="flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+        <span class="text-[11px] text-red-600 dark:text-red-400 leading-tight">{{ if .CredentialError }}{{ .CredentialError }}{{ else }}实例检测异常，可能已释放{{ end }}</span>
+      </div>
+    </div>
+    {{ end }}
+
+    <div class="grid grid-cols-2 gap-2 text-[11px] mb-3">
+      <div><span class="text-gray-400 dark:text-gray-500">地域</span> <span class="ml-1 text-gray-700 dark:text-gray-300">{{ regionName .RegionID }}</span></div>
+      <div><span class="text-gray-400 dark:text-gray-500">IP</span> <span class="ml-1 font-mono text-gray-700 dark:text-gray-300">{{ if .PublicIP }}{{ .PublicIP }}{{ else }}—{{ end }}</span></div>
+      {{ if .CPU }}<div><span class="text-gray-400 dark:text-gray-500">配置</span> <span class="ml-1 text-gray-700 dark:text-gray-300">{{ .CPU }}C / {{ .Memory }}G</span></div>{{ end }}
+      {{ if .Bandwidth }}<div><span class="text-gray-400 dark:text-gray-500">带宽</span> <span class="ml-1 text-gray-700 dark:text-gray-300">{{ .Bandwidth }}M</span></div>{{ end }}
+    </div>
+
+    <!-- Traffic bar -->
+    {{ if eq .TrafficStrategy "life" }}
+      {{ if gt .LifeTotalLimit 0.0 }}
+      <div class="mb-3">
+        <div class="flex items-center justify-between text-[10px] mb-1">
+          <span class="text-gray-500 dark:text-gray-400">周期流量 {{ printf "%.1f" .TotalTrafficSum }}/{{ printf "%.0f" .LifeTotalLimit }}G</span>
+          <span class="font-medium {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 80.0 }}text-red-600{{ else }}text-emerald-600{{ end }}">{{ printf "%.0f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%</span>
+        </div>
+        <div class="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div class="h-full rounded-full transition-all {{ if gt (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 80.0 }}bg-red-500{{ else }}bg-emerald-500{{ end }}" style="width: {{ printf "%.1f" (min (mul (div .TotalTrafficSum .LifeTotalLimit) 100.0) 100.0) }}%;"></div>
+        </div>
+      </div>
+      {{ end }}
+    {{ else }}
+      {{ if gt .MonthlyLimit 0.0 }}
+      <div class="mb-3">
+        <div class="flex items-center justify-between text-[10px] mb-1">
+          <span class="text-gray-500 dark:text-gray-400">月度流量 {{ printf "%.1f" .CurrentMonthTraffic }}/{{ printf "%.0f" .MonthlyLimit }}G</span>
+          <span class="font-medium {{ if gt (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 80.0 }}text-red-600{{ else }}text-blue-600{{ end }}">{{ printf "%.0f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%</span>
+        </div>
+        <div class="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div class="h-full rounded-full transition-all {{ if gt (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 80.0 }}bg-red-500{{ else }}bg-blue-500{{ end }}" style="width: {{ printf "%.1f" (min (mul (div .CurrentMonthTraffic .MonthlyLimit) 100.0) 100.0) }}%;"></div>
+        </div>
+      </div>
+      {{ end }}
+    {{ end }}
+
+    <div class="flex flex-wrap gap-1.5">
+      <a href="/instance/{{ .ID }}" class="inline-flex items-center px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">详情</a>
+      <a href="/instance/{{ .ID }}/security_groups" class="inline-flex items-center px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">端口</a>
+      <button onclick="openVnc({{ .ID }})" class="inline-flex items-center px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">VNC</button>
+      
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+function openVnc(id) {
+  fetch('/api/instance/' + id + '/vnc').then(function(r){return r.json()}).then(function(d) {
+    if (d.success && d.url) { window.open(d.url, '_blank'); }
+    else { showToast(d.message || 'VNC 连接失败', 'error'); }
+  }).catch(function(){ showToast('请求失败', 'error'); });
+}
+
+function showToast(msg, type) {
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  var colors = type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' :
+    'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20';
+  var el = document.createElement('div');
+  el.className = 'toast rounded-xl border px-4 py-2.5 text-sm ' + colors;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(function() { el.remove(); }, 350); }, 3000);
+}
+</script>
+{{ end }}
+
+{{ template "base" . }}

@@ -1,0 +1,14 @@
+---
+description: After editing templates or Go code, restart local dns-panel so the browser sees changes.
+globs: templates/**/*.html,**/*.go,main.go
+---
+
+# Local panel restart
+
+This project loads HTML templates at **process startup** (Go `html/template`). After any change to `templates/*.html` or Go source:
+
+1. **Default:** Run a restart on Windows from the repo root:
+   - `taskkill /F /IM dns-panel.exe 2>$null; Start-Sleep -Seconds 1; go build -o dns-panel.exe .; $env:PANEL_PORT="5000"; Start-Process -FilePath ".\dns-panel.exe" -WorkingDirectory (Get-Location) -NoNewWindow`
+2. If the user runs with `go run .` instead, stop that process and start it again with the same env vars they use.
+
+Do this **automatically** after finishing code edits unless the user explicitly says not to restart.

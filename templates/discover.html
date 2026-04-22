@@ -1,29 +1,102 @@
 {{ define "title" }}发现实例 - CloudPanel{{ end }}
 {{ define "content" }}
-<div class="mx-auto w-full max-w-2xl">
-  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">实例自动发现</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
+<style>
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .anim-in { animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-in-d1 { animation-delay: 0.06s; }
+  .anim-in-d2 { animation-delay: 0.12s; }
+  .anim-in-d3 { animation-delay: 0.18s; }
+  @keyframes scanPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35), 0 4px 14px -3px rgba(79, 70, 229, 0.25); }
+    50% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0), 0 6px 20px -4px rgba(16, 185, 129, 0.2); }
+  }
+  .btn-scan-pulse { animation: scanPulse 2.4s ease-in-out infinite; }
+  .csel-trigger { position: relative; cursor: pointer; user-select: none; }
+  .csel-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40; max-height: 0; opacity: 0; overflow: hidden; border-radius: 0.75rem; border: 1px solid transparent; background: white; box-shadow: 0 10px 40px -8px rgba(0,0,0,.12), 0 4px 12px -4px rgba(0,0,0,.06); transition: max-height 0.3s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease, border-color 0.2s ease; }
+  .dark .csel-menu { background: #111827; box-shadow: 0 10px 40px -8px rgba(0,0,0,.5); }
+  .csel-menu.open { max-height: 380px; opacity: 1; overflow-y: auto; border-color: rgb(229 231 235); }
+  .dark .csel-menu.open { border-color: rgb(55 65 81); }
+  .csel-menu::-webkit-scrollbar { width: 5px; }
+  .csel-menu::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 9px; }
+  .dark .csel-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); }
+  .csel-opt { padding: 8px 14px; font-size: 13px; cursor: pointer; transition: background 0.15s, color 0.15s; display: flex; align-items: center; gap: 10px; }
+  .csel-opt:hover { background: rgb(238 242 255); }
+  .dark .csel-opt:hover { background: rgb(30 27 75 / 0.4); }
+  .csel-opt.active { background: rgb(224 231 255); color: rgb(67 56 202); font-weight: 600; }
+  .dark .csel-opt.active { background: rgb(49 46 129 / 0.4); color: rgb(165 180 252); }
+  .csel-group { padding: 6px 14px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgb(156 163 175); pointer-events: none; }
+  .csel-search { position: sticky; top: 0; z-index: 1; padding: 10px 14px; background: inherit; border-bottom: 1px solid rgb(243 244 246); }
+  .dark .csel-search { border-bottom-color: rgb(31 41 55); }
+  @media (prefers-reduced-motion: reduce) {
+    .anim-in, .anim-in-d1, .anim-in-d2, .anim-in-d3 { animation: none; opacity: 1; transform: none; }
+    .btn-scan-pulse { animation: none; }
+    .discover-row { transition: none !important; }
+    .csel-menu { transition: none; }
+  }
+</style>
 
-    <form method="POST" class="space-y-4 mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="pb-8">
+  <!-- Hero -->
+  <div class="anim-in relative overflow-hidden rounded-2xl border border-indigo-200/60 dark:border-indigo-500/25 bg-gradient-to-br from-indigo-50 via-white to-emerald-50/80 dark:from-indigo-950/40 dark:via-gray-900 dark:to-emerald-950/30 px-6 py-7 sm:px-8 sm:py-8 mb-6 shadow-sm">
+    <div class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-400/10 dark:bg-indigo-400/5 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-12 -left-8 h-40 w-40 rounded-full bg-emerald-400/10 dark:bg-emerald-400/5 blur-3xl"></div>
+    <div class="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-5">
+      <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/90 dark:bg-gray-800/90 shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-500/20">
+        <svg class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+      </div>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">实例自动发现</h1>
+        <p class="mt-1.5 text-sm leading-relaxed text-gray-500 dark:text-gray-400 max-w-2xl">输入 AK/SK 扫描指定区域下的所有 ECS 实例。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form card -->
+  <div class="anim-in anim-in-d1 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+    <form method="POST" class="space-y-6 mb-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">AccessKey ID</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AccessKey ID</label>
           <input name="access_key_id" type="text" value="{{ .ak }}" required
-            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-gray-800/90 transition-all duration-200 text-sm shadow-sm">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">AccessKey Secret</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AccessKey Secret</label>
           <input name="access_key_secret" type="password" value="{{ .sk }}" required
-            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm">
+            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-gray-800/90 transition-all duration-200 text-sm shadow-sm">
         </div>
       </div>
 
-      <!-- Region Selector -->
-      <div class="relative">
-        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">区域 ID</label>
-        <select id="region_select"
-          class="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 pr-10 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+      <!-- Region Selector (custom dropdown) -->
+      <div class="relative rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-800/50 dark:to-gray-900/80 p-4 sm:p-5 shadow-sm">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
+          </span>
+          <label class="text-sm font-semibold text-gray-900 dark:text-white">区域 ID</label>
+        </div>
+
+        <!-- Custom select trigger -->
+        <div class="relative" id="regionDropdown">
+          <div id="regionTrigger" class="csel-trigger flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-4 pr-3 py-3 text-sm text-gray-900 dark:text-gray-100 shadow-sm hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200">
+            <span id="regionLabel" class="truncate">cn-hangzhou（杭州）</span>
+            <svg id="regionChevron" class="h-4 w-4 text-gray-400 shrink-0 ml-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+          </div>
+          <div id="regionMenu" class="csel-menu">
+            <div class="csel-search">
+              <input id="regionSearch" type="text" placeholder="搜索区域..." class="w-full bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none">
+            </div>
+            <div id="regionOptions"></div>
+          </div>
+        </div>
+
+        <input id="region_custom" type="text"
+          class="hidden mt-3 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all duration-200 text-sm shadow-sm"
+          placeholder="输入自定义 Region ID">
+        <input id="region_id" name="region_id" type="hidden" required value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}">
+
+        <!-- Keep original select hidden for data source -->
+        <select id="region_select" class="hidden">
           <optgroup label="华北">
             <option value="cn-beijing">cn-beijing（北京）</option>
             <option value="cn-zhangjiakou">cn-zhangjiakou（张家口）</option>
@@ -70,59 +143,56 @@
           </optgroup>
           <option value="__custom__">自定义输入...</option>
         </select>
-        <span class="pointer-events-none absolute right-3 top-[43px] text-gray-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.16l3.71-3.93a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
-        </span>
-        <input id="region_custom" type="text"
-          class="hidden mt-2 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-          placeholder="输入自定义 Region ID">
-        <input id="region_id" name="region_id" type="hidden" required value="{{ if .region_id }}{{ .region_id }}{{ else }}cn-hangzhou{{ end }}">
       </div>
 
       <button type="submit"
-        class="w-full bg-gray-900 dark:bg-indigo-600 text-white font-medium py-3 rounded-lg hover:bg-gray-800 dark:hover:bg-indigo-500 transition-colors shadow-sm">
-        🔍 扫描实例
+        class="btn-scan-pulse group relative w-full overflow-hidden bg-indigo-600 text-white font-semibold py-3.5 rounded-xl shadow-sm hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 transition-colors duration-200">
+        <span class="relative z-10 inline-flex items-center justify-center gap-2">
+          <svg class="h-5 w-5 opacity-90 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+          扫描实例
+        </span>
+        <span class="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
       </button>
     </form>
 
     {{ if .discovered }}
-    <div class="border-t border-gray-200 dark:border-gray-800 pt-5">
-      <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">发现 {{ len .discovered }} 个实例</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+    <div class="anim-in anim-in-d2 border-t border-gray-200 dark:border-gray-800 pt-8 mt-8">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-5">发现 {{ len .discovered }} 个实例</h2>
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/30 shadow-inner">
+        <table class="w-full text-sm min-w-[640px]">
           <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-gray-500 dark:text-gray-400">
-              <th class="py-2 pr-4">Instance ID</th>
-              <th class="py-2 pr-4">名称</th>
-              <th class="py-2 pr-4">IP 地址</th>
-              <th class="py-2 pr-4">状态</th>
-              <th class="py-2">操作</th>
+            <tr class="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+              <th class="py-3.5 px-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Instance ID</th>
+              <th class="py-3.5 px-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">名称</th>
+              <th class="py-3.5 px-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">IP 地址</th>
+              <th class="py-3.5 px-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">状态</th>
+              <th class="py-3.5 px-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">操作</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800/80">
             {{ range .discovered }}
-            <tr class="border-b border-gray-100 dark:border-gray-800/50">
-              <td class="py-2.5 pr-4 font-mono text-xs text-gray-600 dark:text-gray-300">{{ .InstanceID }}</td>
-              <td class="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{{ if .Name }}{{ .Name }}{{ else }}-{{ end }}</td>
-              <td class="py-2.5 pr-4">
-                <div class="text-[10px] font-mono text-gray-500">
+            <tr class="discover-row group border-b-0 bg-white/60 dark:bg-gray-900/40 transition-all duration-200 ease-out hover:bg-indigo-50/70 dark:hover:bg-gray-800/60 hover:shadow-sm hover:-translate-y-px">
+              <td class="py-3.5 px-4 font-mono text-xs text-gray-700 dark:text-gray-300">{{ .InstanceID }}</td>
+              <td class="py-3.5 px-4 text-gray-800 dark:text-gray-200">{{ if .Name }}{{ .Name }}{{ else }}-{{ end }}</td>
+              <td class="py-3.5 px-4">
+                <div class="text-[10px] font-mono text-gray-500 dark:text-gray-400">
                   {{ if .PublicIP }}<span class="text-blue-600 dark:text-blue-400">{{ .PublicIP }}</span>{{ end }}
                 </div>
               </td>
-              <td class="py-2.5 pr-4">
+              <td class="py-3.5 px-4">
                 {{ if eq .Status "Running" }}
-                <span class="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400">● Running</span>
+                <span class="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">● Running</span>
                 {{ else if eq .Status "Stopped" }}
-                <span class="inline-flex items-center text-xs font-medium text-red-500 dark:text-red-400">● Stopped</span>
+                <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">● Stopped</span>
                 {{ else }}
-                <span class="text-xs text-gray-400">{{ .Status }}</span>
+                <span class="inline-flex rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">{{ .Status }}</span>
                 {{ end }}
               </td>
-              <td class="py-2.5">
+              <td class="py-3.5 px-4">
                 {{ if .Added }}
                 <span class="text-xs text-gray-400 dark:text-gray-500">已添加</span>
                 {{ else }}
-                <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">+ 添加</a>
+                <a href="/instance/add?instance_id={{ .InstanceID }}&region_id={{ .RegionID }}&name={{ .Name }}" class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:underline transition-colors duration-200">+ 添加</a>
                 {{ end }}
               </td>
             </tr>
@@ -133,7 +203,7 @@
     </div>
     {{ end }}
 
-    <a href="/dashboard" class="block text-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm mt-4">&larr; 返回</a>
+    <a href="/dashboard" class="anim-in anim-in-d3 block text-center text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 mt-8 pt-2 transition-colors duration-200">&larr; 返回</a>
   </div>
 </div>
 {{ end }}
@@ -144,28 +214,134 @@
   var regionSelect = document.getElementById('region_select');
   var regionCustom = document.getElementById('region_custom');
   var regionHidden = document.getElementById('region_id');
+  var trigger = document.getElementById('regionTrigger');
+  var menu = document.getElementById('regionMenu');
+  var label = document.getElementById('regionLabel');
+  var chevron = document.getElementById('regionChevron');
+  var optionsWrap = document.getElementById('regionOptions');
+  var searchInput = document.getElementById('regionSearch');
 
+  var regionIcons = {
+    '华北': '🏔', '华东': '🌊', '华南': '🌴', '西南': '🏯',
+    '港澳台': '🏙', '亚太': '🌏', '欧洲与美洲': '🌍', '中东': '🏜'
+  };
+
+  function buildOptions() {
+    var html = '';
+    var groups = regionSelect.querySelectorAll('optgroup');
+    groups.forEach(function(g) {
+      var icon = regionIcons[g.label] || '📍';
+      html += '<div class="csel-group">' + icon + ' ' + g.label + '</div>';
+      g.querySelectorAll('option').forEach(function(o) {
+        html += '<div class="csel-opt" data-value="' + o.value + '">' +
+          '<span class="flex-1">' + o.textContent + '</span>' +
+          '<svg class="csel-check h-4 w-4 text-indigo-500 opacity-0 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>' +
+          '</div>';
+      });
+    });
+    var customOpt = regionSelect.querySelector('option[value="__custom__"]');
+    if (customOpt) {
+      html += '<div class="csel-opt" data-value="__custom__">' +
+        '<span class="flex-1">✏️ ' + customOpt.textContent + '</span>' +
+        '</div>';
+    }
+    optionsWrap.innerHTML = html;
+  }
+  buildOptions();
+
+  function setActive(val) {
+    optionsWrap.querySelectorAll('.csel-opt').forEach(function(el) {
+      var isActive = el.dataset.value === val;
+      el.classList.toggle('active', isActive);
+      var check = el.querySelector('.csel-check');
+      if (check) check.style.opacity = isActive ? '1' : '0';
+    });
+  }
+
+  function selectValue(val) {
+    if (val === '__custom__') {
+      regionCustom.classList.remove('hidden');
+      regionCustom.focus();
+      regionHidden.value = regionCustom.value;
+      label.textContent = '自定义输入...';
+    } else {
+      regionCustom.classList.add('hidden');
+      regionCustom.value = '';
+      regionHidden.value = val;
+      var opt = regionSelect.querySelector('option[value="' + val + '"]');
+      label.textContent = opt ? opt.textContent : val;
+    }
+    regionSelect.value = val;
+    setActive(val);
+    closeMenu();
+  }
+
+  function openMenu() {
+    menu.classList.add('open');
+    chevron.style.transform = 'rotate(180deg)';
+    trigger.style.borderColor = 'rgb(16 185 129 / 0.5)';
+    trigger.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.12)';
+    searchInput.value = '';
+    filterOptions('');
+    setTimeout(function() { searchInput.focus(); }, 50);
+  }
+
+  function closeMenu() {
+    menu.classList.remove('open');
+    chevron.style.transform = '';
+    trigger.style.borderColor = '';
+    trigger.style.boxShadow = '';
+  }
+
+  function isOpen() { return menu.classList.contains('open'); }
+
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    isOpen() ? closeMenu() : openMenu();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target) && e.target !== trigger && !trigger.contains(e.target)) closeMenu();
+  });
+
+  optionsWrap.addEventListener('click', function(e) {
+    var opt = e.target.closest('.csel-opt');
+    if (opt) selectValue(opt.dataset.value);
+  });
+
+  function filterOptions(q) {
+    q = q.toLowerCase();
+    optionsWrap.querySelectorAll('.csel-opt').forEach(function(el) {
+      el.style.display = (!q || el.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    });
+    optionsWrap.querySelectorAll('.csel-group').forEach(function(el) {
+      var next = el.nextElementSibling;
+      var hasVisible = false;
+      while (next && !next.classList.contains('csel-group')) {
+        if (next.style.display !== 'none') hasVisible = true;
+        next = next.nextElementSibling;
+      }
+      el.style.display = hasVisible ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', function() { filterOptions(this.value); });
+  searchInput.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  // Init from current value
   var currentRegion = regionHidden.value;
   var matchOption = regionSelect.querySelector('option[value="' + currentRegion + '"]');
   if (matchOption) {
     matchOption.selected = true;
+    label.textContent = matchOption.textContent;
+    setActive(currentRegion);
   } else if (currentRegion && currentRegion !== 'cn-hangzhou') {
     regionSelect.value = '__custom__';
     regionCustom.classList.remove('hidden');
     regionCustom.value = currentRegion;
+    label.textContent = '自定义: ' + currentRegion;
+    setActive('__custom__');
   }
-
-  regionSelect.addEventListener('change', function() {
-    if (this.value === '__custom__') {
-      regionCustom.classList.remove('hidden');
-      regionCustom.focus();
-      regionHidden.value = regionCustom.value;
-    } else {
-      regionCustom.classList.add('hidden');
-      regionCustom.value = '';
-      regionHidden.value = this.value;
-    }
-  });
 
   regionCustom.addEventListener('input', function() {
     regionHidden.value = this.value;

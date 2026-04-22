@@ -11,12 +11,24 @@ type User struct {
 	ID                  uint           `gorm:"primaryKey" json:"id"`
 	Username            string         `gorm:"uniqueIndex;size:150;not null" json:"username"`
 	PasswordHash        string         `gorm:"size:256;not null" json:"-"`
+	LoginToken          string         `gorm:"size:64;index;default:''" json:"-"`
+	Role                string         `gorm:"size:20;not null;default:'user'" json:"role"`
 	FailedLoginCount    int            `gorm:"default:0" json:"-"`
 	LockedUntil         *time.Time     `json:"-"`
 	ForcePasswordChange bool           `gorm:"default:false" json:"force_password_change"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+type UserInstance struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	UserID     uint      `gorm:"not null;index;uniqueIndex:idx_user_instance" json:"user_id"`
+	InstanceID uint      `gorm:"not null;index;uniqueIndex:idx_user_instance" json:"instance_id"`
+	CreatedAt  time.Time `json:"created_at"`
+
+	User     User        `gorm:"foreignKey:UserID" json:"-"`
+	Instance EcsInstance `gorm:"foreignKey:InstanceID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 type EcsInstance struct {
@@ -38,8 +50,9 @@ type EcsInstance struct {
 	LastAPITraffic     float64 `gorm:"default:0" json:"last_api_traffic"`
 	AlertThresholdPct  int     `gorm:"default:80" json:"alert_threshold_pct"`
 
-	Tag   string `gorm:"size:100;default:''" json:"tag"`
-	Notes string `gorm:"type:text;default:''" json:"notes"`
+	Tag       string `gorm:"size:100;default:''" json:"tag"`
+	GroupName string `gorm:"size:100;default:''" json:"group_name"`
+	Notes     string `gorm:"type:text;default:''" json:"notes"`
 
 	Status    string `gorm:"size:50;default:Unknown" json:"status"`
 	PublicIP  string `gorm:"size:100;default:''" json:"public_ip"`
@@ -57,12 +70,15 @@ type EcsInstance struct {
 	CreationTime string `gorm:"size:50;default:''" json:"creation_time"`
 
 	AutoStopEnabled  bool `gorm:"default:false" json:"auto_stop_enabled"`
-	AutoStartEnabled bool `gorm:"default:false" json:"auto_start_enabled"`
+	AutoStartEnabled bool `gorm:"default:true" json:"auto_start_enabled"`
 	MonitorEnabled   bool `gorm:"default:true" json:"monitoring_enabled"`
 
 	CredentialStatus       string     `gorm:"size:50;default:ok" json:"credential_status"`
 	CredentialError        string     `gorm:"size:500;default:''" json:"credential_error"`
 	CredentialLastFailedAt *time.Time `json:"credential_last_failed_at"`
+
+	LoginAccount  string `gorm:"size:500;default:''" json:"-"`
+	LoginPassword string `gorm:"size:500;default:''" json:"-"`
 
 	RealCreationTime *time.Time `json:"real_creation_time"`
 	LastChecked      time.Time  `json:"last_checked"`
@@ -202,9 +218,33 @@ func (j *ImportJob) SetResult(v any) {
 	j.ResultJSON = string(data)
 }
 
+type Ticket struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"not null;index" json:"user_id"`
+	Type      string    `gorm:"size:30;not null;index" json:"type"` // quota_request, reset_system
+	Status    string    `gorm:"size:20;not null;default:pending;index" json:"status"` // pending, approved, rejected, completed
+	Subject   string    `gorm:"size:200;not null" json:"subject"`
+
+	Region        string `gorm:"size:100;default:''" json:"region"`
+	Quantity      int    `gorm:"default:0" json:"quantity"`
+	AlipayCode    string `gorm:"size:200;default:''" json:"alipay_code"`
+	Remark        string `gorm:"type:text;default:''" json:"remark"`
+	NoDDGuarantee bool   `gorm:"default:false" json:"no_dd_guarantee"`
+
+	AdminReply string     `gorm:"type:text;default:''" json:"admin_reply"`
+	ReviewedBy string     `gorm:"size:100;default:''" json:"reviewed_by"`
+	ReviewedAt *time.Time `json:"reviewed_at"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	User User `gorm:"foreignKey:UserID" json:"-"`
+}
+
 func AllModels() []any {
 	return []any{
 		&User{},
+		&UserInstance{},
 		&EcsInstance{},
 		&TrafficLog{},
 		&OperationLog{},
@@ -215,5 +255,6 @@ func AllModels() []any {
 		&DnsFailover{},
 		&DnsFailoverLog{},
 		&ImportJob{},
+		&Ticket{},
 	}
 }

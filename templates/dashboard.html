@@ -63,6 +63,7 @@
   #batchOpsMenu.is-open > div:nth-child(7) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.135s; }
   #batchOpsMenu.is-open > div:nth-child(8) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.16s; }
   #batchOpsMenu.is-open > div:nth-child(9) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.185s; }
+  #batchOpsMenu.is-open > div:nth-child(10) button { animation: batchMenuItemIn 0.22s cubic-bezier(.34,1.2,.64,1) backwards; animation-delay: 0.21s; }
 </style>
 <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3.5 mb-3">
   <div class="flex flex-wrap items-center gap-2">
@@ -222,13 +223,12 @@
           </th>
           <th class="tbl-th">流量</th>
           <th class="tbl-th">用量</th>
-          <th class="tbl-th">价格</th>
           <th class="tbl-th text-right">操作</th>
         </tr>
       </thead>
       <tbody id="instanceBody">
         {{ range $i, $inst := .instances }}
-        <tr class="instance-row tbl-row border-b border-gray-50 dark:border-gray-800/40"
+        <tr class="instance-row tbl-row border-b border-gray-50 dark:border-gray-800/40 {{ if ne $inst.CredentialStatus "ok" }}bg-red-50/40 dark:bg-red-500/[0.03]{{ end }}"
             data-id="{{ $inst.ID }}"
             data-instance-id="{{ $inst.InstanceID }}"
             data-region="{{ $inst.RegionID }}"
@@ -243,7 +243,11 @@
             <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] font-medium text-gray-600 dark:text-gray-400" title="{{ $inst.RegionID }}">{{ regionName $inst.RegionID }}</span>
           </td>
           <td class="tbl-td">
-            {{ if eq $inst.Status "Running" }}
+            {{ if ne $inst.CredentialStatus "ok" }}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>异常
+              </span>
+            {{ else if eq $inst.Status "Running" }}
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>运行
               </span>
@@ -266,8 +270,11 @@
           <td class="tbl-td">
             <a href="/instance/{{ $inst.ID }}" class="text-[12px] font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{{ $inst.Name }}</a>
             <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
-              {{ $inst.InstanceID }}{{ if ne $inst.CredentialStatus "ok" }}<span class="text-red-500" title="{{ $inst.CredentialError }}">⚠</span>{{ end }}
+              {{ $inst.InstanceID }}
             </div>
+            {{ if ne $inst.CredentialStatus "ok" }}
+            <div class="mt-1 text-[10px] text-red-500 dark:text-red-400 leading-tight max-w-[220px] truncate" title="{{ $inst.CredentialError }}">{{ $inst.CredentialError }}</div>
+            {{ end }}
           </td>
           <td class="tbl-td font-mono ip-cell" data-pub="{{ $inst.PublicIP }}" data-pri="{{ $inst.PrivateIP }}">
             <div class="ip-pub text-[12px] text-gray-700 dark:text-gray-300">{{ if $inst.PublicIP }}{{ $inst.PublicIP }}{{ else }}<span class="text-gray-300 dark:text-gray-600">—</span>{{ end }}</div>
@@ -303,7 +310,6 @@
               {{ else }}N/A{{ end }}
             {{ end }}
           </td>
-          <td class="px-2 py-2 text-gray-600 dark:text-gray-400">{{ if $inst.HourlyPrice }}{{ printf "%.2f" $inst.HourlyPrice }}{{ else }}-{{ end }}</td>
           <td class="px-2 py-2 text-right">
             <div class="relative inline-block">
               <button type="button" onclick="toggleRowMenu(this)" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition">
@@ -411,6 +417,11 @@
             <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-500 text-[10px]">♥</span>批量开放端口
           </button>
         </div>
+        <div class="batch-menu-item">
+          <button type="button" onclick="closeBatchOpsMenu();showBatchGroupModal()" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-200 rounded-lg mx-1 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors duration-150">
+            <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-[10px]">⊞</span>批量分组
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -489,6 +500,19 @@
     <div class="flex justify-end gap-2">
       <button onclick="closeModal('batchPortModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
       <button onclick="submitBatchPort()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Group Modal -->
+<div id="batchGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-96 p-5">
+    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">批量设置分组</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">为选中的实例设置分组名称，留空则清除分组</p>
+    <input id="batchGroupInput" type="text" placeholder="输入分组名称" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 mb-3">
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal('batchGroupModal')" class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">取消</button>
+      <button onclick="submitBatchGroup()" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">确认</button>
     </div>
   </div>
 </div>
@@ -824,7 +848,11 @@ document.getElementById('tableScroller').addEventListener('scroll', function() {
 function ecsAction(id, action) {
   fetch('/api/instance/' + id + '/' + action, {method: 'POST'}).then(function(r){return r.json()}).then(function(d) {
     showToast(d.message || (d.success ? '操作成功' : '操作失败'), d.success ? 'success' : 'error');
-    if (d.success) setTimeout(function(){ location.reload(); }, 1500);
+    if (d.success) {
+      setTimeout(function(){
+        fetch('/api/instance/' + id + '/refresh', {method: 'POST'}).finally(function(){ location.reload(); });
+      }, 2000);
+    }
   }).catch(function(){ showToast('请求失败', 'error'); });
 }
 
@@ -979,16 +1007,35 @@ function submitBatchPort() {
   });
 }
 
-function refreshAll() {
-  showToast('正在刷新所有实例...', 'success');
-  var rows = document.querySelectorAll('.instance-row');
-  var done = 0, total = rows.length;
-  if (total === 0) { location.reload(); return; }
-  rows.forEach(function(row) {
-    fetch('/api/instance/' + row.dataset.id + '/refresh', {method:'POST'})
-      .then(function(r){return r.json()})
-      .finally(function() { done++; if (done >= total) location.reload(); });
+function showBatchGroupModal() {
+  var ids = getSelectedIds();
+  if (!ids.length) { showToast('请先勾选实例', 'error'); return; }
+  document.getElementById('batchGroupInput').value = '';
+  document.getElementById('batchGroupModal').classList.remove('hidden');
+}
+
+function submitBatchGroup() {
+  var groupName = document.getElementById('batchGroupInput').value.trim();
+  var ids = getSelectedIds();
+  if (!ids.length) return;
+  fetch('/api/instance/batch_group', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({instance_ids: ids, group_name: groupName})
+  }).then(function(r){return r.json()}).then(function(d) {
+    showToast(d.message || (d.success ? '分组已更新' : '操作失败'), d.success ? 'success' : 'error');
+    closeModal('batchGroupModal');
+    if (d.success) setTimeout(function(){ location.reload(); }, 800);
   });
+}
+
+function refreshAll() {
+  showToast('正在全量检测所有实例（状态/流量/释放检测）...', 'success');
+  fetch('/api/check_all').then(function(r){return r.json()}).then(function(d) {
+    if (d.success) {
+      showToast(d.message + '，请稍候刷新页面查看结果', 'success');
+      setTimeout(function(){ location.reload(); }, 5000);
+    }
+  }).catch(function(){ location.reload(); });
 }
 
 // bottomBar is now sticky, no position sync needed

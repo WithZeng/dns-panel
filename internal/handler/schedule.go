@@ -25,6 +25,7 @@ func SchedulesPage(c *gin.Context) {
 		"instance":  inst,
 		"schedules": schedules,
 		"username":  c.GetString("username"),
+		"role":      c.GetString("role"),
 	})
 }
 

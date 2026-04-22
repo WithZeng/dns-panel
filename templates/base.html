@@ -157,13 +157,16 @@
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
                 <span class="nav-label">仪表盘</span>
               </a>
+              {{ if eq .role "admin" }}
               <a href="/dns_failover" data-tip="DNS 管理" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
                 <span class="nav-label">DNS 管理</span>
               </a>
+              {{ end }}
             </div>
           </div>
 
+          {{ if eq .role "admin" }}
           <div class="flex flex-col gap-1.5">
             <span class="nav-group-label block text-left pl-3 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">导入</span>
             <div class="flex flex-col gap-1.5">
@@ -177,21 +180,39 @@
               </a>
             </div>
           </div>
+          {{ end }}
 
           <div class="flex flex-col gap-1.5">
             <span class="nav-group-label block text-left pl-3 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">系统</span>
             <div class="flex flex-col gap-1.5">
-              <a href="/logs" data-tip="操作日志" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
+              {{ if eq .role "admin" }}
+              <a href="/admin/users" data-tip="用户管理" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
+                <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                <span class="nav-label">用户管理</span>
+              </a>
+              {{ end }}
+              <a href="/logs" data-tip="{{ if eq .role "admin" }}操作日志{{ else }}操作记录{{ end }}" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="nav-label">日志</span>
+                <span class="nav-label">{{ if eq .role "admin" }}日志{{ else }}操作记录{{ end }}</span>
               </a>
               <a href="/notification_logs" data-tip="通知" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
                 <span class="nav-label">通知</span>
               </a>
+              {{ if eq .role "admin" }}
               <a href="/restore" data-tip="数据恢复" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
                 <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
                 <span class="nav-label">恢复</span>
+              </a>
+              {{ end }}
+              <a href="/tickets" data-tip="工单" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
+                <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+                <span class="nav-label">工单</span>
+                <span id="ticketBadge" class="hidden ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none bg-red-500 text-white"></span>
+              </a>
+              <a href="/help" data-tip="帮助" class="nav-item flex w-full items-center justify-start gap-3 px-3 py-2.5 rounded-2xl text-[15px] leading-snug text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/90 dark:hover:bg-white/[.08]">
+                <svg class="w-5 h-5 shrink-0 opacity-85" fill="none" viewBox="0 0 24 24" stroke-width="1.65" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+                <span class="nav-label">帮助</span>
               </a>
             </div>
           </div>
@@ -200,24 +221,19 @@
     </nav>
 
     <div class="border-t border-gray-200 dark:border-white/[.08] p-2 space-y-1.5 shrink-0 bg-gray-50/50 dark:bg-black/20">
-      <div class="sidebar-version flex flex-wrap items-center gap-x-2 gap-y-0.5 px-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+      <div class="sidebar-version flex items-center gap-x-1.5 px-1.5 text-[10px] text-gray-400 dark:text-gray-500">
         <span class="tabular-nums">v5.0</span>
         <span class="text-gray-300 dark:text-gray-600">·</span>
-        <a href="https://github.com/WithZeng/dns-panel" target="_blank" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition">GitHub</a>
-        <button type="button" onclick="checkForUpdate()" class="hover:text-gray-600 dark:hover:text-gray-300 transition">更新</button>
-        <span id="updateStatus" class="hidden basis-full text-[10px]"></span>
+        <span>Powered by WithZeng</span>
       </div>
-      <div class="sidebar-user-info flex items-center gap-1.5 px-1.5 py-1 rounded-lg bg-white/90 dark:bg-white/[.06] ring-1 ring-gray-200/70 dark:ring-white/[.08]">
-        <img src="https://api.dicebear.com/9.x/adventurer/svg?seed={{ .username }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="avatar" class="w-6 h-6 rounded-md shrink-0">
-        <div class="flex-1 min-w-0">
-          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate leading-tight">{{ .username }}</div>
-        </div>
-        <a href="/change_password" class="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition" title="修改密码">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        </a>
-        <a href="/logout" class="p-1 rounded-md text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="退出登录">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
-        </a>
+      <div class="sidebar-user-info">
+        <button type="button" id="userMenuBtn" onclick="toggleUserMenu()" class="flex w-full items-center gap-1.5 px-1.5 py-1.5 rounded-lg bg-white/90 dark:bg-white/[.06] ring-1 ring-gray-200/70 dark:ring-white/[.08] hover:ring-gray-300 dark:hover:ring-white/[.12] hover:bg-white dark:hover:bg-white/[.08] transition-all cursor-pointer">
+          <img src="https://api.dicebear.com/9.x/adventurer/svg?seed={{ .username }}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf" alt="avatar" class="w-6 h-6 rounded-md shrink-0">
+          <div class="flex-1 min-w-0 text-left">
+            <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate leading-tight">{{ .username }}</div>
+          </div>
+          <svg class="w-3 h-3 text-gray-400 dark:text-gray-500 shrink-0 transition-transform duration-200" id="userMenuChevron" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/></svg>
+        </button>
       </div>
       <button id="sidebarToggle" type="button" class="hidden lg:flex w-full items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-white/[.08] transition">
         <svg id="collapseIcon" class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"/></svg>
@@ -225,6 +241,22 @@
       </button>
     </div>
   </aside>
+
+  <!-- User menu popover (fixed, outside sidebar to avoid clipping) -->
+  <div id="userMenuPopover" class="fixed z-50 w-48 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl shadow-black/10 dark:shadow-black/40 py-1 opacity-0 scale-95 pointer-events-none transition-all duration-200 origin-bottom-left" style="display:none">
+    <div class="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+      <div class="text-[11px] font-medium text-gray-900 dark:text-white truncate">{{ .username }}</div>
+      <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ if eq .role "admin" }}管理员{{ else }}普通用户{{ end }}</div>
+    </div>
+    <a href="/change_password" class="flex items-center gap-2.5 px-3 py-2 text-[12px] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition">
+      <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+      修改密码
+    </a>
+    <a href="/logout" class="flex items-center gap-2.5 px-3 py-2 text-[12px] text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+      退出登录
+    </a>
+  </div>
 
   <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden" onclick="closeMobileSidebar()"></div>
 
@@ -263,23 +295,6 @@
   {{ end }}
 
   <script>
-    function checkForUpdate() {
-      var status = document.getElementById('updateStatus');
-      fetch('/api/check_update')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (status) {
-            status.classList.remove('hidden');
-            if (data.has_update) {
-              status.innerHTML = '<a href="' + (data.release_url || '#') + '" target="_blank" class="text-indigo-400 hover:underline">' + data.message + '</a>';
-            } else {
-              status.innerHTML = '<span class="text-emerald-400">' + data.message + '</span>';
-              setTimeout(function() { status.classList.add('hidden'); }, 4000);
-            }
-          }
-        })
-        .catch(function() { if (status) { status.classList.remove('hidden'); status.textContent = '检查失败'; } });
-    }
     function openMobileSidebar() {
       var s = document.getElementById('sidebar');
       var o = document.getElementById('sidebarOverlay');
@@ -292,6 +307,44 @@
       if (s) s.classList.add('max-lg:-translate-x-full');
       if (o) o.classList.add('hidden');
     }
+    function toggleUserMenu() {
+      var pop = document.getElementById('userMenuPopover');
+      var btn = document.getElementById('userMenuBtn');
+      var chev = document.getElementById('userMenuChevron');
+      if (!pop || !btn) return;
+      var isOpen = pop.style.display !== 'none' && !pop.classList.contains('pointer-events-none');
+      if (isOpen) {
+        pop.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        pop.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+        if (chev) chev.style.transform = '';
+        setTimeout(function() { pop.style.display = 'none'; }, 200);
+      } else {
+        var rect = btn.getBoundingClientRect();
+        pop.style.left = rect.left + 'px';
+        pop.style.top = (rect.top - 8) + 'px';
+        pop.style.width = rect.width + 'px';
+        pop.style.transform = 'translateY(-100%)';
+        pop.style.display = '';
+        requestAnimationFrame(function() {
+          pop.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+          pop.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+        });
+        if (chev) chev.style.transform = 'rotate(180deg)';
+      }
+    }
+    document.addEventListener('click', function(e) {
+      var pop = document.getElementById('userMenuPopover');
+      var btn = document.getElementById('userMenuBtn');
+      if (!pop || !btn) return;
+      if (pop.style.display === 'none') return;
+      if (!btn.contains(e.target) && !pop.contains(e.target)) {
+        pop.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        pop.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+        var chev = document.getElementById('userMenuChevron');
+        if (chev) chev.style.transform = '';
+        setTimeout(function() { pop.style.display = 'none'; }, 200);
+      }
+    });
   </script>
   <script>
     (function () {
@@ -385,6 +438,18 @@
           window.location.assign(url.href);
         });
       }, true);
+    })();
+  </script>
+  <script>
+    (function(){
+      var badge = document.getElementById('ticketBadge');
+      if (!badge) return;
+      fetch('/api/tickets/pending_count').then(function(r){return r.json()}).then(function(d){
+        if (d.count > 0) {
+          badge.textContent = d.count > 99 ? '99+' : d.count;
+          badge.classList.remove('hidden');
+        }
+      }).catch(function(){});
     })();
   </script>
   <script src="/static/js/utils.js"></script>

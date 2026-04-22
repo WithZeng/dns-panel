@@ -1,0 +1,436 @@
+{{ define "title" }}工单 #{{ .ticket.ID }} - CloudPanel{{ end }}
+{{ define "content" }}
+<style>
+  @keyframes tdFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .td-anim { animation: tdFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .td-d1 { animation-delay: 0.06s; }
+  .td-d2 { animation-delay: 0.12s; }
+  .td-d3 { animation-delay: 0.18s; }
+  .grp-opt {
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; color: #4b5563; transition: all 0.15s ease;
+  }
+  .dark .grp-opt { color: #d1d5db; }
+  .grp-opt:hover { background: #f3f4f6; transform: translateX(2px); }
+  .dark .grp-opt:hover { background: rgba(255,255,255,0.06); }
+  .grp-opt.active { background: rgb(99 102 241 / 0.08); color: #4f46e5; font-weight: 500; }
+  .dark .grp-opt.active { background: rgb(99 102 241 / 0.15); color: #a5b4fc; }
+  #groupPanel.scale-y-100 { transform: scaleY(1); }
+  .asgn-chip {
+    padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    border: 1px solid #e5e7eb; color: #6b7280; cursor: pointer;
+    transition: all 0.15s ease; background: transparent;
+  }
+  .dark .asgn-chip { border-color: #374151; color: #9ca3af; }
+  .asgn-chip:hover { border-color: #a5b4fc; color: #6366f1; }
+  .dark .asgn-chip:hover { border-color: #6366f1; color: #a5b4fc; }
+  .asgn-chip.active { background: rgb(99 102 241 / 0.08); border-color: #818cf8; color: #4f46e5; }
+  .dark .asgn-chip.active { background: rgb(99 102 241 / 0.15); border-color: #6366f1; color: #a5b4fc; }
+  .inst-card:has(input:checked) { border-color: #818cf8; background: rgb(99 102 241 / 0.04); }
+  .dark .inst-card:has(input:checked) { border-color: #6366f1; background: rgb(99 102 241 / 0.08); }
+</style>
+
+<div class="mb-5 td-anim">
+  <a href="/tickets" class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition">
+    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+    返回工单列表
+  </a>
+</div>
+
+{{ if .error }}
+<div class="mb-4 rounded-xl border px-4 py-2.5 text-sm bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20 td-anim">{{ .error }}</div>
+{{ end }}
+
+<div class="max-w-3xl">
+  <!-- Header -->
+  <div class="flex items-start justify-between gap-4 mb-5 td-anim td-d1">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">#{{ .ticket.ID }} {{ .ticket.Subject }}</h1>
+        {{ if eq .ticket.Status "pending" }}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-200/60 dark:ring-amber-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>待处理
+        </span>
+        {{ else if eq .ticket.Status "approved" }}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200/60 dark:ring-blue-500/20">已通过</span>
+        {{ else if eq .ticket.Status "completed" }}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200/60 dark:ring-emerald-500/20">已完成</span>
+        {{ else if eq .ticket.Status "rejected" }}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 ring-1 ring-red-200/60 dark:ring-red-500/20">已拒绝</span>
+        {{ end }}
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+        提交者: {{ .ticket.User.Username }} · {{ .ticket.CreatedAt.Format "2006-01-02 15:04:05" }}
+        {{ if .ticket.ReviewedBy }} · 审核: {{ .ticket.ReviewedBy }}{{ end }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Ticket Info Card -->
+  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-5 td-anim td-d2">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+      <h2 class="text-sm font-semibold text-gray-900 dark:text-white">工单详情</h2>
+    </div>
+    <div class="p-6">
+      {{ if eq .ticket.Type "quota_request" }}
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3.5">
+          <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">支付宝口令</div>
+          <div class="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">{{ .ticket.AlipayCode }}</div>
+        </div>
+        <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3.5">
+          <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">请求区域</div>
+          <div class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ if .ticket.Region }}{{ .ticket.Region }}{{ else }}不限{{ end }}</div>
+        </div>
+        <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3.5">
+          <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">请求数量</div>
+          <div class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ .ticket.Quantity }} 台</div>
+        </div>
+      </div>
+      {{ else }}
+      <div class="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3.5 mb-4">
+        <div class="flex items-center gap-2">
+          {{ if .ticket.NoDDGuarantee }}
+          <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="text-sm text-emerald-700 dark:text-emerald-400 font-medium">已确认未使用 DD 系统</span>
+          {{ else }}
+          <svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          <span class="text-sm text-red-600 dark:text-red-400 font-medium">未确认 DD 状态</span>
+          {{ end }}
+        </div>
+      </div>
+      {{ end }}
+
+      {{ if .ticket.Remark }}
+      <div>
+        <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">用户备注</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{{ .ticket.Remark }}</div>
+      </div>
+      {{ end }}
+
+      {{ if .ticket.AdminReply }}
+      <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/60">
+        <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">管理员回复</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{{ .ticket.AdminReply }}</div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+
+  <!-- Admin Actions -->
+  {{ if eq .role "admin" }}
+    {{ if eq .ticket.Status "pending" }}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-5 td-anim td-d3">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">审核操作</h2>
+      </div>
+      <div class="p-6">
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">管理员回复</label>
+          <textarea id="reviewReply" rows="2" placeholder="可选，给用户的回复信息..." class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-y transition"></textarea>
+        </div>
+        <div class="flex items-center gap-3">
+          <form method="POST" action="/ticket/{{ .ticket.ID }}/review" class="inline">
+            <input type="hidden" name="action" value="approve">
+            <input type="hidden" name="admin_reply" id="approveReply" value="">
+            <button type="submit" onclick="document.getElementById('approveReply').value=document.getElementById('reviewReply').value" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition active:scale-[0.98]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              通过
+            </button>
+          </form>
+          <form method="POST" action="/ticket/{{ .ticket.ID }}/review" class="inline">
+            <input type="hidden" name="action" value="reject">
+            <input type="hidden" name="admin_reply" id="rejectReply" value="">
+            <button type="submit" onclick="document.getElementById('rejectReply').value=document.getElementById('reviewReply').value" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition active:scale-[0.98]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              拒绝
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {{ end }}
+
+    {{ if eq .ticket.Type "quota_request" }}
+    {{ if or (eq .ticket.Status "pending") (eq .ticket.Status "approved") }}
+
+    <!-- All regions summary -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-5 td-anim td-d3">
+      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-white">各区域可用实例</h2>
+          <span class="text-xs text-gray-500 dark:text-gray-400">共 <span class="font-semibold text-gray-800 dark:text-gray-200">{{ .totalUnassigned }}</span> 台未分配</span>
+        </div>
+      </div>
+      <div class="p-5">
+        {{ if .regionStats }}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          {{ range .regionStats }}
+          <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 transition hover:border-gray-200 dark:hover:border-gray-600">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2 h-2 rounded-full shrink-0 {{ .DotColor }}"></span>
+              <span class="text-xs text-gray-700 dark:text-gray-300 truncate">{{ .Name }}</span>
+            </div>
+            <span class="text-xs font-bold tabular-nums text-gray-900 dark:text-white ml-2">{{ .Count }}</span>
+          </div>
+          {{ end }}
+        </div>
+        {{ else }}
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">暂无未分配的实例</p>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+
+    {{ if eq .ticket.Status "approved" }}
+    <!-- Assign quota panel -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-500/20 overflow-hidden mb-5 td-anim td-d3">
+      <div class="px-6 py-4 border-b border-indigo-100 dark:border-indigo-500/10 bg-indigo-50/50 dark:bg-indigo-500/5">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H6A2.25 2.25 0 003.75 6v2.25A2.25 2.25 0 006 10.5zm0 9.75h2.25A2.25 2.25 0 0010.5 18v-2.25a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V18A2.25 2.25 0 006 20.25zm9.75-9.75H18a2.25 2.25 0 002.25-2.25V6A2.25 2.25 0 0018 3.75h-2.25A2.25 2.25 0 0013.5 6v2.25a2.25 2.25 0 002.25 2.25z"/></svg>
+          <h2 class="text-sm font-semibold text-indigo-900 dark:text-indigo-300">分配配额</h2>
+        </div>
+        <p class="text-[11px] text-indigo-600/70 dark:text-indigo-400/60 mt-0.5">为 {{ .ticket.User.Username }} 分配 {{ .ticket.Quantity }} 台实例{{ if .requestedRegionName }}（请求区域: {{ .requestedRegionName }}）{{ end }}</p>
+      </div>
+      <div class="p-6">
+        <!-- Mode tabs -->
+        <div class="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-5">
+          <button type="button" onclick="switchAssignMode('random')" id="tabRandom"
+            class="flex-1 text-sm font-medium py-2 rounded-lg transition-all bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm">
+            随机分配
+          </button>
+          <button type="button" onclick="switchAssignMode('manual')" id="tabManual"
+            class="flex-1 text-sm font-medium py-2 rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+            手动选择
+          </button>
+        </div>
+
+        <!-- Random mode -->
+        <div id="panelRandom">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">限定分组</label>
+              <div class="relative" id="groupDropdown">
+                <button type="button" onclick="toggleGroupDD()" id="groupBtn"
+                  class="w-full flex items-center justify-between px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer transition">
+                  <span id="groupLabel">全部分组 ({{ .totalUnassigned }})</span>
+                  <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" id="groupArrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </button>
+                <div id="groupPanel" class="absolute z-30 left-0 right-0 mt-2 origin-top scale-y-0 opacity-0 pointer-events-none transition-all duration-200 ease-out">
+                  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-1.5 max-h-[220px] overflow-y-auto">
+                    <div class="grp-opt active" data-val="" onclick="pickGroup(this)">全部分组 ({{ .totalUnassigned }})</div>
+                    {{ range .groupOptions }}
+                    <div class="grp-opt" data-val="{{ .GroupName }}" onclick="pickGroup(this)">{{ .GroupName }} ({{ .Count }})</div>
+                    {{ end }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">分配数量</label>
+              <input type="number" id="randomQty" min="1" value="{{ .ticket.Quantity }}" class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition">
+            </div>
+          </div>
+          {{ if .requestedRegionName }}
+          <p class="text-[11px] text-indigo-600/70 dark:text-indigo-400/50 mb-4">将仅从 <span class="font-semibold">{{ .requestedRegionName }}</span> 区域的未分配实例中随机选取</p>
+          {{ end }}
+          <button type="button" onclick="submitRandom()" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 transition active:scale-[0.98]">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            随机分配
+          </button>
+        </div>
+
+        <!-- Manual mode -->
+        <div id="panelManual" class="hidden">
+          <!-- Filter chips -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button type="button" class="asgn-chip active" data-region="__all__" onclick="setRegionChip(this)">全部</button>
+            {{ range .regionStats }}
+            <button type="button" class="asgn-chip" data-region="{{ .RegionID }}" onclick="setRegionChip(this)">{{ .Name }} ({{ .Count }})</button>
+            {{ end }}
+          </div>
+          <!-- Instance grid -->
+          <div class="mb-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+                <input type="checkbox" id="selectAllManual" onchange="toggleSelectAll(this.checked)" class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/30">
+                全选当前
+              </label>
+              <span class="text-xs text-gray-400 dark:text-gray-500">已选 <span id="manualCount" class="font-semibold text-indigo-600 dark:text-indigo-400">0</span> 台</span>
+            </div>
+            <button type="button" onclick="submitManual()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition active:scale-[0.98]">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              确认分配
+            </button>
+          </div>
+          <div id="manualGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[400px] overflow-y-auto pr-1">
+            {{ range .allUnassigned }}
+            <label class="inst-card flex items-start gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/40 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all cursor-pointer"
+              data-region="{{ .RegionID }}" data-id="{{ .ID }}">
+              <input type="checkbox" name="manual_ids" value="{{ .ID }}" onchange="updateManualCount()" class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-medium">
+                    {{ if eq .Status "Running" }}<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span class="text-emerald-600 dark:text-emerald-400">运行中</span>
+                    {{ else if eq .Status "Stopped" }}<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span><span class="text-gray-500">已停止</span>
+                    {{ else }}<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span class="text-amber-600 dark:text-amber-400">{{ .Status }}</span>{{ end }}
+                  </span>
+                  {{ if .GroupName }}<span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-200/60 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400">{{ .GroupName }}</span>{{ end }}
+                </div>
+                <div class="text-xs font-mono text-gray-800 dark:text-gray-200 truncate">{{ if .PublicIP }}{{ .PublicIP }}{{ else }}{{ .PrivateIP }}{{ end }}</div>
+                <div class="flex items-center gap-2 mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+                  <span class="truncate max-w-[100px]" title="{{ .Name }}">{{ .Name }}</span>
+                  {{ if .CPU }}<span>{{ .CPU }}C{{ if .Memory }}/{{ div .Memory 1024 }}G{{ end }}</span>{{ end }}
+                  {{ if .Bandwidth }}<span>{{ .Bandwidth }}M</span>{{ end }}
+                </div>
+              </div>
+            </label>
+            {{ else }}
+            <p class="col-span-2 text-sm text-gray-500 dark:text-gray-400 text-center py-6">暂无可用实例</p>
+            {{ end }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {{ end }}
+    {{ end }}
+  {{ end }}
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+var ticketID = {{ .ticket.ID }};
+var groupDDOpen = false;
+var selectedGroup = '';
+var requestedRegionID = '{{ .requestedRegionID }}';
+
+function switchAssignMode(mode) {
+  var pr = document.getElementById('panelRandom');
+  var pm = document.getElementById('panelManual');
+  var tr = document.getElementById('tabRandom');
+  var tm = document.getElementById('tabManual');
+  var ac = 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm';
+  var ic = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300';
+  if (mode === 'random') {
+    pr.classList.remove('hidden'); pm.classList.add('hidden');
+    tr.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + ac;
+    tm.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + ic;
+  } else {
+    pr.classList.add('hidden'); pm.classList.remove('hidden');
+    tr.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + ic;
+    tm.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + ac;
+  }
+}
+
+function toggleGroupDD() {
+  groupDDOpen = !groupDDOpen;
+  var p = document.getElementById('groupPanel');
+  var a = document.getElementById('groupArrow');
+  if (groupDDOpen) {
+    p.classList.add('scale-y-100','opacity-100','pointer-events-auto');
+    p.classList.remove('scale-y-0','opacity-0','pointer-events-none');
+    a.style.transform = 'rotate(180deg)';
+  } else {
+    p.classList.remove('scale-y-100','opacity-100','pointer-events-auto');
+    p.classList.add('scale-y-0','opacity-0','pointer-events-none');
+    a.style.transform = '';
+  }
+}
+
+function pickGroup(el) {
+  selectedGroup = el.getAttribute('data-val');
+  document.getElementById('groupLabel').textContent = el.textContent;
+  var opts = document.querySelectorAll('.grp-opt');
+  for (var i = 0; i < opts.length; i++) opts[i].classList.remove('active');
+  el.classList.add('active');
+  toggleGroupDD();
+}
+
+document.addEventListener('click', function(e) {
+  if (groupDDOpen && !document.getElementById('groupDropdown').contains(e.target)) toggleGroupDD();
+});
+
+function setRegionChip(el) {
+  var chips = document.querySelectorAll('.asgn-chip');
+  for (var i = 0; i < chips.length; i++) chips[i].classList.remove('active');
+  el.classList.add('active');
+  var region = el.getAttribute('data-region');
+  var cards = document.querySelectorAll('.inst-card');
+  for (var i = 0; i < cards.length; i++) {
+    if (region === '__all__' || cards[i].getAttribute('data-region') === region) {
+      cards[i].style.display = '';
+    } else {
+      cards[i].style.display = 'none';
+    }
+  }
+  if (document.getElementById('selectAllManual')) document.getElementById('selectAllManual').checked = false;
+}
+
+function toggleSelectAll(checked) {
+  var cards = document.querySelectorAll('.inst-card');
+  for (var i = 0; i < cards.length; i++) {
+    if (cards[i].style.display !== 'none') {
+      cards[i].querySelector('input[type="checkbox"]').checked = checked;
+    }
+  }
+  updateManualCount();
+}
+
+function updateManualCount() {
+  var checked = document.querySelectorAll('#manualGrid input[type="checkbox"]:checked');
+  document.getElementById('manualCount').textContent = checked.length;
+}
+
+function submitRandom() {
+  var qty = document.getElementById('randomQty').value;
+  var body = 'quantity=' + encodeURIComponent(qty);
+  if (selectedGroup) body += '&group=' + encodeURIComponent(selectedGroup);
+  doAssign(body);
+}
+
+function submitManual() {
+  var checked = document.querySelectorAll('#manualGrid input[type="checkbox"]:checked');
+  if (checked.length === 0) { showToast('请至少选择一台实例', 'error'); return; }
+  var parts = [];
+  for (var i = 0; i < checked.length; i++) parts.push('instance_ids=' + checked[i].value);
+  doAssign(parts.join('&'));
+}
+
+function doAssign(body) {
+  fetch('/ticket/' + ticketID + '/assign', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) {
+      showToast(d.message, 'success');
+      setTimeout(function() { location.reload(); }, 1000);
+    } else {
+      showToast(d.message || '分配失败', 'error');
+    }
+  }).catch(function() { showToast('请求失败', 'error'); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (requestedRegionID) {
+    var chip = document.querySelector('.asgn-chip[data-region="' + requestedRegionID + '"]');
+    if (chip) setRegionChip(chip);
+  }
+});
+
+function showToast(msg, type) {
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  var colors = type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' :
+    'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20';
+  var el = document.createElement('div');
+  el.className = 'toast rounded-xl border px-4 py-2.5 text-sm ' + colors;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(function() { el.remove(); }, 350); }, 3000);
+}
+</script>
+{{ end }}
+
+{{ template "base" . }}

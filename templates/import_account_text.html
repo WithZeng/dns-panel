@@ -1,97 +1,208 @@
 {{ define "title" }}账号文本导入 - CloudPanel{{ end }}
 {{ define "content" }}
-<div class="mx-auto w-full max-w-4xl">
-  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">账号文本一键导入</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">粘贴阿里云账号信息文本，自动解析 AK/SK、发现实例并入库。</p>
-
-    <form method="POST" class="space-y-4" id="import-form">
-      <div>
-        <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">账号信息文本</label>
-        <textarea name="account_text" rows="12" required placeholder="示例：&#10;登录名称：demo@example.com&#10;AccessKey ID：LTAIxxxxxxxxxxxx&#10;AccessKey Secret：xxxxxxxxxxxxxxxxxxx&#10;备注：香港生产账号"
-          class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all text-sm font-mono">{{ .raw_text }}</textarea>
-        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">支持中英文标签，自动忽略无关行；同一账号重复导入会覆盖更新。</p>
-      </div>
-
-      <div class="space-y-2">
-        <label class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <input type="checkbox" name="scan_all_regions" value="1" checked
-            class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-500 focus:ring-indigo-500/30">
-          扫描账号下全部可用区域（含香港与海外区域）
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <input type="checkbox" name="stop_on_first" value="1"
-            class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-500 focus:ring-indigo-500/30">
-          发现实例后停止扫描剩余区域（适用于单区域账号，加快导入速度）
-        </label>
-      </div>
-
-      <!-- GitHub Backup -->
-      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-        <label class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-          <input type="checkbox" name="github_sync" value="1" id="ghSyncToggle"
-            {{ if .github_repo }}checked{{ end }}
-            class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-indigo-500 focus:ring-indigo-500/30"
-            onchange="document.getElementById('ghSyncDetail').classList.toggle('hidden', !this.checked)">
-          <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          导入后同步备份到 GitHub 私有仓库
-        </label>
-        <div id="ghSyncDetail" class="{{ if not .github_repo }}hidden{{ end }} space-y-3 pl-6">
-          <div>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">GitHub 仓库</label>
-            <input type="text" name="github_repo" placeholder="owner/repo-name" value="{{ .github_repo }}"
-              class="w-full max-w-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all font-mono">
-            <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">格式: owner/repo-name，不存在时自动创建为私有仓库</p>
-          </div>
-          <div class="flex items-start gap-2 text-[11px] text-gray-400 dark:text-gray-500">
-            <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
-            <span>需要服务器已安装 <code class="px-1 py-0.5 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">gh</code> CLI 并完成 <code class="px-1 py-0.5 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">gh auth login</code> 认证</span>
-          </div>
+<style>
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .anim-in { animation: fadeSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-in-d1 { animation-delay: 0.06s; }
+  .anim-in-d2 { animation-delay: 0.12s; }
+  .anim-in-d3 { animation-delay: 0.18s; }
+  .anim-in-d4 { animation-delay: 0.24s; }
+</style>
+<div>
+  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+    <!-- Gradient / icon header -->
+    <div class="relative anim-in px-6 sm:px-8 pt-8 pb-6 sm:pt-10 sm:pb-8">
+      <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/[0.12] via-violet-500/[0.06] to-transparent dark:from-indigo-400/[0.15] dark:via-violet-500/[0.08]"></div>
+      <div class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-400/20 blur-3xl dark:bg-indigo-500/25"></div>
+      <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/25 ring-4 ring-white/80 dark:ring-gray-900/80">
+          <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
         </div>
-      </div>
-
-      <button type="submit" id="import-submit-btn"
-        class="w-full bg-gray-900 dark:bg-indigo-600 text-white font-medium py-3 rounded-lg hover:bg-gray-800 dark:hover:bg-indigo-500 transition-colors shadow-sm">
-        一键导入并同步
-      </button>
-    </form>
-
-    <div id="import-progress-wrap" class="mt-6 {{ if not .job_id }}hidden{{ end }}">
-      <div class="rounded-xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 p-4">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <div class="text-sm font-semibold text-indigo-700 dark:text-indigo-300">导入进度</div>
-            <div id="import-progress-step" class="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">初始化中...</div>
-          </div>
-          <div id="import-progress-percent" class="text-sm font-bold text-indigo-700 dark:text-indigo-300">0%</div>
+        <div class="min-w-0 flex-1 space-y-1.5">
+          <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">账号文本一键导入</h1>
+          <p class="max-w-2xl text-sm leading-relaxed text-gray-500 dark:text-gray-400">粘贴阿里云账号信息文本，自动解析 AK/SK、发现实例并入库。</p>
         </div>
-        <div class="mt-3 h-2 w-full bg-indigo-100 dark:bg-indigo-900/50 rounded-full overflow-hidden">
-          <div id="import-progress-bar" class="h-2 bg-indigo-500 rounded-full transition-all" style="width: 0%"></div>
-        </div>
-        <div id="import-progress-message" class="text-xs text-gray-600 dark:text-gray-300 mt-2">任务已创建，等待执行...</div>
-        <div id="import-progress-error" class="mt-3 hidden rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400 leading-5"></div>
       </div>
     </div>
 
-    {{ if .result }}
-    <div class="mt-8 border-t border-gray-200 dark:border-gray-800 pt-5 space-y-3">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">导入结果</h2>
-      {{ $r := .result }}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">账号标识：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "account_slug" }}</span></div>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">发现实例：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "discovered_count" }}</span></div>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">新增：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "imported_count" }}</span></div>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 text-gray-600 dark:text-gray-300">更新：<span class="font-semibold text-gray-900 dark:text-white">{{ index $r "updated_count" }}</span></div>
+    <div class="space-y-8 px-6 pb-8 sm:px-8">
+      <form method="POST" class="space-y-6" id="import-form">
+        <div class="anim-in anim-in-d1 space-y-2.5">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white">账号信息文本</label>
+          <div class="relative rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/50 shadow-inner ring-1 ring-black/[0.03] dark:ring-white/[0.04] transition-shadow focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:border-indigo-500/40 dark:focus-within:border-indigo-500/40">
+            <textarea name="account_text" rows="12" required placeholder="示例：&#10;登录名称：demo@example.com&#10;AccessKey ID：LTAIxxxxxxxxxxxx&#10;AccessKey Secret：xxxxxxxxxxxxxxxxxxx&#10;备注：香港生产账号"
+              class="w-full resize-y rounded-xl bg-transparent px-4 py-3.5 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder:text-gray-400/90 placeholder:dark:text-gray-500 focus:outline-none min-h-[12rem]">{{ .raw_text }}</textarea>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">支持中英文标签，自动忽略无关行；同一账号重复导入会覆盖更新。</p>
+        </div>
+
+        <div class="anim-in anim-in-d2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 shadow-sm">
+          <div class="mb-3 flex items-center gap-2">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </span>
+            <div>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">导入选项</h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400">控制区域扫描与速度</p>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <label class="group flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-gray-50/80 px-3 py-3 transition-colors hover:border-indigo-200/80 hover:bg-indigo-50/40 dark:bg-gray-800/60 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10">
+              <input type="checkbox" name="scan_all_regions" value="1" checked
+                class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-500">
+              <span class="text-sm leading-snug text-gray-700 dark:text-gray-300">扫描账号下全部可用区域（含香港与海外区域）</span>
+            </label>
+            <div class="rounded-lg border border-transparent bg-gray-50/80 px-3 py-3 dark:bg-gray-800/60">
+              <div class="flex items-center gap-2 mb-1.5">
+                <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">自动按地域分组</label>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">新导入的实例将自动按地域归入中文分组（如「香港」「东京」「北京」），方便后续按组分配给用户</p>
+              <div class="mt-2">
+                <label class="block text-[11px] text-gray-400 dark:text-gray-500 mb-1">自定义分组（可选，覆盖自动分组）</label>
+                <input type="text" name="default_group" placeholder="留空则按地域自动分组" value=""
+                  class="w-full max-w-xs h-8 px-3 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400">
+              </div>
+            </div>
+            <label class="group flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-gray-50/80 px-3 py-3 transition-colors hover:border-indigo-200/80 hover:bg-indigo-50/40 dark:bg-gray-800/60 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10">
+              <input type="checkbox" name="hot_regions_only" value="1" checked
+                class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-500">
+              <div>
+                <span class="text-sm leading-snug text-gray-700 dark:text-gray-300">仅扫描热门区域（北京、广州、上海、杭州、香港、日本、深圳、成都）</span>
+                <span class="block mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">跳过冷门区域大幅提升导入速度，适合大多数场景</span>
+              </div>
+            </label>
+            <label class="group flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-gray-50/80 px-3 py-3 transition-colors hover:border-indigo-200/80 hover:bg-indigo-50/40 dark:bg-gray-800/60 dark:hover:border-indigo-500/20 dark:hover:bg-indigo-500/10">
+              <input type="checkbox" name="stop_on_first" value="1"
+                class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-500">
+              <span class="text-sm leading-snug text-gray-700 dark:text-gray-300">发现实例后停止扫描剩余区域（适用于单区域账号，加快导入速度）</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- GitHub Backup -->
+        <div class="anim-in anim-in-d3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-slate-50 to-gray-50 shadow-sm dark:from-gray-900 dark:to-gray-900/80 dark:border-gray-800">
+          <div class="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:gap-5 sm:p-5">
+            <div class="flex shrink-0 items-center justify-center sm:w-24">
+              <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-900 text-white shadow-lg shadow-gray-900/20 ring-1 ring-white/10 dark:bg-gray-950">
+                <svg class="h-11 w-11" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              </div>
+            </div>
+            <div class="min-w-0 flex-1 space-y-3">
+              <div>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">GitHub 同步备份</h2>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">导入完成后将配置推送到私有仓库</p>
+              </div>
+              <label class="inline-flex cursor-pointer select-none items-center gap-2.5 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" name="github_sync" value="1" id="ghSyncToggle"
+                  {{ if .github_repo }}checked{{ end }}
+                  class="h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-500"
+                  onchange="document.getElementById('ghSyncDetail').classList.toggle('hidden', !this.checked)">
+                <span class="font-medium">导入后同步备份到 GitHub 私有仓库</span>
+              </label>
+              <div id="ghSyncDetail" class="{{ if not .github_repo }}hidden{{ end }} space-y-3 rounded-lg border border-gray-200/80 bg-white/80 p-3 dark:border-gray-700 dark:bg-gray-800/80">
+                <div>
+                  <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">GitHub 仓库</label>
+                  <input type="text" name="github_repo" placeholder="owner/repo-name" value="{{ .github_repo }}"
+                    class="w-full max-w-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-mono text-gray-900 placeholder:text-gray-400 focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500">
+                  <p class="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">格式: owner/repo-name，不存在时自动创建为私有仓库</p>
+                </div>
+                <div class="flex items-start gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                  <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+                  <span>需要服务器已安装 <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-gray-600 dark:bg-gray-900 dark:text-gray-400">gh</code> CLI 并完成 <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-gray-600 dark:bg-gray-900 dark:text-gray-400">gh auth login</code> 认证</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="import-submit-btn"
+          class="anim-in anim-in-d4 w-full rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-60">
+          一键导入并同步
+        </button>
+      </form>
+
+      <div id="import-progress-wrap" class="{{ if not .job_id }}hidden{{ end }}">
+        <div class="rounded-2xl border border-white/40 bg-white/65 p-5 shadow-lg shadow-indigo-500/5 backdrop-blur-md dark:border-gray-600/40 dark:bg-gray-900/55 dark:shadow-black/20">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-300">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">导入进度</div>
+                <div id="import-progress-step" class="mt-0.5 text-xs text-indigo-600 dark:text-indigo-400">初始化中...</div>
+              </div>
+            </div>
+            <div id="import-progress-percent" class="shrink-0 text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-300">0%</div>
+          </div>
+          <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-indigo-100/90 ring-1 ring-inset ring-indigo-200/50 dark:bg-indigo-950/60 dark:ring-indigo-500/20">
+            <div id="import-progress-bar" class="h-2 rounded-full transition-all bg-indigo-500" style="width: 0%"></div>
+          </div>
+          <div id="import-progress-message" class="mt-3 text-xs text-gray-600 dark:text-gray-300">任务已创建，等待执行...</div>
+          <div id="import-progress-error" class="mt-3 hidden rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs leading-5 text-red-600 backdrop-blur-sm dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-400"></div>
+        </div>
       </div>
-      {{ if index $r "sync_target" }}
-      <div class="rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
-        已同步到 GitHub：<a href="https://github.com/{{ index $r "sync_target" }}" target="_blank" class="underline font-mono text-xs">{{ index $r "sync_target" }}</a>
+
+      {{ if .result }}
+      <div class="anim-in space-y-5 border-t border-gray-200 pt-8 dark:border-gray-800">
+        <div class="flex items-center gap-2">
+          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </span>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">导入结果</h2>
+        </div>
+        {{ $r := .result }}
+        <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div class="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-medium text-gray-500 dark:text-gray-400">账号标识</div>
+              <div class="mt-0.5 truncate font-semibold text-gray-900 dark:text-white">{{ index $r "account_slug" }}</div>
+            </div>
+          </div>
+          <div class="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3V6a3 3 0 013-3h13.5a3 3 0 013 3v5.25a3 3 0 01-3 3m-16.5 0a3 3 0 003 3h13.5a3 3 0 003-3m-19.5 0v-1.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v1.5" /></svg>
+            </span>
+            <div>
+              <div class="text-xs font-medium text-gray-500 dark:text-gray-400">发现实例</div>
+              <div class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ index $r "discovered_count" }}</div>
+            </div>
+          </div>
+          <div class="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </span>
+            <div>
+              <div class="text-xs font-medium text-gray-500 dark:text-gray-400">新增</div>
+              <div class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ index $r "imported_count" }}</div>
+            </div>
+          </div>
+          <div class="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+            </span>
+            <div>
+              <div class="text-xs font-medium text-gray-500 dark:text-gray-400">更新</div>
+              <div class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ index $r "updated_count" }}</div>
+            </div>
+          </div>
+        </div>
+        {{ if index $r "sync_target" }}
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-sm text-emerald-700 shadow-sm dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-400">
+          已同步到 GitHub：<a href="https://github.com/{{ index $r "sync_target" }}" target="_blank" class="font-mono text-xs underline underline-offset-2">{{ index $r "sync_target" }}</a>
+        </div>
+        {{ end }}
       </div>
       {{ end }}
-    </div>
-    {{ end }}
 
-    <a href="/dashboard" class="block text-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 text-sm mt-6">&larr; 返回</a>
+      <a href="/dashboard" class="block text-center text-sm text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">&larr; 返回</a>
+    </div>
   </div>
 </div>
 {{ end }}

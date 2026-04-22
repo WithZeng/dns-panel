@@ -25,3 +25,9 @@ func generatePassword(length int) string {
 	rand.Read(b)
 	return base64.URLEncoding.EncodeToString(b)[:length]
 }
+
+func GenerateLoginToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
+}

@@ -10,7 +10,10 @@ import (
 )
 
 func DiscoverPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "discover.html", gin.H{"username": c.GetString("username")})
+	c.HTML(http.StatusOK, "discover.html", gin.H{
+		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
+	})
 }
 
 func DiscoverPost(c *gin.Context) {
@@ -25,6 +28,7 @@ func DiscoverPost(c *gin.Context) {
 		c.HTML(http.StatusOK, "discover.html", gin.H{
 			"error":    "请填写 Access Key ID 和 Secret",
 			"username": c.GetString("username"),
+			"role":     c.GetString("role"),
 		})
 		return
 	}
@@ -45,6 +49,7 @@ func DiscoverPost(c *gin.Context) {
 		c.HTML(http.StatusOK, "discover.html", gin.H{
 			"error":    "扫描失败: " + err.Error(),
 			"username": c.GetString("username"),
+			"role":     c.GetString("role"),
 		})
 		return
 	}
@@ -69,5 +74,6 @@ func DiscoverPost(c *gin.Context) {
 		"sk":         sk,
 		"region_id":  regionID,
 		"username":   c.GetString("username"),
+		"role":       c.GetString("role"),
 	})
 }

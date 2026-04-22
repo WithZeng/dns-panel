@@ -49,6 +49,10 @@ func CheckAndManageInstance(instanceID uint) error {
 		return err
 	}
 
+	if inst.Status == "Released" {
+		return nil
+	}
+
 	if inst.AccessKeyID == "" || inst.AccessKeySK == "" {
 		return fmt.Errorf("missing AK/SK for %s", inst.Name)
 	}
@@ -123,6 +127,13 @@ func CheckAndManageInstance(instanceID uint) error {
 		}
 		inst.Bandwidth = ecsInfo.Bandwidth
 		inst.BandwidthType = ecsInfo.BandwidthType
+	} else if err == nil && ecsInfo == nil {
+		inst.Status = "Released"
+		updateCredentialStatus(&inst, "released", "实例已释放或不存在 (DescribeInstances returned empty)")
+		log.Printf("[monitor] %s (%s) not found in API, marking as Released", inst.Name, inst.InstanceID)
+	} else if err != nil {
+		updateCredentialStatus(&inst, "error", err.Error())
+		log.Printf("[monitor] GetECSInfo failed for %s: %v", inst.Name, err)
 	}
 
 	autoStartStopLogic(client, &inst)
@@ -248,16 +259,44 @@ func ECSAction(instanceID uint, action string) (bool, string) {
 		return false, err.Error()
 	}
 
+	var ok bool
+	var msg string
+
 	switch action {
 	case "start":
-		return aliyun.ECSStart(client, inst.InstanceID)
+		ok, msg = aliyun.ECSStart(client, inst.InstanceID)
 	case "stop":
-		return aliyun.ECSStop(client, inst.InstanceID)
+		ok, msg = aliyun.ECSStop(client, inst.InstanceID)
 	case "reboot":
-		return aliyun.ECSReboot(client, inst.InstanceID)
+		ok, msg = aliyun.ECSReboot(client, inst.InstanceID)
 	case "release":
-		return aliyun.ECSRelease(client, inst.InstanceID)
+		ok, msg = aliyun.ECSRelease(client, inst.InstanceID)
 	default:
 		return false, "unknown action: " + action
 	}
+
+	if ok {
+		switch action {
+		case "start":
+			inst.Status = "Starting"
+		case "stop":
+			inst.Status = "Stopping"
+		case "reboot":
+			inst.Status = "Starting"
+		case "release":
+			inst.Status = "Released"
+		}
+		database.DB.Save(&inst)
+
+		if action != "release" {
+			go func(id uint) {
+				time.Sleep(8 * time.Second)
+				if err := CheckAndManageInstance(id); err != nil {
+					log.Printf("[ecs_action] delayed refresh failed for instance %d: %v", id, err)
+				}
+			}(instanceID)
+		}
+	}
+
+	return ok, msg
 }

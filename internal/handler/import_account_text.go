@@ -31,6 +31,11 @@ var allAliyunRegions = []string{
 	"me-east-1", "me-central-1",
 }
 
+var hotAliyunRegions = []string{
+	"cn-beijing", "cn-guangzhou", "cn-shanghai", "cn-hangzhou",
+	"cn-hongkong", "ap-northeast-1", "cn-shenzhen", "cn-chengdu",
+}
+
 func ImportAccountTextPage(c *gin.Context) {
 	githubRepo := strings.TrimSpace(os.Getenv("GITHUB_SYNC_REPO"))
 	doneJobID := c.Query("job_done")
@@ -40,6 +45,7 @@ func ImportAccountTextPage(c *gin.Context) {
 			result := job.GetResult()
 			c.HTML(http.StatusOK, "import_account_text.html", gin.H{
 				"username":    c.GetString("username"),
+				"role":        c.GetString("role"),
 				"result":      result,
 				"github_repo": githubRepo,
 			})
@@ -48,6 +54,7 @@ func ImportAccountTextPage(c *gin.Context) {
 	}
 	c.HTML(http.StatusOK, "import_account_text.html", gin.H{
 		"username":    c.GetString("username"),
+		"role":        c.GetString("role"),
 		"github_repo": githubRepo,
 	})
 }
@@ -60,6 +67,7 @@ func ImportAccountTextPost(c *gin.Context) {
 	if strings.TrimSpace(rawText) == "" {
 		c.HTML(http.StatusOK, "import_account_text.html", gin.H{
 			"username":    c.GetString("username"),
+			"role":        c.GetString("role"),
 			"error":       "请粘贴账号文本",
 			"raw_text":    rawText,
 			"github_repo": githubRepo,
@@ -78,6 +86,8 @@ func ImportAccountTextPost(c *gin.Context) {
 
 	scanAll := c.PostForm("scan_all_regions") == "1"
 	stopOnFirst := c.PostForm("stop_on_first") == "1"
+	hotOnly := c.PostForm("hot_regions_only") == "1"
+	defaultGroup := strings.TrimSpace(c.PostForm("default_group"))
 
 	jobID := fmt.Sprintf("imp-%d", time.Now().UnixNano()%1000000000)
 	job := models.ImportJob{
@@ -88,10 +98,11 @@ func ImportAccountTextPost(c *gin.Context) {
 	}
 	database.DB.Create(&job)
 
-	go runAccountImport(jobID, rawText, scanAll, stopOnFirst, syncRepo)
+	go runAccountImport(jobID, rawText, scanAll, stopOnFirst, hotOnly, defaultGroup, syncRepo)
 
 	c.HTML(http.StatusOK, "import_account_text.html", gin.H{
 		"username":    c.GetString("username"),
+		"role":        c.GetString("role"),
 		"raw_text":    rawText,
 		"job_id":      jobID,
 		"github_repo": githubRepo,
@@ -160,6 +171,7 @@ func parseAccountText(text string) map[string]string {
 		"access_key_id":     {"accesskey id", "access key id", "accesskeyid", "key id", "akid", "ak"},
 		"access_key_secret": {"accesskey secret", "access key secret", "accesskeysecret", "secret key", "sk"},
 		"login_name":        {"登录名称", "登录名", "账号", "账户", "用户名", "login name", "username", "account"},
+		"login_password":    {"登录密码", "密码", "ram密码", "ram password", "login password", "password", "pwd"},
 		"remark":            {"备注", "说明", "note", "notes", "remark", "memo"},
 		"region_id":         {"区域", "地域", "region id", "region_id", "region"},
 	}
@@ -171,12 +183,35 @@ func parseAccountText(text string) map[string]string {
 			continue
 		}
 		normalized := strings.ReplaceAll(line, "：", ":")
+
+		var left, right string
 		idx := strings.Index(normalized, ":")
-		if idx < 0 {
-			continue
+		if idx >= 0 {
+			left = strings.TrimSpace(normalized[:idx])
+			right = strings.TrimSpace(normalized[idx+1:])
+		} else {
+			// Try space-separated: match known key prefixes then take the rest as value
+			for _, aliases := range keyMap {
+				for _, alias := range aliases {
+					prefixLower := strings.ToLower(line)
+					aliasLen := len(alias)
+					if len(prefixLower) > aliasLen && strings.HasPrefix(prefixLower, alias) {
+						rest := strings.TrimSpace(line[aliasLen:])
+						if rest != "" {
+							left = line[:aliasLen]
+							right = rest
+							break
+						}
+					}
+				}
+				if left != "" {
+					break
+				}
+			}
+			if left == "" {
+				continue
+			}
 		}
-		left := strings.TrimSpace(normalized[:idx])
-		right := strings.TrimSpace(normalized[idx+1:])
 		if right == "" {
 			continue
 		}
@@ -242,6 +277,26 @@ func removeSpaces(s string) string {
 	return b.String()
 }
 
+var regionNameMap = map[string]string{
+	"cn-qingdao": "青岛", "cn-beijing": "北京", "cn-zhangjiakou": "张家口",
+	"cn-huhehaote": "呼和浩特", "cn-wulanchabu": "乌兰察布", "cn-hangzhou": "杭州",
+	"cn-shanghai": "上海", "cn-nanjing": "南京", "cn-fuzhou": "福州",
+	"cn-shenzhen": "深圳", "cn-guangzhou": "广州", "cn-heyuan": "河源",
+	"cn-chengdu": "成都", "cn-wuhan-lr": "武汉", "cn-hongkong": "香港",
+	"ap-southeast-1": "新加坡", "ap-southeast-2": "悉尼", "ap-southeast-3": "吉隆坡",
+	"ap-southeast-5": "雅加达", "ap-southeast-6": "马尼拉", "ap-southeast-7": "曼谷",
+	"ap-south-1": "孟买", "ap-northeast-1": "东京", "ap-northeast-2": "首尔",
+	"us-west-1": "硅谷", "us-east-1": "弗吉尼亚", "eu-west-1": "伦敦",
+	"eu-central-1": "法兰克福", "me-east-1": "迪拜", "me-central-1": "利雅得",
+}
+
+func regionGroupName(regionID string) string {
+	if name, ok := regionNameMap[regionID]; ok {
+		return name
+	}
+	return regionID
+}
+
 func slugifyAccount(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	re := regexp.MustCompile(`[^a-z0-9\p{Han}-]+`)
@@ -253,7 +308,7 @@ func slugifyAccount(s string) string {
 	return s
 }
 
-func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRepo string) {
+func runAccountImport(jobID, rawText string, scanAll, stopOnFirst, hotOnly bool, defaultGroup, githubRepo string) {
 	updateJob := func(step, message string, progress int) {
 		database.DB.Model(&models.ImportJob{}).Where("id = ?", jobID).Updates(map[string]interface{}{
 			"step": step, "message": message, "progress": progress, "updated_at": time.Now(),
@@ -299,7 +354,11 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 
 	regions := []string{parsed["region_id"]}
 	if scanAll {
-		regions = allAliyunRegions
+		if hotOnly {
+			regions = hotAliyunRegions
+		} else {
+			regions = allAliyunRegions
+		}
 	}
 
 	type discoveredInst struct {
@@ -417,16 +476,26 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 
 	updateJob("入库", "正在导入实例数据...", 85)
 
+	encLoginAcct, _ := crypto.Encrypt(parsed["login_name"])
+	encLoginPwd, _ := crypto.Encrypt(parsed["login_password"])
+
 	imported, updated := 0, 0
 	for _, d := range allDiscovered {
 		encAK, _ := crypto.Encrypt(ak)
 		encSK, _ := crypto.Encrypt(sk)
+
+		groupName := defaultGroup
+		if groupName == "" {
+			groupName = regionGroupName(d.RegionID)
+		}
 
 		var existing models.EcsInstance
 		if database.DB.Where("instance_id = ?", d.InstanceID).First(&existing).Error == nil {
 			existing.AccessKeyID = encAK
 			existing.AccessKeySK = encSK
 			existing.IsEncrypted = true
+			existing.LoginAccount = encLoginAcct
+			existing.LoginPassword = encLoginPwd
 			existing.Status = d.Status
 			existing.PublicIP = d.PublicIP
 			existing.CredentialStatus = "ok"
@@ -435,6 +504,9 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 			existing.LifeTotalLimit = 500
 			existing.AutoStartEnabled = true
 			existing.MonitorEnabled = true
+			if existing.GroupName == "" {
+				existing.GroupName = groupName
+			}
 			database.DB.Save(&existing)
 			updated++
 		} else {
@@ -445,6 +517,8 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 				AccessKeyID:       encAK,
 				AccessKeySK:       encSK,
 				IsEncrypted:       true,
+				LoginAccount:      encLoginAcct,
+				LoginPassword:     encLoginPwd,
 				TrafficStrategy:   "life",
 				LifeTotalLimit:    500,
 				AlertThresholdPct: 80,
@@ -453,6 +527,7 @@ func runAccountImport(jobID, rawText string, scanAll, stopOnFirst bool, githubRe
 				Status:            d.Status,
 				PublicIP:          d.PublicIP,
 				Tag:               accountSlug,
+				GroupName:         groupName,
 				LastChecked:       time.Now(),
 			}
 			if inst.Name == "" {

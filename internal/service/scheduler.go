@@ -15,7 +15,7 @@ var Cron *cron.Cron
 func StartScheduler() {
 	Cron = cron.New(cron.WithSeconds())
 
-	Cron.AddFunc("0 */5 * * * *", func() {
+	Cron.AddFunc("0 */3 * * * *", func() {
 		log.Println("[scheduler] check_all_instances")
 		CheckAllInstances()
 	})
@@ -60,7 +60,7 @@ func StopScheduler() {
 
 func CheckAllInstances() {
 	var instances []models.EcsInstance
-	database.DB.Where("monitoring_enabled = ?", true).Find(&instances)
+	database.DB.Where("monitor_enabled = ?", true).Find(&instances)
 	for _, inst := range instances {
 		if err := CheckAndManageInstance(inst.ID); err != nil {
 			log.Printf("[monitor] error checking %s: %v", inst.Name, err)

@@ -8,10 +8,25 @@
       </div>
       <h1 class="text-xl font-bold text-gray-900 dark:text-white text-center">CloudPanel</h1>
       <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-1">登录以访问控制面板</p>
+
+      <!-- Tabs -->
+      <div class="flex mt-5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <button id="tabBtnPassword" onclick="switchLoginTab('password')"
+          class="flex-1 text-sm font-medium py-2 rounded-lg transition-all">
+          账号密码
+        </button>
+        <button id="tabBtnToken" onclick="switchLoginTab('token')"
+          class="flex-1 text-sm font-medium py-2 rounded-lg transition-all">
+          Token 登录
+        </button>
+      </div>
+
       {{ if .error }}
       <div class="mt-4 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">{{ .error }}</div>
       {{ end }}
-      <form method="POST" class="mt-6 space-y-4">
+
+      <!-- Password Form -->
+      <form id="formPassword" method="POST" action="/login" class="mt-5 space-y-4">
         <div>
           <label for="username" class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">用户名</label>
           <input id="username" name="username" type="text" required autofocus
@@ -27,11 +42,46 @@
           登录
         </button>
       </form>
+
+      <!-- Token Form -->
+      <form id="formToken" method="POST" action="/login_token" class="mt-5 space-y-4 hidden">
+        <div>
+          <label for="token" class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">登录 Token</label>
+          <input id="token" name="token" type="password" required placeholder="粘贴管理员提供的 Token"
+            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm font-mono tracking-wider">
+        </div>
+        <button type="submit"
+          class="w-full bg-emerald-600 text-white font-medium py-2.5 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
+          一键登录
+        </button>
+      </form>
     </div>
     <p class="text-center text-xs text-gray-400 mt-5">
-      CloudPanel &middot; <a href="https://github.com/WithZeng/dns-panel" target="_blank" class="hover:text-gray-600 dark:hover:text-gray-300 transition">GitHub</a>
+      CloudPanel &middot; Powered by WithZeng
     </p>
   </div>
 </div>
+<script>
+function switchLoginTab(tab) {
+  var fp = document.getElementById('formPassword');
+  var ft = document.getElementById('formToken');
+  var bp = document.getElementById('tabBtnPassword');
+  var bt = document.getElementById('tabBtnToken');
+  var activeClass = 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm';
+  var inactiveClass = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300';
+  if (tab === 'password') {
+    fp.classList.remove('hidden');
+    ft.classList.add('hidden');
+    bp.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + activeClass;
+    bt.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + inactiveClass;
+  } else {
+    fp.classList.add('hidden');
+    ft.classList.remove('hidden');
+    bt.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + activeClass;
+    bp.className = 'flex-1 text-sm font-medium py-2 rounded-lg transition-all ' + inactiveClass;
+  }
+}
+switchLoginTab({{ if .tab }}{{ if eq .tab "token" }}'token'{{ else }}'password'{{ end }}{{ else }}'password'{{ end }});
+</script>
 {{ end }}
 {{ template "base" . }}

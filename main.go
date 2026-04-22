@@ -100,6 +100,12 @@ func main() {
 	r.Use(middleware.RequestLogger())
 
 	funcMap := template.FuncMap{
+		"firstChar": func(s string) string {
+			for _, r := range s {
+				return string(r)
+			}
+			return "?"
+		},
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b float64) float64 {
 			v := a - b
@@ -181,12 +187,13 @@ func main() {
 	r.GET("/health", handler.HealthCheck)
 	r.GET("/login", handler.LoginPage)
 	r.POST("/login", middleware.RateLimit(10, 60*time.Second), handler.LoginPost)
+	r.POST("/login_token", middleware.RateLimit(10, 60*time.Second), handler.LoginTokenPost)
 	r.GET("/logout", handler.Logout)
 
 	// Public IPv6 script (token auth)
 	r.GET("/public/instance/:id/ipv6_script.sh", handler.PublicIPv6Script)
 
-	// ─── Authenticated routes ───────────────────────────────────
+	// ─── Authenticated routes (all users) ──────────────────────
 	auth := r.Group("/")
 	auth.Use(middleware.AuthRequired())
 	auth.Use(middleware.ForcePasswordChange())
@@ -195,97 +202,142 @@ func main() {
 		auth.GET("/change_password", handler.ChangePasswordPage)
 		auth.POST("/change_password", handler.ChangePasswordPost)
 
-		// Instance CRUD
-		auth.GET("/instance/add", handler.AddInstancePage)
-		auth.POST("/instance/add", handler.AddInstancePost)
-		auth.GET("/instance/edit/:id", handler.EditInstancePage)
-		auth.POST("/instance/edit/:id", handler.EditInstancePost)
-		auth.GET("/instance/:id", handler.InstanceDetail)
-		auth.POST("/instance/delete/:id", handler.DeleteInstance)
-
-		// Schedules
-		auth.GET("/instance/:id/schedules", handler.SchedulesPage)
-		auth.POST("/instance/:id/schedules", handler.ScheduleCreate)
-		auth.POST("/schedule/:id/toggle", handler.ScheduleToggle)
-		auth.POST("/schedule/:id/delete", handler.ScheduleDelete)
-
-		// Logs
+		// Logs (filtered by role in handler)
 		auth.GET("/logs", handler.OperationLogs)
 		auth.GET("/notification_logs", handler.NotificationLogs)
 
-		// Notification settings
-		auth.GET("/alert_config", func(c *gin.Context) { c.Redirect(302, "/notification_logs?tab=settings") })
-		auth.POST("/alert_config", handler.AlertConfigPost)
-		auth.POST("/api/test_notification", handler.TestNotification)
+		// Help page
+		auth.GET("/help", handler.HelpPage)
 
-		// Export & backup
-		auth.GET("/export_csv", handler.ExportCSV)
-		auth.GET("/download_backup", handler.DownloadBackup)
-		auth.GET("/download_backup_plaintext", handler.DownloadBackupPlaintext)
+		// Tickets (all users can view/create)
+		auth.GET("/tickets", handler.TicketListPage)
+		auth.GET("/tickets/create", handler.TicketCreatePage)
+		auth.POST("/tickets/create", handler.TicketCreatePost)
+		auth.GET("/ticket/:id", handler.TicketDetailPage)
+		auth.GET("/api/tickets/pending_count", handler.TicketPendingCount)
 
-		// Discover & import
-		auth.GET("/discover", handler.DiscoverPage)
-		auth.POST("/discover", handler.DiscoverPost)
-		auth.POST("/import_csv", handler.ImportCSVPost)
-		auth.GET("/import_account_text", handler.ImportAccountTextPage)
-		auth.POST("/import_account_text", handler.ImportAccountTextPost)
-		auth.GET("/api/account/import_text/status/:job_id", handler.ImportAccountTextStatus)
-
-		// Batch & check all
-		auth.POST("/api/batch", handler.BatchAction)
-		auth.GET("/api/check_all", handler.CheckAll)
-		auth.GET("/api/region_traffic", handler.APIRegionTraffic)
-		auth.GET("/api/billing/cdt/three_months", handler.APICDTThreeMonths)
-		auth.GET("/api/traffic_forecast/:id", handler.APITrafficForecast)
-
-		// ECS actions
-		auth.POST("/api/instance/:id/start", handler.ECSStartAction)
-		auth.POST("/api/instance/:id/stop", handler.ECSStopAction)
-		auth.POST("/api/instance/:id/reboot", handler.ECSRebootAction)
-		auth.POST("/api/instance/:id/release", handler.ECSReleaseAction)
-		auth.POST("/api/instance/:id/refresh", handler.ECSRefreshStatus)
-		auth.GET("/api/instance/:id/billing", handler.ECSTrafficBilling)
-		auth.POST("/api/instance/:id/check", handler.ForceCheckInstance)
-		auth.GET("/api/instance/:id/vnc", handler.ECSVncUrl)
-		auth.POST("/api/instance/:id/password", handler.ECSModifyPasswordAction)
-		auth.GET("/api/instance/:id/images", handler.ECSImagesAction)
-		auth.POST("/api/instance/:id/reset_system", handler.ECSResetSystemAction)
-		auth.POST("/api/instance/:id/rename", handler.ECSRenameAction)
-
-		// IPv6
-		auth.POST("/api/instance/:id/enable_ipv6", handler.EnableIPv6)
-		auth.GET("/api/instance/:id/ipv6_status", handler.GetIPv6Status)
-		auth.GET("/instance/:id/ipv6_script.sh", handler.DownloadIPv6Script)
-
-		// Security groups
-		auth.GET("/instance/:id/security_groups", handler.SecurityGroupsPage)
-		auth.POST("/api/instance/:id/sg/add", handler.APISecurityGroupAdd)
-		auth.POST("/api/instance/:id/sg/revoke", handler.APISecurityGroupRevoke)
-
-		// DNS Failover
-		auth.GET("/dns_failover", handler.DNSFailoverPage)
-		auth.POST("/dns_failover/cf_config", handler.SaveCloudflareConfig)
-		auth.POST("/dns_failover/rules", handler.CreateDNSFailoverRule)
-		auth.POST("/dns_failover/rules/:id/toggle", handler.ToggleDNSFailoverRule)
-		auth.POST("/dns_failover/rules/:id/delete", handler.DeleteDNSFailoverRule)
-		auth.GET("/api/dns_failover/logs", handler.APIDNSFailoverLogs)
-		auth.POST("/api/dns_failover/:id/test", handler.APIDNSFailoverTestSwitch)
-
-		// Version & update
+		// Version & update (available to all)
 		auth.GET("/api/version", handler.VersionInfo)
 		auth.GET("/api/check_update", handler.CheckUpdate)
+	}
+
+	// ─── Admin-only routes ─────────────────────────────────────
+	admin := r.Group("/")
+	admin.Use(middleware.AuthRequired())
+	admin.Use(middleware.ForcePasswordChange())
+	admin.Use(middleware.AdminRequired())
+	{
+		// Instance CRUD (admin only)
+		admin.GET("/instance/add", handler.AddInstancePage)
+		admin.POST("/instance/add", handler.AddInstancePost)
+		admin.GET("/instance/edit/:id", handler.EditInstancePage)
+		admin.POST("/instance/edit/:id", handler.EditInstancePost)
+		admin.POST("/instance/delete/:id", handler.DeleteInstance)
+
+		// Schedules (admin only)
+		admin.GET("/instance/:id/schedules", handler.SchedulesPage)
+		admin.POST("/instance/:id/schedules", handler.ScheduleCreate)
+		admin.POST("/schedule/:id/toggle", handler.ScheduleToggle)
+		admin.POST("/schedule/:id/delete", handler.ScheduleDelete)
+
+		// Notification settings (admin only)
+		admin.GET("/alert_config", func(c *gin.Context) { c.Redirect(302, "/notification_logs?tab=settings") })
+		admin.POST("/alert_config", handler.AlertConfigPost)
+		admin.POST("/api/test_notification", handler.TestNotification)
+
+		// Export & backup
+		admin.GET("/export_csv", handler.ExportCSV)
+		admin.GET("/download_backup", handler.DownloadBackup)
+		admin.GET("/download_backup_plaintext", handler.DownloadBackupPlaintext)
+
+		// Discover & import
+		admin.GET("/discover", handler.DiscoverPage)
+		admin.POST("/discover", handler.DiscoverPost)
+		admin.POST("/import_csv", handler.ImportCSVPost)
+		admin.GET("/import_account_text", handler.ImportAccountTextPage)
+		admin.POST("/import_account_text", handler.ImportAccountTextPost)
+		admin.GET("/api/account/import_text/status/:job_id", handler.ImportAccountTextStatus)
+
+		// Batch & check all
+		admin.POST("/api/batch", handler.BatchAction)
+		admin.GET("/api/check_all", handler.CheckAll)
+		admin.GET("/api/region_traffic", handler.APIRegionTraffic)
+		admin.GET("/api/billing/cdt/three_months", handler.APICDTThreeMonths)
+
+		// ECS power actions (admin only)
+		admin.POST("/api/instance/:id/start", handler.ECSStartAction)
+		admin.POST("/api/instance/:id/stop", handler.ECSStopAction)
+		admin.POST("/api/instance/:id/reboot", handler.ECSRebootAction)
+		admin.POST("/api/instance/:id/release", handler.ECSReleaseAction)
+
+		// DNS Failover
+		admin.GET("/dns_failover", handler.DNSFailoverPage)
+		admin.POST("/dns_failover/cf_config", handler.SaveCloudflareConfig)
+		admin.POST("/dns_failover/rules", handler.CreateDNSFailoverRule)
+		admin.POST("/dns_failover/rules/:id/toggle", handler.ToggleDNSFailoverRule)
+		admin.POST("/dns_failover/rules/:id/delete", handler.DeleteDNSFailoverRule)
+		admin.GET("/api/dns_failover/logs", handler.APIDNSFailoverLogs)
+		admin.POST("/api/dns_failover/:id/test", handler.APIDNSFailoverTestSwitch)
 
 		// DB Restore
-		auth.GET("/restore_db", handler.RestoreDBPage)
-		auth.POST("/restore_db", handler.RestoreDBPost)
+		admin.GET("/restore_db", handler.RestoreDBPage)
+		admin.POST("/restore_db", handler.RestoreDBPost)
+		admin.GET("/restore", handler.RestorePage)
 
-		// Unified restore page
-		auth.GET("/restore", handler.RestorePage)
+		// Admin API
+		admin.GET("/api/instances", handler.APIInstances)
 
-		// API
-		auth.GET("/api/instances", handler.APIInstances)
-		auth.POST("/api/instance/:id/notes", handler.UpdateNotes)
-		auth.GET("/api/traffic_history/:id", handler.APITrafficHistory)
+		// User management
+		admin.GET("/admin/users", handler.UserListPage)
+		admin.POST("/admin/users", handler.CreateUserPost)
+		admin.POST("/admin/users/:id/delete", handler.DeleteUserPost)
+		admin.POST("/admin/users/:id/reset_password", handler.ResetUserPasswordPost)
+		admin.GET("/admin/users/:id/assign", handler.AssignInstancePage)
+		admin.POST("/admin/users/:id/assign", handler.AssignInstancePost)
+
+		// Instance group management
+		admin.POST("/api/instance/group", handler.UpdateInstanceGroup)
+		admin.POST("/api/instance/batch_group", handler.BatchUpdateInstanceGroup)
+
+		// User token management
+		admin.POST("/api/users/:id/regenerate_token", handler.RegenerateToken)
+
+		// Ticket admin actions
+		admin.POST("/ticket/:id/review", handler.TicketReviewPost)
+		admin.POST("/ticket/:id/assign", handler.TicketAssignQuotaPost)
+	}
+
+	// ─── Instance routes (access-controlled per instance) ──────
+	inst := r.Group("/")
+	inst.Use(middleware.AuthRequired())
+	inst.Use(middleware.ForcePasswordChange())
+	inst.Use(middleware.InstanceAccessRequired())
+	{
+		inst.GET("/instance/:id", handler.InstanceDetail)
+
+		// ECS actions (view-only for normal users)
+		inst.POST("/api/instance/:id/refresh", handler.ECSRefreshStatus)
+		inst.GET("/api/instance/:id/billing", handler.ECSTrafficBilling)
+		inst.POST("/api/instance/:id/check", handler.ForceCheckInstance)
+		inst.GET("/api/instance/:id/vnc", handler.ECSVncUrl)
+		inst.POST("/api/instance/:id/password", handler.ECSModifyPasswordAction)
+		inst.GET("/api/instance/:id/images", handler.ECSImagesAction)
+		inst.POST("/api/instance/:id/reset_system", handler.ECSResetSystemAction)
+		inst.POST("/api/instance/:id/rename", handler.ECSRenameAction)
+		inst.POST("/api/instance/:id/notes", handler.UpdateNotes)
+		inst.POST("/api/instance/:id/traffic", handler.UpdateTrafficSettings)
+		inst.GET("/api/traffic_history/:id", handler.APITrafficHistory)
+		inst.GET("/api/traffic_forecast/:id", handler.APITrafficForecast)
+
+		// IPv6
+		inst.POST("/api/instance/:id/enable_ipv6", handler.EnableIPv6)
+		inst.GET("/api/instance/:id/ipv6_status", handler.GetIPv6Status)
+		inst.GET("/instance/:id/ipv6_script.sh", handler.DownloadIPv6Script)
+
+		// Security groups
+		inst.GET("/instance/:id/security_groups", handler.SecurityGroupsPage)
+		inst.POST("/api/instance/:id/sg/add", handler.APISecurityGroupAdd)
+		inst.POST("/api/instance/:id/sg/revoke", handler.APISecurityGroupRevoke)
 	}
 
 	addr := fmt.Sprintf("0.0.0.0:%d", cfg.Port)
@@ -315,10 +367,11 @@ func runResetPassword() {
 		"password_hash":     hash,
 		"failed_login_count": 0,
 		"locked_until":       nil,
+		"role":               "admin",
 	})
 	if result.RowsAffected == 0 {
 		hash2, _ := database.HashPassword(newPass)
-		database.DB.Create(&models.User{Username: "admin", PasswordHash: hash2})
+		database.DB.Create(&models.User{Username: "admin", PasswordHash: hash2, Role: "admin"})
 		fmt.Println("Admin user created.")
 	}
 

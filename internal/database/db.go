@@ -46,6 +46,9 @@ func Init(cfg *config.Config) error {
 	}
 
 	ensureDefaultAdmin()
+	migrateExistingUsersRole()
+	ensureLoginTokens()
+	enableAutoStartForExisting()
 	log.Printf("Database ready: %s", cfg.DBPath)
 	return nil
 }
@@ -60,9 +63,12 @@ func ensureDefaultAdmin() {
 
 	password := generatePassword(16)
 	hash, _ := hashPassword(password)
+	token := GenerateLoginToken()
 	admin := models.User{
 		Username:            "admin",
 		PasswordHash:        hash,
+		LoginToken:          token,
+		Role:                "admin",
 		ForcePasswordChange: true,
 	}
 	if err := DB.Create(&admin).Error; err != nil {
@@ -75,11 +81,35 @@ func ensureDefaultAdmin() {
 		credPath = "data/initial_admin_credentials.txt"
 	}
 	os.MkdirAll(filepath.Dir(credPath), 0755)
-	content := fmt.Sprintf("DNS Panel 初始管理员账号\nusername=admin\npassword=%s\n请登录后立即修改密码。\n", password)
+	content := fmt.Sprintf("DNS Panel 初始管理员账号\nusername=admin\npassword=%s\nlogin_token=%s\n请登录后立即修改密码。\n", password, token)
 	os.WriteFile(credPath, []byte(content), 0600)
 	log.Printf("Default admin created. Password saved to %s", credPath)
 
 	now := time.Now().Format(time.RFC3339)
 	marker := filepath.Join(filepath.Dir(credPath), ".db_initialized")
 	os.WriteFile(marker, []byte(now), 0644)
+}
+
+func migrateExistingUsersRole() {
+	DB.Model(&models.User{}).Where("role = '' OR role IS NULL").Update("role", "admin")
+	DB.Model(&models.User{}).Where("username = ? AND role != ?", "admin", "admin").Update("role", "admin")
+}
+
+func enableAutoStartForExisting() {
+	result := DB.Model(&models.EcsInstance{}).Where("auto_start_enabled = ?", false).Update("auto_start_enabled", true)
+	if result.RowsAffected > 0 {
+		log.Printf("Enabled auto-start for %d existing instance(s).", result.RowsAffected)
+	}
+}
+
+func ensureLoginTokens() {
+	var users []models.User
+	DB.Where("login_token = '' OR login_token IS NULL").Find(&users)
+	for _, u := range users {
+		u.LoginToken = GenerateLoginToken()
+		DB.Save(&u)
+	}
+	if len(users) > 0 {
+		log.Printf("Generated login tokens for %d user(s).", len(users))
+	}
 }

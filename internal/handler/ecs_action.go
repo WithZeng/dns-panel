@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
@@ -40,6 +41,11 @@ func ECSRefreshStatus(c *gin.Context) {
 		return
 	}
 
+	if inst.Status == "Released" {
+		c.JSON(http.StatusOK, gin.H{"success": true, "instance": inst})
+		return
+	}
+
 	client, err := getClientFromInstance(&inst)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
@@ -47,11 +53,29 @@ func ECSRefreshStatus(c *gin.Context) {
 	}
 
 	info, err := aliyun.GetECSInfo(client, inst.InstanceID)
-	if err != nil || info == nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "获取状态失败"})
+	if err != nil {
+		inst.CredentialStatus = "error"
+		inst.CredentialError = err.Error()
+		now := time.Now()
+		inst.CredentialLastFailedAt = &now
+		database.DB.Save(&inst)
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if info == nil {
+		inst.Status = "Released"
+		inst.CredentialStatus = "released"
+		inst.CredentialError = "实例已释放或不存在"
+		now := time.Now()
+		inst.CredentialLastFailedAt = &now
+		database.DB.Save(&inst)
+		c.JSON(http.StatusOK, gin.H{"success": true, "instance": inst})
 		return
 	}
 
+	inst.CredentialStatus = "ok"
+	inst.CredentialError = ""
+	inst.CredentialLastFailedAt = nil
 	inst.Status = info.Status
 	inst.PublicIP = info.PublicIP
 	inst.PrivateIP = info.PrivateIP
@@ -143,6 +167,7 @@ func SecurityGroupsPage(c *gin.Context) {
 			"instance": inst,
 			"error":    err.Error(),
 			"username": c.GetString("username"),
+			"role":     c.GetString("role"),
 		})
 		return
 	}
@@ -153,6 +178,7 @@ func SecurityGroupsPage(c *gin.Context) {
 			"instance": inst,
 			"error":    err.Error(),
 			"username": c.GetString("username"),
+			"role":     c.GetString("role"),
 		})
 		return
 	}
@@ -171,6 +197,7 @@ func SecurityGroupsPage(c *gin.Context) {
 		"instance": inst,
 		"groups":   groups,
 		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
 	})
 }
 

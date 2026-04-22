@@ -15,6 +15,7 @@ func AlertConfigPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "notification_logs.html", gin.H{
 		"config":   cfg,
 		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
 		"tab":      "settings",
 	})
 }

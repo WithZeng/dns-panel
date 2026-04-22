@@ -10,12 +10,14 @@ import (
 	"github.com/WithZeng/dns-panel/internal/crypto"
 	"github.com/WithZeng/dns-panel/internal/database"
 	"github.com/WithZeng/dns-panel/internal/models"
+	"github.com/WithZeng/dns-panel/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 func AddInstancePage(c *gin.Context) {
 	c.HTML(http.StatusOK, "add_instance.html", gin.H{
 		"username":    c.GetString("username"),
+		"role":        c.GetString("role"),
 		"instance_id": c.Query("instance_id"),
 		"region_id":   c.Query("region_id"),
 		"name":        c.Query("name"),
@@ -40,7 +42,6 @@ func AddInstancePost(c *gin.Context) {
 
 	monthlyLimit, _ := strconv.ParseFloat(c.PostForm("monthly_limit"), 64)
 	lifeTotalLimit, _ := strconv.ParseFloat(c.PostForm("life_total_limit"), 64)
-	hourlyPrice, _ := strconv.ParseFloat(c.PostForm("hourly_price"), 64)
 	threshold, _ := strconv.Atoi(c.PostForm("alert_threshold_pct"))
 	if threshold == 0 {
 		threshold = 80
@@ -56,7 +57,6 @@ func AddInstancePost(c *gin.Context) {
 		TrafficStrategy:   strategy,
 		MonthlyLimit:      monthlyLimit,
 		LifeTotalLimit:    lifeTotalLimit,
-		HourlyPrice:       hourlyPrice,
 		AlertThresholdPct: threshold,
 		Tag:               strings.TrimSpace(c.PostForm("tag")),
 		Notes:             strings.TrimSpace(c.PostForm("notes")),
@@ -72,6 +72,9 @@ func AddInstancePost(c *gin.Context) {
 	}
 
 	logOperation("add", fmt.Sprintf("添加实例 %s (%s)", name, instanceID), &inst.ID, c)
+
+	go service.CheckAndManageInstance(inst.ID)
+
 	c.Redirect(http.StatusFound, "/dashboard")
 }
 
@@ -82,7 +85,11 @@ func EditInstancePage(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/dashboard")
 		return
 	}
-	c.HTML(http.StatusOK, "edit_instance.html", gin.H{"instance": inst, "username": c.GetString("username")})
+	c.HTML(http.StatusOK, "edit_instance.html", gin.H{
+		"instance": inst,
+		"username": c.GetString("username"),
+		"role":     c.GetString("role"),
+	})
 }
 
 func EditInstancePost(c *gin.Context) {
@@ -99,7 +106,6 @@ func EditInstancePost(c *gin.Context) {
 	inst.TrafficStrategy = c.PostForm("traffic_strategy")
 	inst.MonthlyLimit, _ = strconv.ParseFloat(c.PostForm("monthly_limit"), 64)
 	inst.LifeTotalLimit, _ = strconv.ParseFloat(c.PostForm("life_total_limit"), 64)
-	inst.HourlyPrice, _ = strconv.ParseFloat(c.PostForm("hourly_price"), 64)
 	inst.AlertThresholdPct, _ = strconv.Atoi(c.PostForm("alert_threshold_pct"))
 	inst.Tag = strings.TrimSpace(c.PostForm("tag"))
 	inst.Notes = strings.TrimSpace(c.PostForm("notes"))
@@ -143,14 +149,28 @@ func InstanceDetail(c *gin.Context) {
 	scriptURL := fmt.Sprintf("%s://%s/public/instance/%d/ipv6_script.sh?token=%s", scheme, c.Request.Host, id, token)
 	curlCommand := fmt.Sprintf("curl -fsSL '%s' | sudo bash", scriptURL)
 
-	c.HTML(http.StatusOK, "instance_detail.html", gin.H{
+	data := gin.H{
 		"instance":                      inst,
 		"logs":                          logs,
 		"username":                      c.GetString("username"),
+		"role":                          c.GetString("role"),
 		"ipv6_script_url":               scriptURL,
 		"ipv6_curl_command":             curlCommand,
 		"ipv6_script_token_expires_min": 30,
-	})
+	}
+
+	if c.GetString("role") == "admin" {
+		decAK, _ := crypto.Decrypt(inst.AccessKeyID)
+		decSK, _ := crypto.Decrypt(inst.AccessKeySK)
+		decLoginAcct, _ := crypto.Decrypt(inst.LoginAccount)
+		decLoginPwd, _ := crypto.Decrypt(inst.LoginPassword)
+		data["decryptedAK"] = decAK
+		data["decryptedSK"] = decSK
+		data["loginAccount"] = decLoginAcct
+		data["loginPassword"] = decLoginPwd
+	}
+
+	c.HTML(http.StatusOK, "instance_detail.html", data)
 }
 
 func DeleteInstance(c *gin.Context) {
@@ -180,6 +200,42 @@ func UpdateNotes(c *gin.Context) {
 	inst.Notes = body.Notes
 	database.DB.Save(&inst)
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func UpdateTrafficSettings(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var inst models.EcsInstance
+	if err := database.DB.First(&inst, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "实例不存在"})
+		return
+	}
+	var body struct {
+		TrafficStrategy   string  `json:"traffic_strategy"`
+		MonthlyLimit      float64 `json:"monthly_limit"`
+		LifeTotalLimit    float64 `json:"life_total_limit"`
+		AlertThresholdPct int     `json:"alert_threshold_pct"`
+	}
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "参数错误"})
+		return
+	}
+
+	role := c.GetString("role")
+	if role == "admin" {
+		if body.TrafficStrategy != "" {
+			inst.TrafficStrategy = body.TrafficStrategy
+		}
+		inst.MonthlyLimit = body.MonthlyLimit
+		inst.LifeTotalLimit = body.LifeTotalLimit
+	}
+
+	if body.AlertThresholdPct > 0 {
+		inst.AlertThresholdPct = body.AlertThresholdPct
+	}
+
+	database.DB.Save(&inst)
+	logOperation("update_traffic", fmt.Sprintf("更新流量设置 %s", inst.Name), &inst.ID, c)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "设置已更新"})
 }
 
 func logOperation(action, detail string, instanceID *uint, c *gin.Context) {

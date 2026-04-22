@@ -1,0 +1,110 @@
+{{ define "title" }}工单 - CloudPanel{{ end }}
+{{ define "content" }}
+<style>
+  @keyframes tkFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .tk-anim { animation: tkFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .tk-d1 { animation-delay: 0.05s; }
+  .tk-d2 { animation-delay: 0.1s; }
+  .tk-row { animation: tkFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+</style>
+
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 tk-anim">
+  <div class="flex items-center gap-3">
+    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-sm shadow-orange-500/25">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">工单中心</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+        {{ if eq .role "admin" }}管理所有用户工单{{ else }}提交与查看工单{{ end }}
+        {{ if .pendingCount }}<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400">{{ .pendingCount }} 待处理</span>{{ end }}
+      </p>
+    </div>
+  </div>
+  {{ if ne .role "admin" }}
+  <div class="flex items-center gap-2">
+    <a href="/tickets/create?type=quota_request" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 transition active:scale-[0.98]">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+      请求配额
+    </a>
+    <a href="/tickets/create?type=reset_system" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition active:scale-[0.98]">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+      请求重置系统
+    </a>
+  </div>
+  {{ end }}
+</div>
+
+<!-- Status filter -->
+<div class="flex items-center gap-1.5 mb-4 tk-anim tk-d1">
+  <a href="/tickets" class="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all {{ if eq .statusFilter "" }}bg-indigo-600 text-white shadow-sm{{ else }}border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">全部</a>
+  <a href="/tickets?status=pending" class="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all {{ if eq .statusFilter "pending" }}bg-amber-500 text-white shadow-sm{{ else }}border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">待处理</a>
+  <a href="/tickets?status=approved" class="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all {{ if eq .statusFilter "approved" }}bg-blue-500 text-white shadow-sm{{ else }}border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">已通过</a>
+  <a href="/tickets?status=completed" class="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all {{ if eq .statusFilter "completed" }}bg-emerald-500 text-white shadow-sm{{ else }}border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">已完成</a>
+  <a href="/tickets?status=rejected" class="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all {{ if eq .statusFilter "rejected" }}bg-red-500 text-white shadow-sm{{ else }}border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">已拒绝</a>
+</div>
+
+<!-- Ticket list -->
+{{ if .tickets }}
+<div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden tk-anim tk-d2">
+  <div class="divide-y divide-gray-50 dark:divide-gray-800/40">
+    {{ range .tickets }}
+    <a href="/ticket/{{ .ID }}" class="tk-row flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 dark:hover:bg-gray-800/20 transition-colors group">
+      <div class="shrink-0">
+        {{ if eq .Type "quota_request" }}
+        <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+          <svg class="w-4.5 h-4.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+        </div>
+        {{ else }}
+        <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10">
+          <svg class="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+        </div>
+        {{ end }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">#{{ .ID }} {{ .Subject }}</span>
+          {{ if eq .Status "pending" }}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">待处理</span>
+          {{ else if eq .Status "approved" }}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">已通过</span>
+          {{ else if eq .Status "completed" }}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">已完成</span>
+          {{ else if eq .Status "rejected" }}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400">已拒绝</span>
+          {{ end }}
+        </div>
+        <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+          {{ if eq $.role "admin" }}<span>{{ .User.Username }}</span><span class="text-gray-300 dark:text-gray-600">·</span>{{ end }}
+          <span>{{ .CreatedAt.Format "2006-01-02 15:04" }}</span>
+          {{ if eq .Type "quota_request" }}<span class="text-gray-300 dark:text-gray-600">·</span><span>{{ .Region }} × {{ .Quantity }}</span>{{ end }}
+        </div>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+    </a>
+    {{ end }}
+  </div>
+  {{ if gt .totalPages 1 }}
+  <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-800/60 flex items-center justify-center gap-1 text-xs">
+    {{ if gt .page 1 }}
+    <a href="/tickets?page={{ add .page -1 }}{{ if .statusFilter }}&status={{ .statusFilter }}{{ end }}" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">上一页</a>
+    {{ end }}
+    <span class="px-3 py-1.5 text-gray-500 dark:text-gray-400 tabular-nums">{{ .page }} / {{ .totalPages }}</span>
+    {{ if lt .page .totalPages }}
+    <a href="/tickets?page={{ add .page 1 }}{{ if .statusFilter }}&status={{ .statusFilter }}{{ end }}" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">下一页</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ else }}
+<div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 px-6 py-16 flex flex-col items-center justify-center tk-anim tk-d2">
+  <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
+    <svg class="w-7 h-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+  </div>
+  <h3 class="text-base font-semibold text-gray-900 dark:text-white">暂无工单</h3>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">{{ if eq .role "admin" }}目前没有用户提交的工单{{ else }}您还没有提交过工单{{ end }}</p>
+</div>
+{{ end }}
+{{ end }}
+
+{{ template "base" . }}

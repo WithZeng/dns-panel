@@ -1,0 +1,228 @@
+{{ define "title" }}提交工单 - CloudPanel{{ end }}
+{{ define "content" }}
+<style>
+  @keyframes tcFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .tc-anim { animation: tcFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .tc-d1 { animation-delay: 0.06s; }
+  .tc-d2 { animation-delay: 0.12s; }
+  .tc-input { transition: all 0.2s ease; }
+  .tc-input:focus { border-color: rgb(99 102 241 / 0.5); box-shadow: 0 0 0 3px rgb(99 102 241 / 0.08); transform: translateY(-1px); }
+  .region-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; color: #4b5563; transition: all 0.15s ease;
+  }
+  .dark .region-opt { color: #d1d5db; }
+  .region-opt:hover { background: #f3f4f6; transform: translateX(2px); }
+  .dark .region-opt:hover { background: rgba(255,255,255,0.06); }
+  .region-opt.active { background: rgb(99 102 241 / 0.08); color: #4f46e5; font-weight: 500; }
+  .dark .region-opt.active { background: rgb(99 102 241 / 0.15); color: #a5b4fc; }
+  #regionPanel.open { transform: scaleY(1); opacity: 1; pointer-events: auto; }
+  #regionArrow.open { transform: rotate(180deg); }
+</style>
+
+<div class="mb-5 tc-anim">
+  <a href="/tickets" class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition">
+    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+    返回工单列表
+  </a>
+</div>
+
+<div class="max-w-2xl">
+  <!-- Type selector tabs -->
+  <div class="flex items-center gap-2 mb-5 tc-anim tc-d1">
+    <a href="/tickets/create?type=quota_request" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all {{ if eq .ticketType "quota_request" }}bg-indigo-600 text-white shadow-sm shadow-indigo-600/20{{ else }}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/></svg>
+      请求配额
+    </a>
+    <a href="/tickets/create?type=reset_system" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all {{ if eq .ticketType "reset_system" }}bg-amber-500 text-white shadow-sm shadow-amber-500/20{{ else }}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800{{ end }}">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+      请求重置系统
+    </a>
+  </div>
+
+  {{ if .error }}
+  <div class="mb-4 rounded-xl border px-4 py-2.5 text-sm bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20 tc-anim">{{ .error }}</div>
+  {{ end }}
+
+  <form method="POST" action="/tickets/create" class="tc-anim tc-d2">
+    <input type="hidden" name="type" value="{{ .ticketType }}">
+
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+      {{ if eq .ticketType "quota_request" }}
+      <!-- Quota Request Form -->
+      <div class="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800/60">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/15">
+            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/></svg>
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">请求配额</h2>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">提交支付宝口令红包并说明需要的服务器区域和数量</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">支付宝口令红包 <span class="text-red-500">*</span></label>
+          <input type="text" name="alipay_code" required placeholder="请输入支付宝口令红包" class="tc-input w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none">
+          <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">请粘贴支付宝口令红包完整内容</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">请求区域</label>
+            <input type="hidden" name="region" id="regionValue" value="不限">
+            <div class="relative" id="regionDropdown">
+              <button type="button" onclick="toggleRegionDropdown()" id="regionBtn"
+                class="tc-input w-full flex items-center justify-between px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
+                <span id="regionLabel">不限区域</span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" id="regionArrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+              </button>
+              <div id="regionPanel" class="absolute z-30 left-0 right-0 mt-2 origin-top scale-y-0 opacity-0 pointer-events-none transition-all duration-200 ease-out">
+                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-2 max-h-[280px] overflow-y-auto">
+                  <div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-1 pb-1.5">全部</div>
+                  <div class="region-opt" data-val="不限" onclick="pickRegion(this)">
+                    <span class="text-base">🌐</span><span>不限区域</span>
+                  </div>
+                  <div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-2.5 pb-1.5">中国大陆</div>
+                  <div class="region-opt" data-val="北京" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>北京</span>
+                  </div>
+                  <div class="region-opt" data-val="上海" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>上海</span>
+                  </div>
+                  <div class="region-opt" data-val="广州" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>广州</span>
+                  </div>
+                  <div class="region-opt" data-val="深圳" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>深圳</span>
+                  </div>
+                  <div class="region-opt" data-val="杭州" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>杭州</span>
+                  </div>
+                  <div class="region-opt" data-val="成都" onclick="pickRegion(this)">
+                    <span class="text-base">🇨🇳</span><span>成都</span>
+                  </div>
+                  <div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-2.5 pb-1.5">亚太</div>
+                  <div class="region-opt" data-val="香港" onclick="pickRegion(this)">
+                    <span class="text-base">🇭🇰</span><span>香港</span>
+                  </div>
+                  <div class="region-opt" data-val="东京" onclick="pickRegion(this)">
+                    <span class="text-base">🇯🇵</span><span>东京</span>
+                  </div>
+                  <div class="region-opt" data-val="新加坡" onclick="pickRegion(this)">
+                    <span class="text-base">🇸🇬</span><span>新加坡</span>
+                  </div>
+                  <div class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-2.5 pb-1.5">欧美</div>
+                  <div class="region-opt" data-val="硅谷" onclick="pickRegion(this)">
+                    <span class="text-base">🇺🇸</span><span>硅谷</span>
+                  </div>
+                  <div class="region-opt" data-val="弗吉尼亚" onclick="pickRegion(this)">
+                    <span class="text-base">🇺🇸</span><span>弗吉尼亚</span>
+                  </div>
+                  <div class="region-opt" data-val="伦敦" onclick="pickRegion(this)">
+                    <span class="text-base">🇬🇧</span><span>伦敦</span>
+                  </div>
+                  <div class="region-opt" data-val="法兰克福" onclick="pickRegion(this)">
+                    <span class="text-base">🇩🇪</span><span>法兰克福</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">请求数量</label>
+            <input type="number" name="quantity" min="1" value="1" class="tc-input w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">备注说明</label>
+          <textarea name="remark" rows="3" placeholder="其他需要说明的信息..." class="tc-input w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none resize-y"></textarea>
+        </div>
+      </div>
+
+      {{ else }}
+      <!-- Reset System Request Form -->
+      <div class="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800/60">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/15">
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">请求重置系统权限</h2>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">仅限未使用 DD 系统的用户申请</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 p-4">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <div>
+              <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-300">重要提示</h3>
+              <p class="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">重置系统权限仅对未使用 DD (Direct Disk) 安装自定义系统的实例开放。如果您的实例使用了 DD 系统，重置后可能导致系统无法启动。</p>
+            </div>
+          </div>
+        </div>
+        <label class="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-colors">
+          <input type="checkbox" name="no_dd_guarantee" value="1" required class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500/30 dark:border-gray-600 dark:bg-gray-800">
+          <div>
+            <span class="text-sm font-medium text-gray-900 dark:text-white">我确认未使用 DD 系统</span>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">我保证我的实例未通过 DD 方式安装自定义操作系统，理解重置系统的风险</p>
+          </div>
+        </label>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">备注说明</label>
+          <textarea name="remark" rows="3" placeholder="说明需要重置系统的原因..." class="tc-input w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/60 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none resize-y"></textarea>
+        </div>
+      </div>
+      {{ end }}
+
+      <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800/60">
+        <button type="submit" class="w-full py-2.5 text-sm font-medium rounded-xl text-white shadow-sm transition active:scale-[0.98] {{ if eq .ticketType "quota_request" }}bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20{{ else }}bg-amber-500 hover:bg-amber-600 shadow-amber-500/20{{ end }}">
+          提交工单
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+var regionOpen = false;
+
+function toggleRegionDropdown() {
+  regionOpen = !regionOpen;
+  document.getElementById('regionPanel').classList.toggle('open', regionOpen);
+  document.getElementById('regionArrow').classList.toggle('open', regionOpen);
+  if (regionOpen) {
+    document.getElementById('regionBtn').style.borderColor = 'rgb(99 102 241 / 0.5)';
+    document.getElementById('regionBtn').style.boxShadow = '0 0 0 3px rgb(99 102 241 / 0.08)';
+  } else {
+    document.getElementById('regionBtn').style.borderColor = '';
+    document.getElementById('regionBtn').style.boxShadow = '';
+  }
+}
+
+function pickRegion(el) {
+  var val = el.getAttribute('data-val');
+  document.getElementById('regionValue').value = val;
+  document.getElementById('regionLabel').textContent = val === '不限' ? '不限区域' : el.querySelector('span:last-child').textContent;
+  var opts = document.querySelectorAll('.region-opt');
+  for (var i = 0; i < opts.length; i++) opts[i].classList.remove('active');
+  el.classList.add('active');
+  toggleRegionDropdown();
+}
+
+document.addEventListener('click', function(e) {
+  if (regionOpen && !document.getElementById('regionDropdown').contains(e.target)) {
+    toggleRegionDropdown();
+  }
+});
+
+document.querySelector('.region-opt[data-val="不限"]').classList.add('active');
+</script>
+{{ end }}
+
+{{ template "base" . }}

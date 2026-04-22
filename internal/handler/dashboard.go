@@ -14,6 +14,13 @@ import (
 )
 
 func Dashboard(c *gin.Context) {
+	role := c.GetString("role")
+
+	if role != "admin" {
+		userDashboard(c)
+		return
+	}
+
 	var instances []models.EcsInstance
 	tag := c.Query("tag")
 	q := database.DB.Order("tag, name")
@@ -23,7 +30,7 @@ func Dashboard(c *gin.Context) {
 	q.Find(&instances)
 
 	tags := map[string]bool{}
-	var totalTraffic, totalCost float64
+	var totalTraffic float64
 	var online, stopped int
 
 	var allInstances []models.EcsInstance
@@ -35,7 +42,6 @@ func Dashboard(c *gin.Context) {
 	}
 	for _, inst := range instances {
 		totalTraffic += inst.CurrentMonthTraffic
-		totalCost += inst.HourlyPrice * 24 * 30
 		switch inst.Status {
 		case "Running", "Starting":
 			online++
@@ -55,10 +61,43 @@ func Dashboard(c *gin.Context) {
 		"online":       online,
 		"stopped":      stopped,
 		"totalTraffic": totalTraffic,
-		"totalCost":    totalCost,
 		"tags":         tagList,
 		"currentTag":   tag,
 		"username":     c.GetString("username"),
+		"role":         role,
+	})
+}
+
+func userDashboard(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+
+	var assignedIDs []uint
+	database.DB.Model(&models.UserInstance{}).
+		Where("user_id = ?", userID).
+		Pluck("instance_id", &assignedIDs)
+
+	var instances []models.EcsInstance
+	if len(assignedIDs) > 0 {
+		database.DB.Where("id IN ?", assignedIDs).Order("tag, name").Find(&instances)
+	}
+
+	var online, stopped int
+	for _, inst := range instances {
+		switch inst.Status {
+		case "Running", "Starting":
+			online++
+		case "Stopped":
+			stopped++
+		}
+	}
+
+	c.HTML(http.StatusOK, "user_dashboard.html", gin.H{
+		"instances": instances,
+		"total":     len(instances),
+		"online":    online,
+		"stopped":   stopped,
+		"username":  c.GetString("username"),
+		"role":      c.GetString("role"),
 	})
 }
 
@@ -100,7 +139,7 @@ func APIInstances(c *gin.Context) {
 	}
 
 	var online, stopped int
-	var totalTraffic, totalCost float64
+	var totalTraffic float64
 	result := make([]instanceJSON, len(instances))
 
 	for i, inst := range instances {
@@ -110,7 +149,6 @@ func APIInstances(c *gin.Context) {
 			stopped++
 		}
 		totalTraffic += inst.CurrentMonthTraffic
-		totalCost += inst.HourlyPrice * 24 * 30
 
 		r := instanceJSON{
 			ID: inst.ID, Name: inst.Name, InstanceID: inst.InstanceID,
@@ -149,7 +187,6 @@ func APIInstances(c *gin.Context) {
 			"online":        online,
 			"stopped":       stopped,
 			"total_traffic": totalTraffic,
-			"total_cost":    totalCost,
 		},
 	})
 }
@@ -269,7 +306,7 @@ func getClientForBatch(inst *models.EcsInstance) (*aliyun.Client, error) {
 
 func CheckAll(c *gin.Context) {
 	var instances []models.EcsInstance
-	database.DB.Where("monitor_enabled = ?", true).Find(&instances)
+	database.DB.Where("status != ?", "Released").Find(&instances)
 	for _, inst := range instances {
 		go service.CheckAndManageInstance(inst.ID)
 	}
