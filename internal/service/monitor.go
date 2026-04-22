@@ -118,6 +118,7 @@ func CheckAndManageInstance(instanceID uint) error {
 		database.DB.Create(&models.TrafficLog{InstanceID: inst.ID, TrafficGB: displayUsage})
 	}
 
+	ecsStateFresh := false
 	if ecsInfo, err := aliyun.GetECSInfo(client, inst.InstanceID); err == nil && ecsInfo != nil {
 		inst.Status = ecsInfo.Status
 		inst.PublicIP = ecsInfo.PublicIP
@@ -127,47 +128,52 @@ func CheckAndManageInstance(instanceID uint) error {
 		}
 		inst.Bandwidth = ecsInfo.Bandwidth
 		inst.BandwidthType = ecsInfo.BandwidthType
+		ecsStateFresh = true
 	} else if err == nil && ecsInfo == nil {
 		inst.Status = "Released"
-		updateCredentialStatus(&inst, "released", "实例已释放或不存在 (DescribeInstances returned empty)")
+		updateCredentialStatus(&inst, "released", "instance not found in ECS DescribeInstances")
 		log.Printf("[monitor] %s (%s) not found in API, marking as Released", inst.Name, inst.InstanceID)
+		ecsStateFresh = true
 	} else if err != nil {
 		updateCredentialStatus(&inst, "error", err.Error())
 		log.Printf("[monitor] GetECSInfo failed for %s: %v", inst.Name, err)
 	}
 
-	autoStartStopLogic(client, &inst)
+	autoStartStopLogic(client, &inst, ecsStateFresh)
 	checkAlerts(&inst, previousAPIGB, currentAPIGB)
 
 	inst.LastChecked = time.Now()
 	return database.DB.Save(&inst).Error
 }
 
-func autoStartStopLogic(client *aliyun.Client, inst *models.EcsInstance) {
-	status := inst.Status
-	autoStartEligible := status == "Stopped" || status == "Stopping"
-
-	if inst.AutoStartEnabled && autoStartEligible {
-		log.Printf("[monitor] ECS=%s, try auto-start: %s", status, inst.Name)
-		if ok, _ := aliyun.ECSStart(client, inst.InstanceID); ok {
-			inst.Status = "Starting"
-		}
-	}
-
-	if !inst.AutoStopEnabled {
+func autoStartStopLogic(client *aliyun.Client, inst *models.EcsInstance, ecsStateFresh bool) {
+	if !ecsStateFresh {
+		log.Printf("[monitor] skip auto start/stop for %s: ECS state is stale", inst.Name)
 		return
 	}
+
+	status := inst.Status
+	autoStartEligible := status == "Stopped"
+
+	if !inst.AutoStopEnabled {
+		if inst.AutoStartEnabled && autoStartEligible {
+			log.Printf("[monitor] ECS=%s, try auto-start: %s", status, inst.Name)
+			if ok, _ := aliyun.ECSStart(client, inst.InstanceID); ok {
+				inst.Status = "Starting"
+			}
+		}
+		return
+	}
+
+	allowAutoStart := true
 
 	if inst.TrafficStrategy == "cycle" {
 		monthlyQuota := inst.MonthlyLimit
 		if monthlyQuota > 0 {
-			if inst.CurrentMonthTraffic < monthlyQuota {
-				if autoStartEligible {
-					if ok, _ := aliyun.ECSStart(client, inst.InstanceID); ok {
-						inst.Status = "Starting"
-					}
-				}
-			} else if status == "Running" {
+			if inst.CurrentMonthTraffic >= monthlyQuota {
+				allowAutoStart = false
+			}
+			if status == "Running" && !allowAutoStart {
 				log.Printf("[monitor] traffic exceeded (%.2f >= %.0f), stop %s", inst.CurrentMonthTraffic, monthlyQuota, inst.Name)
 				if ok, _ := aliyun.ECSStop(client, inst.InstanceID); ok {
 					inst.Status = "Stopping"
@@ -176,11 +182,23 @@ func autoStartStopLogic(client *aliyun.Client, inst *models.EcsInstance) {
 		}
 	} else if inst.TrafficStrategy == "life" {
 		lifeLimit := inst.LifeTotalLimit
-		if lifeLimit > 0 && inst.TotalTrafficSum >= lifeLimit && status == "Running" {
-			log.Printf("[monitor] LIFE quota exhausted (%.2f >= %.0f), stop %s", inst.TotalTrafficSum, lifeLimit, inst.Name)
-			if ok, _ := aliyun.ECSStop(client, inst.InstanceID); ok {
-				inst.Status = "Stopping"
+		if lifeLimit > 0 {
+			if inst.TotalTrafficSum >= lifeLimit {
+				allowAutoStart = false
 			}
+			if status == "Running" && !allowAutoStart {
+				log.Printf("[monitor] LIFE quota exhausted (%.2f >= %.0f), stop %s", inst.TotalTrafficSum, lifeLimit, inst.Name)
+				if ok, _ := aliyun.ECSStop(client, inst.InstanceID); ok {
+					inst.Status = "Stopping"
+				}
+			}
+		}
+	}
+
+	if inst.AutoStartEnabled && autoStartEligible && allowAutoStart {
+		log.Printf("[monitor] ECS=%s, try auto-start: %s", status, inst.Name)
+		if ok, _ := aliyun.ECSStart(client, inst.InstanceID); ok {
+			inst.Status = "Starting"
 		}
 	}
 }
